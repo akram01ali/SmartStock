@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Measures {
+  centimeters
+  meters
+  amount
+
+}
+
+enum TypeOfComponent {
+  printer
+  group
+  component
+}
+
+model Components {
+  componentName         String @unique
+  amount                Float
+  measure               Measures
+  lastScanned           DateTime @default(now())
+  scannedBy             String
+  durationOfDevelopment Int
+  triggerMinAmount      Float
+  supplier              String
+  cost                  Float
+  type                  TypeOfComponent
+}
+
+
+model ComponentHistory {
+  componentName         String
+  amount                Float
+  scanned               DateTime
+  scannedBy             String
+
+  @@unique([componentName, amount, scanned, scannedBy])
+}
+
+
+model Relationships {
+  topComponent        String
+  subComponent        String
+  amount              Int
+
+
+  @@unique([topComponent, subComponent])
+}
+

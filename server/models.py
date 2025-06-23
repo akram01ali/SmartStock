@@ -1,21 +1,21 @@
-import sys
-from pathlib import Path
-
-# Add the prisma directory to Python path for Prisma enums
-prisma_path = Path(__file__).parent / "prisma"
-sys.path.insert(0, str(prisma_path))
-
 from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
-from prisma.enums import Measures, TypeOfComponent
+from enum import Enum
 
+class Measures(str, Enum):
+    centimeters = "centimeters"
+    meters = "meters"
+    amount = "amount"
 
-class Component(BaseModel):
+class TypeOfComponent(str, Enum):
+    printer = "printer"
+    group = "group"
+    component = "component"
+
+class ComponentCreate(BaseModel):
     componentName: str
     amount: float
     measure: Measures
-    lastScanned: datetime
     scannedBy: str
     durationOfDevelopment: int
     triggerMinAmount: float
@@ -23,13 +23,36 @@ class Component(BaseModel):
     cost: float
     type: TypeOfComponent
 
+class ComponentUpdate(BaseModel):
+    amount: float | None = None
+    measure: Measures | None = None
+    scannedBy: str | None = None
+    durationOfDevelopment: int | None = None
+    triggerMinAmount: float | None = None
+    supplier: str | None = None
+    cost: float | None = None
+    type: TypeOfComponent | None = None
+
+class Component(ComponentCreate):
+    lastScanned: datetime
+
+    class Config:
+        from_attributes = True
+
 class ComponentHistory(BaseModel):
     componentName: str
     amount: float
     scanned: datetime
     scannedBy: str
 
-class Relationship(BaseModel):
+    class Config:
+        from_attributes = True
+
+class RelationshipCreate(BaseModel):
     topComponent: str
     subComponent: str
     amount: int
+
+class Relationship(RelationshipCreate):
+    class Config:
+        from_attributes = True

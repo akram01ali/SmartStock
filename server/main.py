@@ -43,14 +43,14 @@ async def shutdown():
 
 # Endpoints for Components:
 ## GET
-@app.get("/printers", response_model=List[Component])
+@app.get("/printers", response_model=list[Component])
 async def get_printers(db: Prisma = Depends(get_db)):
-    printers = await db.component.find_many(where={"type": TypeOfComponent.PRINTER})
+    printers = await db.components.find_many(where={"type": TypeOfComponent.printer})
     return printers
 
 @app.get("/groups", response_model=List[Component])
 async def get_groups(db: Prisma = Depends(get_db)):
-    groups = await db.component.find_many(where={"type": TypeOfComponent.GROUP})
+    groups = await db.components.find_many(where={"type": TypeOfComponent.group})
     return groups
 
 

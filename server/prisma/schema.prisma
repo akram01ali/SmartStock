@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = -1
 }
 
 datasource db {
@@ -11,7 +13,6 @@ enum Measures {
   centimeters
   meters
   amount
-
 }
 
 enum TypeOfComponent {
@@ -33,7 +34,6 @@ model Components {
   type                  TypeOfComponent
 }
 
-
 model ComponentHistory {
   componentName         String
   amount                Float
@@ -43,13 +43,10 @@ model ComponentHistory {
   @@unique([componentName, amount, scanned, scannedBy])
 }
 
-
 model Relationships {
   topComponent        String
   subComponent        String
   amount              Int
 
-
   @@unique([topComponent, subComponent])
 }
-

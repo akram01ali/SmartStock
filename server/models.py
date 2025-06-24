@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 from enum import Enum
+from typing import Dict, List, Tuple
+
 
 class Measures(str, Enum):
     centimeters = "centimeters"
@@ -56,3 +58,6 @@ class RelationshipCreate(BaseModel):
 class Relationship(RelationshipCreate):
     class Config:
         from_attributes = True
+        
+class ComponentTree(BaseModel):
+    tree: Dict[str, List[Tuple[str, int]]]

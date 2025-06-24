@@ -1,5 +1,8 @@
 import sys
 from pathlib import Path
+from fastapi import Body
+from datetime import datetime
+from copy import deepcopy
 
 # Add the prisma directory to Python path
 prisma_path = Path(__file__).parent / "prisma"
@@ -18,7 +21,9 @@ from models import (
     ComponentHistory, 
     Relationship,
     ComponentCreate,
-    ComponentUpdate
+    ComponentUpdate,
+    ComponentTree,
+    RelationshipCreate
 )
 
 app = FastAPI(title="Components Inventory API", version="1.0.0")
@@ -53,20 +58,204 @@ async def get_groups(db: Prisma = Depends(get_db)):
     groups = await db.components.find_many(where={"type": TypeOfComponent.group})
     return groups
 
+@app.get("/tree", response_model=ComponentTree)  # Changed to Relationship model
+async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...)):  # Renamed function
+    tree = await db.relationships.find_many(
+        where={"topComponent": topName},
 
-    
+    )
+
+    result = dict()
+    toLookUp = list()
+
+    toLookUp = [element.subComponent for element in tree]
+    result[topName] = [[element.subComponent, element.amount] for element in tree]
+
+    while toLookUp:
+        current = toLookUp.pop(0)
+        if current not in result:
+            result[current] = []
+            tree = await db.relationships.find_many(
+                where={"topComponent": current},
+            )
+            toLookUp.extend([element.subComponent for element in tree])
+            result[current] = [[element.subComponent, element.amount] for element in tree]
+    return ComponentTree(tree=result)
+
+@app.get("/components", response_model=Component)
+async def get_component(
+    componentName: str, db: Prisma = Depends(get_db)
+):
+    component = await db.components.find_first(where={"componentName": componentName})
+    if not component:
+        raise HTTPException(status_code=404, detail="Component not found")
+    return component
+
 ## POST
+
+@app.post("/components", response_model=Component)
+async def create_component(
+    component: ComponentCreate = Body(...), 
+    db: Prisma = Depends(get_db)
+):
+    try:
+        created = await db.components.create(  
+            data={
+                **component.dict(),
+                "lastScanned": datetime.utcnow()
+            }
+        )
+        return created
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not create component: {str(e)}"
+        )
+    
+'''
+Body:
+{
+    "componentName": "computer",
+    "amount": 36.0,
+    "measure": "amount",
+    "scannedBy": "",
+    "durationOfDevelopment": 0,
+    "triggerMinAmount": 0.0,
+    "supplier": "",
+    "cost": 0.0,
+    "type": "component",
+    "lastScanned": "2025-06-24T11:29:32.663000Z"
+}
+'''
+
 
 ## PUT
+@app.put("/components/{component_name}", response_model=Component)
+async def update_component(
+    component_name: str,
+    component: ComponentUpdate = Body(...),
+    db: Prisma = Depends(get_db)
+):
+    try:
+        # First check if component exists
+        existing = await db.components.find_unique(
+            where={"componentName": component_name}
+        )
+        if not existing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Component '{component_name}' not found"
+            )
+        
+        # Convert to dict and remove None values
+        update_data = {
+            k: v for k, v in component.dict().items() 
+            if v is not None
+        }
+        
+        # Add lastScanned to update data
+        update_data["lastScanned"] = datetime.utcnow()
 
+        updated = await db.components.update(
+            where={"componentName": component_name},
+            data=update_data
+        )
+        return updated
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not update component: {str(e)}"
+        )
+    
 ## DELETE
+from prisma.errors import RecordNotFoundError  # Add this import at the top
+
+@app.delete("/components", response_model=Component)
+async def delete_component(
+    componentName: str,
+    db: Prisma = Depends(get_db) 
+):
+    try:
+        component = await db.components.find_unique(
+            where={"componentName": componentName}
+        )
+        if not component:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Component '{componentName}' not found"
+            )
+
+        await db.relationships.delete_many(
+            where={
+                "OR": [
+                    {"topComponent": componentName},
+                    {"subComponent": componentName}
+                ]
+            }
+        )
+
+        deleted = await db.components.delete(
+            where={"componentName": componentName}
+        )
+        return deleted
+    
+    except RecordNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Component '{componentName}' not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while deleting the component: {str(e)}"
+        )
 
 # Endpoints for Relationships:
-## GET
+## GET endpoints not needed as they are covered by the get_tree endpoint
 
 ## POST
+@app.post("/relationships", response_model=Relationship)
+async def create_relationship(
+    relationship: RelationshipCreate = Body(...), 
+    db: Prisma = Depends(get_db)  
+):
+    try:
+        created = await db.relationships.create(  
+            data={
+                **relationship.dict()
+            }
+        )
+        return created
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not create relationship: {str(e)}"
+        )
 
-
+# DELETE
+@app.delete("/relationships", response_model=Relationship)
+async def delete_relationship(
+    topComponent: str,
+    subComponent: str,
+    db: Prisma = Depends(get_db)
+):
+    try:
+        deleted = await db.relationships.delete(
+            where={
+                "topComponent_subComponent": {
+                    "topComponent": topComponent,
+                    "subComponent": subComponent
+                }
+            }
+        )
+        return deleted
+    except Exception as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not delete relationship: {str(e)}"
+        )
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

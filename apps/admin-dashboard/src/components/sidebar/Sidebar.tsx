@@ -69,7 +69,7 @@ export function SidebarResponsive(props: { routes: RoutesType[] }) {
 		<Flex display={{ sm: 'flex', xl: 'none' }} alignItems='center'>
 			<Flex ref={btnRef} w='max-content' h='max-content' onClick={onOpen}>
 				<Icon
-					as={IoMenuOutline}
+					as={IoMenuOutline as any}
 					color={menuColor}
 					my='auto'
 					w='20px'

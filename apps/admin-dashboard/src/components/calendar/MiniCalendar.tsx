@@ -37,8 +37,8 @@ export default function MiniCalendar(props: {
         selectRange={selectRange}
         view={'month'}
         tileContent={<Text color="brand.500" />}
-        prevLabel={<Icon as={MdChevronLeft} w="24px" h="24px" mt="4px" />}
-        nextLabel={<Icon as={MdChevronRight} w="24px" h="24px" mt="4px" />}
+        prevLabel="←"
+        nextLabel="→"
       />
     </Card>
   );

@@ -78,15 +78,15 @@ export default function ComplexTable(props: { tableData: any }) {
 							'orange.500'
 						) : null
 					}
-					as={
+					as={(
 						info.getValue() === 'Approved' ? (
 							MdCheckCircle
 						) : info.getValue() === 'Disable' ? (
 							MdCancel
 						) : info.getValue() === 'Error' ? (
-							MdOutlineError
+							MdCancel
 						) : null
-					}
+					) as any}
 				/>
 				<Text color={textColor} fontSize='sm' fontWeight='700'>
 					{info.getValue()}

@@ -56,7 +56,7 @@ export default function TotalSpent(props: { [x: string]: any }) {
 							Total Spent
 						</Text>
 						<Flex align='center'>
-							<Icon as={RiArrowUpSFill} color='green.500' me='2px' mt='2px' />
+							<Icon as={RiArrowUpSFill as any} color='green.500' me='2px' mt='2px' />
 							<Text color='green.500' fontSize='sm' fontWeight='700'>
 								+2.45%
 							</Text>
@@ -64,7 +64,7 @@ export default function TotalSpent(props: { [x: string]: any }) {
 					</Flex>
 
 					<Flex align='center'>
-						<Icon as={IoCheckmarkCircle} color='green.500' me='4px' />
+						<Icon as={IoCheckmarkCircle as any} color='green.500' me='4px' />
 						<Text color='green.500' fontSize='md' fontWeight='700'>
 							On track
 						</Text>

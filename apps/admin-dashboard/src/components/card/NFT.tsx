@@ -47,7 +47,7 @@ export default function NFT(props: {
 							transition='0.2s linear'
 							w='20px'
 							h='20px'
-							as={like ? IoHeart : IoHeartOutline}
+							as={(like ? IoHeart : IoHeartOutline) as any}
 							color='brand.500'
 						/>
 					</Button>

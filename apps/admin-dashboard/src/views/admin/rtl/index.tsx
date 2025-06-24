@@ -53,7 +53,7 @@ export default function UserReports() {
 							w='56px'
 							h='56px'
 							bg={boxBg}
-							icon={<Icon w='32px' h='32px' as={MdBarChart} color={brandColor} />}
+							icon={<Icon w='32px' h='32px' as={MdBarChart as any} color={brandColor} />}
 						/>
 					}
 					name='Earnings'
@@ -65,7 +65,7 @@ export default function UserReports() {
 							w='56px'
 							h='56px'
 							bg={boxBg}
-							icon={<Icon w='32px' h='32px' as={MdAttachMoney} color={brandColor} />}
+							icon={<Icon w='32px' h='32px' as={MdAttachMoney as any} color={brandColor} />}
 						/>
 					}
 					name='Spend this month'
@@ -94,7 +94,7 @@ export default function UserReports() {
 							w='56px'
 							h='56px'
 							bg='linear-gradient(90deg, #4481EB 0%, #04BEFE 100%)'
-							icon={<Icon w='28px' h='28px' as={MdAddTask} color='white' />}
+							icon={<Icon w='28px' h='28px' as={MdAddTask as any} color='white' />}
 						/>
 					}
 					name='New Tasks'
@@ -106,7 +106,7 @@ export default function UserReports() {
 							w='56px'
 							h='56px'
 							bg={boxBg}
-							icon={<Icon w='32px' h='32px' as={MdFileCopy} color={brandColor} />}
+							icon={<Icon w='32px' h='32px' as={MdFileCopy as any} color={brandColor} />}
 						/>
 					}
 					name='Total Projects'

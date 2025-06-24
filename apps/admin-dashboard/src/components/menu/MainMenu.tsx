@@ -54,7 +54,7 @@ export default function Banner(props: { [x: string]: any }) {
 				onClick={onOpen1}
 				borderRadius='10px'
 				{...rest}>
-				<Icon as={MdOutlineMoreHoriz} color={iconColor} w='24px' h='24px' />
+				<Icon as={MdOutlineMoreHoriz as any} color={iconColor} w='24px' h='24px' />
 			</MenuButton>
 			<MenuList
 				w='150px'
@@ -80,7 +80,7 @@ export default function Banner(props: { [x: string]: any }) {
 					}}
 					mb='10px'>
 					<Flex align='center'>
-						<Icon as={MdOutlinePerson} h='16px' w='16px' me='8px' />
+						<Icon as={MdOutlinePerson as any} color={iconColor} w='16px' h='16px' me='8px' />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 1
 						</Text>
@@ -100,7 +100,7 @@ export default function Banner(props: { [x: string]: any }) {
 					}}
 					mb='10px'>
 					<Flex align='center'>
-						<Icon as={MdOutlineCardTravel} h='16px' w='16px' me='8px' />
+						<Icon as={MdOutlineCardTravel as any} color={iconColor} w='16px' h='16px' me='8px' />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 2
 						</Text>
@@ -120,7 +120,7 @@ export default function Banner(props: { [x: string]: any }) {
 					}}
 					mb='10px'>
 					<Flex align='center'>
-						<Icon as={MdOutlineLightbulb} h='16px' w='16px' me='8px' />
+						<Icon as={MdOutlineLightbulb as any} color={iconColor} w='16px' h='16px' me='8px' />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 3
 						</Text>
@@ -139,7 +139,7 @@ export default function Banner(props: { [x: string]: any }) {
 						bg: 'transparent'
 					}}>
 					<Flex align='center'>
-						<Icon as={MdOutlineSettings} h='16px' w='16px' me='8px' />
+						<Icon as={MdOutlineSettings as any} color={iconColor} w='16px' h='16px' me='8px' />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 4
 						</Text>

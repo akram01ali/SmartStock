@@ -51,7 +51,7 @@ export default function NFT(props: {
 						</Text>
 					</Flex>
 					<Flex me={{ base: '4px', md: '32px', xl: '10px', '3xl': '32px' }} align='center'>
-						<Icon as={FaEthereum} color={textColor} width='9px' me='7px' />
+						<Icon as={FaEthereum} color={textColor} w='9px' me='7px' />
 						<Text fontWeight='700' fontSize='md' color={textColor}>
 							{price}
 						</Text>

@@ -9,6 +9,7 @@ prisma_path = Path(__file__).parent / "prisma"
 sys.path.insert(0, str(prisma_path))
 
 from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
 from prisma import Client, Prisma
 from prisma.enums import Measures, TypeOfComponent
 from typing import List, Optional, Dict, Any
@@ -27,6 +28,15 @@ from models import (
 )
 
 app = FastAPI(title="Components Inventory API", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"],  # Add your frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 prisma = Client()
 

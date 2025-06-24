@@ -72,7 +72,7 @@ export default function HeaderLinks(props: { secondary: boolean }) {
 				align='center'
 				me='6px'>
 				<Flex align='center' justify='center' bg={ethBox} h='29px' w='29px' borderRadius='30px' me='7px'>
-					<Icon color={ethColor} w='9px' h='14px' as={FaEthereum} />
+					<Icon color={ethColor} w='9px' h='14px' as={FaEthereum as any} />
 				</Flex>
 				<Text w='max-content' color={ethColor} fontSize='sm' fontWeight='700' me='6px'>
 					1,924
@@ -85,7 +85,7 @@ export default function HeaderLinks(props: { secondary: boolean }) {
 			<SidebarResponsive routes={routes} />
 			<Menu>
 				<MenuButton p='0px'>
-					<Icon mt='6px' as={MdNotificationsNone} color={navbarIcon} w='18px' h='18px' me='10px' />
+					<Icon mt='6px' as={MdNotificationsNone as any} color={navbarIcon} w='18px' h='18px' me='10px' />
 				</MenuButton>
 				<MenuList
 					boxShadow={shadow}
@@ -118,7 +118,7 @@ export default function HeaderLinks(props: { secondary: boolean }) {
 
 			<Menu>
 				<MenuButton p='0px'>
-					<Icon mt='6px' as={MdInfoOutline} color={navbarIcon} w='18px' h='18px' me='10px' />
+					<Icon mt='6px' as={MdInfoOutline as any} color={navbarIcon} w='18px' h='18px' me='10px' />
 				</MenuButton>
 				<MenuList
 					boxShadow={shadow}
@@ -171,7 +171,7 @@ export default function HeaderLinks(props: { secondary: boolean }) {
 					h='18px'
 					w='18px'
 					color={navbarIcon}
-					as={colorMode === 'light' ? IoMdMoon : IoMdSunny}
+					as={(colorMode === 'light' ? IoMdMoon : IoMdSunny) as any}
 				/>
 			</Button>
 			<Menu>

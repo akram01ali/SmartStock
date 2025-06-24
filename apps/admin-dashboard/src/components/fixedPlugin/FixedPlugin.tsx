@@ -29,7 +29,7 @@ export default function FixedPlugin(props: { [x: string]: any }) {
 			p='0px'
 			alignItems='center'
 			justifyContent='center'>
-			<Icon h='24px' w='24px' color='white' as={colorMode === 'light' ? IoMdMoon : IoMdSunny} />
+			<Icon h='24px' w='24px' color='white' as={(colorMode === 'light' ? IoMdMoon : IoMdSunny) as any} />
 		</Button>
 	);
 }

@@ -39,7 +39,7 @@ export default function Default(props: { avatar: string; name: string; job: stri
 				<TransparentMenu
 					ms='auto'
 					mb='0px'
-					icon={<Icon as={IoEllipsisVertical} w='24px' h='24px' color={textColor} />}
+					icon={<Icon as={IoEllipsisVertical as any} w="24px" h="24px" color={textColor} />}
 				/>
 			</Flex>
 		</Card>

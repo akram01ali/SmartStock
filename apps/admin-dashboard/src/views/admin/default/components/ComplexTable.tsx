@@ -78,7 +78,7 @@ export default function ComplexTable(props: { tableData: any }) {
 															'orange.500'
 														) : null
 													}
-													as={
+													as={(
 														info.getValue() === 'Approved' ? (
 															MdCheckCircle
 														) : info.getValue() === 'Disable' ? (
@@ -86,7 +86,7 @@ export default function ComplexTable(props: { tableData: any }) {
 														) : info.getValue() === 'Error' ? (
 															MdOutlineError
 														) : null
-													}
+													) as any}
 												/>
 												<Text color={textColor} fontSize='sm' fontWeight='700'>
 													{info.getValue()}

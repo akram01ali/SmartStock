@@ -91,16 +91,86 @@ export default function Flow({ initialComponent }) {
 
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
+  const [levels, setLevels] = useState(new Map());
 
   const handleNodeClick = useCallback((event, node) => {
     setSelectedNode(node);
     setSelectedEdge(null);
-  }, []);
+    
+    // Update node selection visually
+    setNodes((nodes) =>
+      nodes.map((n) => ({
+        ...n,
+        selected: n.id === node.id,
+        style: {
+          ...n.style,
+          border: n.id === node.id
+            ? '3px solid #FFD700'
+            : n.data.label === initialComponent
+            ? '3px solid #FFD700'
+            : '2px solid rgba(255,255,255,0.3)',
+          boxShadow: n.id === node.id
+            ? '0 0 20px rgba(255, 215, 0, 0.6)'
+            : n.style.boxShadow,
+        },
+      }))
+    );
+  }, [setNodes, initialComponent]);
 
   const handleEdgeClick = useCallback((event, edge) => {
     setSelectedEdge(edge);
     setSelectedNode(null);
-  }, []);
+    
+    // Update edge selection visually
+    setEdges((edges) =>
+      edges.map((e) => ({
+        ...e,
+        selected: e.id === edge.id,
+        style: {
+          ...e.style,
+          strokeWidth: e.id === edge.id ? 3 : 1,
+          stroke: e.id === edge.id ? '#FFD700' : e.style.stroke,
+        },
+      }))
+    );
+  }, [setEdges]);
+
+  const handlePaneClick = useCallback(() => {
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    
+    // Reset all node styles to unselected
+    setNodes((nodes) =>
+      nodes.map((n) => ({
+        ...n,
+        selected: false,
+        style: {
+          ...n.style,
+          border: n.data.label === initialComponent
+            ? '3px solid #FFD700'
+            : '2px solid rgba(255,255,255,0.3)',
+          boxShadow: n.style.boxShadow.includes('rgba(255, 215, 0')
+            ? `0 8px 32px rgba(67, 24, 255, ${0.3 - (levels.get(n.data.label) || 0) * 0.05})`
+            : n.style.boxShadow,
+        },
+      }))
+    );
+    
+    // Reset all edge styles to unselected
+    setEdges((edges) =>
+      edges.map((e) => ({
+        ...e,
+        selected: false,
+        style: {
+          ...e.style,
+          strokeWidth: 1,
+          stroke: e.style.stroke === '#FFD700' ? 
+            getNodeColor(0) : // Default to level 0 color if we can't determine the level
+            e.style.stroke,
+        },
+      }))
+    );
+  }, [setNodes, setEdges, initialComponent, levels]);
 
   const handleDelete = async () => {
     try {
@@ -145,17 +215,19 @@ export default function Flow({ initialComponent }) {
       const response = await ApiService.getTree(initialComponent);
       const treeData = response.tree;
 
-      const { positions, levels } = calculateNodePositions(
+      const { positions, levels: calculatedLevels } = calculateNodePositions(
         treeData,
         initialComponent,
       );
+
+      setLevels(calculatedLevels);
 
       const newNodes = [];
       const nodePositions = new Map();
       let nodeId = 0;
 
       for (const [nodeName, position] of positions.entries()) {
-        const level = levels.get(nodeName) || 0;
+        const level = calculatedLevels.get(nodeName) || 0;
         const currentNodeId = `node-${nodeId++}`;
         nodePositions.set(nodeName, currentNodeId);
 
@@ -186,6 +258,7 @@ export default function Flow({ initialComponent }) {
             transition: 'all 0.3s ease',
           },
           className: 'custom-node',
+          selected: false,
         };
 
         newNodes.push(newNode);
@@ -200,7 +273,7 @@ export default function Flow({ initialComponent }) {
             if (amount > 0) {
               const childNodeId = nodePositions.get(childName);
               if (childNodeId) {
-                const parentLevel = levels.get(parentName) || 0;
+                const parentLevel = calculatedLevels.get(parentName) || 0;
                 const edgeColor = getNodeColor(parentLevel);
 
                 newEdges.push({
@@ -302,7 +375,7 @@ export default function Flow({ initialComponent }) {
     [nodes, toast],
   );
 
-  const handleRelationshipSubmit = async (amount: number) => {
+  const handleRelationshipSubmit = async (amount) => {
     const { sourceComponent, targetComponent } = relationshipDialog;
 
     try {
@@ -447,6 +520,7 @@ export default function Flow({ initialComponent }) {
         snapGrid={[20, 20]}
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
+        onPaneClick={handlePaneClick}
       >
         <MiniMap
           nodeStrokeWidth={2}
@@ -510,6 +584,16 @@ export default function Flow({ initialComponent }) {
             >
               Add Component
             </Button>
+            {(selectedNode || selectedEdge) && (
+              <Button
+                onClick={handleDelete}
+                colorScheme="red"
+                leftIcon={<Icon as={MdDelete} />}
+                className="delete-button"
+              >
+                Delete {selectedNode ? 'Component' : 'Relationship'}
+              </Button>
+            )}
           </div>
         </Panel>
       </ReactFlow>

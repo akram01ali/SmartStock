@@ -103,7 +103,7 @@ export default function ComponentsPage() {
                   mb="16px"
                   backdropFilter="blur(10px)"
                 >
-                  <Icon as={MdGroups} w="32px" h="32px" color="white" />
+                  <Icon as={MdGroups as any} w="32px" h="32px" color="white" />
                 </Box>
                 <Text
                   fontSize="lg"
@@ -154,7 +154,7 @@ export default function ComponentsPage() {
                   mb="16px"
                   backdropFilter="blur(10px)"
                 >
-                  <Icon as={MdPrint} w="32px" h="32px" color="white" />
+                  <Icon as={MdPrint as any} w="32px" h="32px" color="white" />
                 </Box>
                 <Text
                   fontSize="lg"

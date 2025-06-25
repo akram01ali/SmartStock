@@ -26,7 +26,7 @@ export default function TotalSpent(props: { [x: string]: any }) {
 			<Flex justify='space-between' ps='0px' pe='20px' pt='5px'>
 				<Flex align='center' w='100%'>
 					<Button bg={boxBg} fontSize='sm' fontWeight='500' color={textColorSecondary} borderRadius='7px'>
-						<Icon as={MdOutlineCalendarToday} color={textColorSecondary} me='4px' />
+						<Icon as={MdOutlineCalendarToday as any} color={textColorSecondary} me='4px' />
 						This month
 					</Button>
 					<Button
@@ -42,7 +42,7 @@ export default function TotalSpent(props: { [x: string]: any }) {
 						lineHeight='100%'
 						borderRadius='10px'
 						{...rest}>
-						<Icon as={MdBarChart} color={iconColor} w='24px' h='24px' />
+						<Icon as={MdBarChart as any} color={iconColor} w='24px' h='24px' />
 					</Button>
 				</Flex>
 			</Flex>

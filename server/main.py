@@ -222,7 +222,25 @@ async def delete_component(
         )
 
 # Endpoints for Relationships:
-## GET endpoints not needed as they are covered by the get_tree endpoint
+## GET
+@app.get("/relationships", response_model=Relationship)
+async def get_relationship(
+    topComponent: str,
+    subComponent: str,
+    db: Prisma = Depends(get_db)
+):
+    relationship = await db.relationships.find_unique(
+        where={
+            "topComponent_subComponent": {
+                "topComponent": topComponent,
+                "subComponent": subComponent
+            }
+        }
+    )
+    if not relationship:
+        raise HTTPException(status_code=404, detail="Relationship not found")
+    return relationship
+
 
 ## POST
 @app.post("/relationships", response_model=Relationship)
@@ -243,7 +261,7 @@ async def create_relationship(
             detail=f"Could not create relationship: {str(e)}"
         )
 
-# DELETE
+## DELETE
 @app.delete("/relationships", response_model=Relationship)
 async def delete_relationship(
     topComponent: str,
@@ -264,6 +282,53 @@ async def delete_relationship(
         raise HTTPException(
             status_code=404,
             detail=f"Could not delete relationship: {str(e)}"
+        )
+    
+## PUT
+@app.put("/relationships", response_model=Relationship)
+async def update_relationship(
+    relationship: RelationshipCreate = Body(...),
+    db: Prisma = Depends(get_db)
+):
+    try:
+        # Check if relationship exists
+        existing = await db.relationships.find_unique(
+            where={
+                "topComponent_subComponent": {
+                    "topComponent": relationship.topComponent,
+                    "subComponent": relationship.subComponent
+                }
+            }
+        )
+        
+        if not existing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Relationship between '{relationship.topComponent}' and '{relationship.subComponent}' not found"
+            )
+        
+        # Update the relationship
+        updated = await db.relationships.update(
+            where={
+                "topComponent_subComponent": {
+                    "topComponent": relationship.topComponent,
+                    "subComponent": relationship.subComponent
+                }
+            },
+            data={
+                "amount": int(relationship.amount)  # Ensure it's an integer
+            }
+        )
+        
+        return updated
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not update relationship: {str(e)}"
         )
     
 if __name__ == "__main__":

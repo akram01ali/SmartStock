@@ -23,7 +23,7 @@ export default function Conversion(props: { [x: string]: any }) {
 					w='38px'
 					h='38px'
 					bg={boxBg}
-					icon={<Icon as={MdCheckBox} color={brandColor} w='24px' h='24px' />}
+					icon={<Icon as={MdCheckBox as any} color={brandColor} w='24px' h='24px' />}
 				/>
 
 				<Text color={textColor} fontSize='lg' fontWeight='700'>

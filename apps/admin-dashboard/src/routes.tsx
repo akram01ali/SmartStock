@@ -30,7 +30,7 @@ const routes = [
     layout: '/admin',
     path: '/default',
     icon: (
-      <Icon as={MdDashboard} width="20px" height="20px" color="inherit" />
+      <Icon as={MdDashboard as any} width="20px" height="20px" color="inherit" />
     ),
     component: <MainDashboard />,
   },

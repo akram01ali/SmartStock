@@ -24,7 +24,7 @@ export default function Banner(props: { used: number; total: number; [x: string]
 				mx='auto'
 				h='100px'
 				w='100px'
-				icon={<Icon as={MdOutlineCloudDone} color={brandColor} h='46px' w='46px' />}
+				icon={<Icon as={MdOutlineCloudDone as any} color={brandColor} h='46px' w='46px' />}
 				bg={box}
 			/>
 			<Text color={textColorPrimary} fontWeight='bold' fontSize='2xl' mt='10px'>

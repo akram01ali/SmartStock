@@ -95,6 +95,23 @@ export class ApiService {
   }
 
   // Relationships endpoints
+  static async getRelationship(topComponent, subComponent) {
+    const response = await fetch(
+      `${API_URL}/relationships?topComponent=${encodeURIComponent(
+        topComponent,
+      )}&subComponent=${encodeURIComponent(subComponent)}`,
+    );
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(
+          `Relationship between '${topComponent}' and '${subComponent}' not found`,
+        );
+      }
+      throw new Error('Failed to fetch relationship');
+    }
+    return await response.json();
+  }
+
   static async createRelationship(relationshipData) {
     const response = await fetch(`${API_URL}/relationships`, {
       method: 'POST',
@@ -105,6 +122,25 @@ export class ApiService {
     });
     if (!response.ok) {
       throw new Error('Failed to create relationship');
+    }
+    return await response.json();
+  }
+
+  static async updateRelationship(topComponent, subComponent, amount) {
+    const response = await fetch(`${API_URL}/relationships`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topComponent,
+        subComponent,
+        amount: parseInt(amount), // Ensure it's an integer as per schema
+      }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update relationship');
     }
     return await response.json();
   }

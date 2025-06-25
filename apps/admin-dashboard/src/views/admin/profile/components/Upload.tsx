@@ -22,7 +22,7 @@ export default function Upload(props: { used?: number; total?: number; [x: strin
 					minH={{ base: '60%', lg: '50%', '2xl': '100%' }}
 					content={
 						<Box>
-							<Icon as={MdUpload} w='80px' h='80px' color={brandColor} />
+							<Icon as={MdUpload as any} w='80px' h='80px' color={brandColor} />
 							<Flex justify='center' mx='auto' mb='12px'>
 								<Text fontSize='xl' fontWeight='700' color={brandColor}>
 									Upload Files

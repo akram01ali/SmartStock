@@ -25,7 +25,7 @@ export default function TotalSpent(props: { [x: string]: any }) {
 		<Card justifyContent='center' alignItems='center' flexDirection='column' w='100%' mb='0px' {...rest}>
 			<Flex align='center' justify='space-between' w='100%' pe='20px' pt='5px'>
 				<Button bg={boxBg} fontSize='sm' fontWeight='500' color={textColorSecondary} borderRadius='7px'>
-					<Icon as={MdOutlineCalendarToday} color={textColorSecondary} me='4px' />
+					<Icon as={MdOutlineCalendarToday as any} color={textColorSecondary} me='4px' />
 					This month
 				</Button>
 				<Button
@@ -41,7 +41,7 @@ export default function TotalSpent(props: { [x: string]: any }) {
 					lineHeight='100%'
 					borderRadius='10px'
 					{...rest}>
-					<Icon as={MdBarChart} color={iconColor} w='24px' h='24px' />
+					<Icon as={MdBarChart as any} color={iconColor} w='24px' h='24px' />
 				</Button>
 			</Flex>
 			<Flex w='100%' flexDirection={{ base: 'column', lg: 'row' }}>

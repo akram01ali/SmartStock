@@ -34,7 +34,7 @@ export default function Project(props: {
 					</Text>
 				</Box>
 				<Link href={link} variant='no-hover' me='16px' ms='auto' p='0px !important'>
-					<Icon as={MdEdit} color='secondaryGray.500' h='18px' w='18px' />
+					<Icon as={MdEdit as any} color='secondaryGray.500' h='18px' w='18px' />
 				</Link>
 			</Flex>
 		</Card>

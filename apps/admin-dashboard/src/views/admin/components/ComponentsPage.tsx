@@ -30,13 +30,13 @@ export default function ComponentsPage() {
   const [groups, setGroups] = useState<Component[]>([]);
   const [printers, setPrinters] = useState<Component[]>([]);
   const navigate = useNavigate();
-  
+
   // Chakra Color Mode
   const textColor = useColorModeValue('secondaryGray.900', 'white');
   const textColorSecondary = useColorModeValue('secondaryGray.600', 'white');
   const cardShadow = useColorModeValue(
     '0px 18px 40px rgba(112, 144, 176, 0.12)',
-    'unset'
+    'unset',
   );
   const iconBg = useColorModeValue('secondaryGray.300', 'navy.900');
 
@@ -61,18 +61,13 @@ export default function ComponentsPage() {
   }, []);
 
   const handleCardClick = (componentName: string) => {
-    navigate(`/admin/components/${componentName}`);
+    navigate(`/admin/graph/${componentName}`);
   };
 
   return (
     <Box pt={{ base: '130px', md: '80px', xl: '80px' }}>
       <Box p={8}>
-        <Heading 
-          size="xl" 
-          mb={8} 
-          color={textColor}
-          fontWeight="700"
-        >
+        <Heading size="xl" mb={8} color={textColor} fontWeight="700">
           Groups
         </Heading>
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
@@ -95,7 +90,12 @@ export default function ComponentsPage() {
                 filter: 'brightness(1.1)',
               }}
             >
-              <Flex direction="column" align="center" justify="center" minH="120px">
+              <Flex
+                direction="column"
+                align="center"
+                justify="center"
+                minH="120px"
+              >
                 <Box
                   bg="rgba(255, 255, 255, 0.2)"
                   borderRadius="16px"
@@ -105,9 +105,9 @@ export default function ComponentsPage() {
                 >
                   <Icon as={MdGroups} w="32px" h="32px" color="white" />
                 </Box>
-                <Text 
-                  fontSize="lg" 
-                  fontWeight="700" 
+                <Text
+                  fontSize="lg"
+                  fontWeight="700"
                   textAlign="center"
                   lineHeight="1.2"
                 >
@@ -118,13 +118,7 @@ export default function ComponentsPage() {
           ))}
         </SimpleGrid>
 
-        <Heading 
-          size="xl" 
-          mt={16} 
-          mb={8} 
-          color={textColor}
-          fontWeight="700"
-        >
+        <Heading size="xl" mt={16} mb={8} color={textColor} fontWeight="700">
           Printers
         </Heading>
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
@@ -147,7 +141,12 @@ export default function ComponentsPage() {
                 filter: 'brightness(1.1)',
               }}
             >
-              <Flex direction="column" align="center" justify="center" minH="120px">
+              <Flex
+                direction="column"
+                align="center"
+                justify="center"
+                minH="120px"
+              >
                 <Box
                   bg="rgba(255, 255, 255, 0.2)"
                   borderRadius="16px"
@@ -157,9 +156,9 @@ export default function ComponentsPage() {
                 >
                   <Icon as={MdPrint} w="32px" h="32px" color="white" />
                 </Box>
-                <Text 
-                  fontSize="lg" 
-                  fontWeight="700" 
+                <Text
+                  fontSize="lg"
+                  fontWeight="700"
                   textAlign="center"
                   lineHeight="1.2"
                 >

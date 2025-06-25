@@ -7,7 +7,7 @@ import Sidebar from 'components/sidebar/Sidebar';
 import { SidebarContext } from 'contexts/SidebarContext';
 import { useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import routes from 'routes';
+import routes, { hiddenRoutes } from 'routes';
 
 // Custom Chakra theme
 export default function Dashboard(props: { [x: string]: any }) {
@@ -63,6 +63,17 @@ export default function Dashboard(props: { [x: string]: any }) {
       }
     });
   };
+  const getHiddenRoutes = (routes: any[]): any => {
+    return routes.map((route: any, key: any) => {
+      if (route.layout === '/admin') {
+        return (
+          <Route path={`${route.path}`} element={route.component} key={`hidden-${key}`} />
+        );
+      } else {
+        return null;
+      }
+    });
+  };
   document.documentElement.dir = 'ltr';
   const { onOpen } = useDisclosure();
   return (
@@ -112,6 +123,7 @@ export default function Dashboard(props: { [x: string]: any }) {
             >
               <Routes>
                 {getRoutes(routes)}
+                {getHiddenRoutes(hiddenRoutes)}
                 <Route
                   path="/"
                   element={<Navigate to="/admin/default" replace />}

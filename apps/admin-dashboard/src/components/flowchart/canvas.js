@@ -93,52 +93,60 @@ export default function Flow({ initialComponent }) {
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [levels, setLevels] = useState(new Map());
 
-  const handleNodeClick = useCallback((event, node) => {
-    setSelectedNode(node);
-    setSelectedEdge(null);
-    
-    // Update node selection visually
-    setNodes((nodes) =>
-      nodes.map((n) => ({
-        ...n,
-        selected: n.id === node.id,
-        style: {
-          ...n.style,
-          border: n.id === node.id
-            ? '3px solid #FFD700'
-            : n.data.label === initialComponent
-            ? '3px solid #FFD700'
-            : '2px solid rgba(255,255,255,0.3)',
-          boxShadow: n.id === node.id
-            ? '0 0 20px rgba(255, 215, 0, 0.6)'
-            : n.style.boxShadow,
-        },
-      }))
-    );
-  }, [setNodes, initialComponent]);
+  const handleNodeClick = useCallback(
+    (event, node) => {
+      setSelectedNode(node);
+      setSelectedEdge(null);
 
-  const handleEdgeClick = useCallback((event, edge) => {
-    setSelectedEdge(edge);
-    setSelectedNode(null);
-    
-    // Update edge selection visually
-    setEdges((edges) =>
-      edges.map((e) => ({
-        ...e,
-        selected: e.id === edge.id,
-        style: {
-          ...e.style,
-          strokeWidth: e.id === edge.id ? 3 : 1,
-          stroke: e.id === edge.id ? '#FFD700' : e.style.stroke,
-        },
-      }))
-    );
-  }, [setEdges]);
+      // Update node selection visually
+      setNodes((nodes) =>
+        nodes.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+          style: {
+            ...n.style,
+            border:
+              n.id === node.id
+                ? '3px solid #FFD700'
+                : n.data.label === initialComponent
+                ? '3px solid #FFD700'
+                : '2px solid rgba(255,255,255,0.3)',
+            boxShadow:
+              n.id === node.id
+                ? '0 0 20px rgba(255, 215, 0, 0.6)'
+                : n.style.boxShadow,
+          },
+        })),
+      );
+    },
+    [setNodes, initialComponent],
+  );
+
+  const handleEdgeClick = useCallback(
+    (event, edge) => {
+      setSelectedEdge(edge);
+      setSelectedNode(null);
+
+      // Update edge selection visually
+      setEdges((edges) =>
+        edges.map((e) => ({
+          ...e,
+          selected: e.id === edge.id,
+          style: {
+            ...e.style,
+            strokeWidth: e.id === edge.id ? 3 : 1,
+            stroke: e.id === edge.id ? '#FFD700' : e.style.stroke,
+          },
+        })),
+      );
+    },
+    [setEdges],
+  );
 
   const handlePaneClick = useCallback(() => {
     setSelectedNode(null);
     setSelectedEdge(null);
-    
+
     // Reset all node styles to unselected
     setNodes((nodes) =>
       nodes.map((n) => ({
@@ -146,16 +154,19 @@ export default function Flow({ initialComponent }) {
         selected: false,
         style: {
           ...n.style,
-          border: n.data.label === initialComponent
-            ? '3px solid #FFD700'
-            : '2px solid rgba(255,255,255,0.3)',
+          border:
+            n.data.label === initialComponent
+              ? '3px solid #FFD700'
+              : '2px solid rgba(255,255,255,0.3)',
           boxShadow: n.style.boxShadow.includes('rgba(255, 215, 0')
-            ? `0 8px 32px rgba(67, 24, 255, ${0.3 - (levels.get(n.data.label) || 0) * 0.05})`
+            ? `0 8px 32px rgba(67, 24, 255, ${
+                0.3 - (levels.get(n.data.label) || 0) * 0.05
+              })`
             : n.style.boxShadow,
         },
-      }))
+      })),
     );
-    
+
     // Reset all edge styles to unselected
     setEdges((edges) =>
       edges.map((e) => ({
@@ -164,11 +175,12 @@ export default function Flow({ initialComponent }) {
         style: {
           ...e.style,
           strokeWidth: 1,
-          stroke: e.style.stroke === '#FFD700' ? 
-            getNodeColor(0) : // Default to level 0 color if we can't determine the level
-            e.style.stroke,
+          stroke:
+            e.style.stroke === '#FFD700'
+              ? getNodeColor(0) // Default to level 0 color if we can't determine the level
+              : e.style.stroke,
         },
-      }))
+      })),
     );
   }, [setNodes, setEdges, initialComponent, levels]);
 
@@ -187,14 +199,33 @@ export default function Flow({ initialComponent }) {
       } else if (selectedEdge) {
         // Extract component names from edge ID (edge-sourceComponent-targetComponent)
         const [, sourceComponent, targetComponent] = selectedEdge.id.split('-');
-        await ApiService.deleteRelationship(sourceComponent, targetComponent);
-        setSelectedEdge(null);
-        toast({
-          title: 'Relationship deleted',
-          description: 'Relationship has been removed',
-          status: 'success',
-          duration: 3000,
-        });
+
+        // Check if this is an edge from the root node
+        if (sourceComponent === initialComponent) {
+          // Update the relationship to amount 0 instead of deleting
+          await ApiService.updateRelationship(
+            sourceComponent,
+            targetComponent,
+            0,
+          );
+          setSelectedEdge(null);
+          toast({
+            title: 'Relationship updated',
+            description: 'Relationship amount set to 0',
+            status: 'success',
+            duration: 3000,
+          });
+        } else {
+          // For non-root edges, delete as normal
+          await ApiService.deleteRelationship(sourceComponent, targetComponent);
+          setSelectedEdge(null);
+          toast({
+            title: 'Relationship deleted',
+            description: 'Relationship has been removed',
+            status: 'success',
+            duration: 3000,
+          });
+        }
       }
       await fetchTreeData();
     } catch (error) {

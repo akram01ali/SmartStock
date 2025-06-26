@@ -6,12 +6,26 @@ import {
   useColorModeValue,
   Flex,
   Icon,
+  Button,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  FormControl,
+  FormLabel,
+  VStack,
+  useToast,
+  useDisclosure,
+  HStack,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiService } from '../../../services/service';
 import Card from 'components/card/Card';
-import { MdGroups, MdPrint } from 'react-icons/md';
+import { MdGroups, MdPrint, MdAdd } from 'react-icons/md';
 
 interface Component {
   componentName: string;
@@ -29,7 +43,22 @@ interface Component {
 export default function ComponentsPage() {
   const [groups, setGroups] = useState<Component[]>([]);
   const [printers, setPrinters] = useState<Component[]>([]);
+  const [formData, setFormData] = useState({
+    componentName: '',
+    amount: 0,
+    measure: 'amount' as 'centimeters' | 'meters' | 'amount',
+    lastScanned: new Date().toISOString(),
+    scannedBy: '',
+    durationOfDevelopment: 0,
+    triggerMinAmount: 0,
+    supplier: '',
+    cost: 0,
+  });
+  const [createType, setCreateType] = useState<'printer' | 'group' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   // Chakra Color Mode
   const textColor = useColorModeValue('secondaryGray.900', 'white');
@@ -64,12 +93,95 @@ export default function ComponentsPage() {
     navigate(`/admin/graph/${componentName}`);
   };
 
+  const handleCreateClick = (type: 'printer' | 'group') => {
+    setCreateType(type);
+    setFormData({
+      componentName: '',
+      amount: 0,
+      measure: 'amount',
+      lastScanned: new Date().toISOString(),
+      scannedBy: '',
+      durationOfDevelopment: 0,
+      triggerMinAmount: 0,
+      supplier: '',
+      cost: 0,
+    });
+    onOpen();
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.componentName) {
+      toast({
+        title: 'Validation Error',
+        description: 'Component name is required',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const componentData = {
+        ...formData,
+        type: createType,
+      };
+
+      if (createType === 'printer') {
+        // For printers, they are their own root component
+        await ApiService.createPrinter(componentData, formData.componentName);
+      } else {
+        // For groups, they are their own root component
+        await ApiService.createGroup(componentData, formData.componentName);
+      }
+
+      toast({
+        title: `${createType.charAt(0).toUpperCase() + createType.slice(1)} Created`,
+        description: `${formData.componentName} has been created successfully`,
+        status: 'success',
+        duration: 3000,
+      });
+
+      // Refresh the data
+      const [groupsData, printersData] = await Promise.all([
+        ApiService.getGroups(),
+        ApiService.getPrinters(),
+      ]);
+      setGroups(groupsData);
+      setPrinters(printersData);
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create component',
+        status: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
     <Box pt={{ base: '130px', md: '80px', xl: '80px' }}>
       <Box p={8}>
-        <Heading size="xl" mb={8} color={textColor} fontWeight="700">
-          Groups
-        </Heading>
+        <HStack justify="space-between" align="center" mb={8}>
+          <Heading size="xl" color={textColor} fontWeight="700">
+            Groups
+          </Heading>
+          <Button
+            leftIcon={<Icon as={MdAdd} />}
+            colorScheme="purple"
+            onClick={() => handleCreateClick('group')}
+          >
+            Create Group
+          </Button>
+        </HStack>
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
           {groups.map((group) => (
             <Card
@@ -118,9 +230,18 @@ export default function ComponentsPage() {
           ))}
         </SimpleGrid>
 
-        <Heading size="xl" mt={16} mb={8} color={textColor} fontWeight="700">
-          Printers
-        </Heading>
+        <HStack justify="space-between" align="center" mt={16} mb={8}>
+          <Heading size="xl" color={textColor} fontWeight="700">
+            Printers
+          </Heading>
+          <Button
+            leftIcon={<Icon as={MdAdd} />}
+            colorScheme="blue"
+            onClick={() => handleCreateClick('printer')}
+          >
+            Create Printer
+          </Button>
+        </HStack>
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
           {printers.map((printer) => (
             <Card
@@ -168,6 +289,68 @@ export default function ComponentsPage() {
             </Card>
           ))}
         </SimpleGrid>
+
+        {/* Create Dialog */}
+        <Modal isOpen={isOpen} onClose={onClose} size="lg">
+          <ModalOverlay backdropFilter="blur(4px)" />
+          <ModalContent>
+            <ModalHeader color="#4318FF">
+              Create New {createType?.charAt(0).toUpperCase()}{createType?.slice(1)}
+            </ModalHeader>
+            <ModalBody>
+              <VStack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel>Component Name</FormLabel>
+                  <Input
+                    value={formData.componentName}
+                    onChange={(e) => handleInputChange('componentName', e.target.value)}
+                    placeholder={`Enter ${createType} name`}
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Supplier</FormLabel>
+                  <Input
+                    value={formData.supplier}
+                    onChange={(e) => handleInputChange('supplier', e.target.value)}
+                    placeholder="Enter supplier name"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Cost</FormLabel>
+                  <Input
+                    type="number"
+                    value={formData.cost}
+                    onChange={(e) => handleInputChange('cost', parseFloat(e.target.value) || 0)}
+                    placeholder="Enter cost"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Development Duration (days)</FormLabel>
+                  <Input
+                    type="number"
+                    value={formData.durationOfDevelopment}
+                    onChange={(e) => handleInputChange('durationOfDevelopment', parseInt(e.target.value) || 0)}
+                    placeholder="Enter development duration"
+                  />
+                </FormControl>
+              </VStack>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                colorScheme="blue"
+                mr={3}
+                onClick={handleSubmit}
+                isLoading={isSubmitting}
+              >
+                Create {createType?.charAt(0).toUpperCase()}{createType?.slice(1)}
+              </Button>
+              <Button onClick={onClose}>Cancel</Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </Box>
     </Box>
   );

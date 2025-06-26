@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import { ApiService } from '../../services/service';
 import { ComponentDialog } from './componentDialog';
+import { DeleteConfirmationDialog } from './deleteConfirmationDialog';
 import { Button, Icon, useToast } from '@chakra-ui/react';
 import { MdAdd, MdDelete } from 'react-icons/md';
 import '@xyflow/react/dist/style.css';
@@ -88,6 +89,7 @@ export default function Flow({ initialComponent }) {
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
@@ -185,16 +187,26 @@ export default function Flow({ initialComponent }) {
   }, [setNodes, setEdges, initialComponent, levels]);
 
   const handleDelete = async () => {
+    // This function is now only called to open the delete dialog
+    // The actual deletion logic is handled by the specific delete methods below
+    if (selectedNode || selectedEdge) {
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const handleDeleteFromDatabase = async () => {
     try {
       if (selectedNode) {
         const componentName = selectedNode.data.label;
-        await ApiService.deleteComponent(componentName);
+        
+        // Use the new delete method that completely removes from database
+        const result = await ApiService.deleteComponentFromDatabase(componentName);
         setSelectedNode(null);
         toast({
-          title: 'Component deleted',
-          description: `${componentName} has been deleted`,
+          title: 'Component deleted from database',
+          description: `Component ${componentName} has been completely removed from the database`,
           status: 'success',
-          duration: 3000,
+          duration: 4000,
         });
       } else if (selectedEdge) {
         // Extract component names from edge ID (edge-sourceComponent-targetComponent)
@@ -230,7 +242,81 @@ export default function Flow({ initialComponent }) {
       await fetchTreeData();
     } catch (error) {
       toast({
-        title: 'Error deleting',
+        title: 'Error deleting from database',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleDeleteFromSubassembly = async () => {
+    try {
+      if (selectedNode) {
+        const componentName = selectedNode.data.label;
+        
+        // Don't allow deleting the root component from its own subassembly
+        if (componentName === initialComponent) {
+          toast({
+            title: 'Cannot remove root component',
+            description: 'You cannot remove the root component from its own subassembly',
+            status: 'warning',
+            duration: 3000,
+          });
+          return;
+        }
+
+        // Find the parent of the selected component by looking at the tree data
+        const treeResponse = await ApiService.getTree(initialComponent);
+        const treeData = treeResponse.tree;
+        
+        let parentComponent = null;
+        // Look through the tree to find which component points to this one
+        for (const [parent, children] of Object.entries(treeData)) {
+          if (children && children.some(([child]) => child === componentName)) {
+            parentComponent = parent;
+            break;
+          }
+        }
+
+        if (!parentComponent) {
+          toast({
+            title: 'Error',
+            description: 'Could not find parent component',
+            status: 'error',
+            duration: 3000,
+          });
+          return;
+        }
+
+        const result = await ApiService.removeComponentFromSubassembly(
+          componentName, 
+          initialComponent, 
+          parentComponent
+        );
+        setSelectedNode(null);
+        toast({
+          title: 'Component removed from subassembly',
+          description: `Component ${componentName} has been removed from the subassembly`,
+          status: 'success',
+          duration: 4000,
+        });
+      } else if (selectedEdge) {
+        // For edges, just delete the specific relationship
+        const [, sourceComponent, targetComponent] = selectedEdge.id.split('-');
+        await ApiService.deleteRelationship(sourceComponent, targetComponent);
+        setSelectedEdge(null);
+        toast({
+          title: 'Relationship removed',
+          description: 'Relationship has been removed from this subassembly',
+          status: 'success',
+          duration: 3000,
+        });
+      }
+      await fetchTreeData();
+    } catch (error) {
+      toast({
+        title: 'Error removing from subassembly',
         description: error.message,
         status: 'error',
         duration: 5000,
@@ -342,20 +428,26 @@ export default function Flow({ initialComponent }) {
 
   const handleCreateComponent = async (componentData, relationshipData) => {
     try {
-      // First create the component
-      await ApiService.createComponent(componentData);
+      // Create the component with the root parameter - relationship is created automatically
+      await ApiService.createComponent(componentData, initialComponent);
 
-      // Then create a relationship with the root component
-      await ApiService.createRelationship({
-        topComponent: initialComponent,
-        subComponent: componentData.componentName,
-        amount: 0,
-      });
-
-      // Finally refresh the tree to show the new component
+      // Refresh the tree to show the new component
       await fetchTreeData();
+      
+      toast({
+        title: 'Component created',
+        description: `Component ${componentData.componentName} has been created and added to ${initialComponent}`,
+        status: 'success',
+        duration: 4000,
+      });
     } catch (error) {
       console.error('Error handling component creation:', error);
+      toast({
+        title: 'Error creating component',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+      });
     }
   };
 
@@ -386,6 +478,20 @@ export default function Flow({ initialComponent }) {
 
         const sourceComponent = sourceNode.data.label;
         const targetComponent = targetNode.data.label;
+
+        // Prevent self-loops
+        if (sourceComponent === targetComponent) {
+          toast({
+            title: 'Connection not allowed',
+            description: 'A component cannot be connected to itself.',
+            status: 'warning',
+            duration: 3000,
+          });
+          return;
+        }
+
+        // TODO: Add cycle detection to prevent circular dependencies
+        // This should ideally be done on the backend
 
         // Open dialog to specify amount
         setRelationshipDialog({
@@ -640,6 +746,7 @@ export default function Flow({ initialComponent }) {
         onClose={() => setIsCreateDialogOpen(false)}
         component={null}
         mode="create"
+        initialComponent={initialComponent}
         onSubmit={handleCreateComponent}
       />
       <RelationshipDialog
@@ -650,6 +757,14 @@ export default function Flow({ initialComponent }) {
         sourceComponent={relationshipDialog.sourceComponent}
         targetComponent={relationshipDialog.targetComponent}
         onSubmit={handleRelationshipSubmit}
+      />
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        componentName={selectedNode ? selectedNode.data.label : (selectedEdge ? selectedEdge.id.split('-')[2] : '')}
+        parentComponent={initialComponent}
+        onDeleteFromDatabase={handleDeleteFromDatabase}
+        onDeleteFromSubassembly={handleDeleteFromSubassembly}
       />
     </div>
   );

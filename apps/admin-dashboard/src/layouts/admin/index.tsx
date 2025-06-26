@@ -20,7 +20,7 @@ export default function Dashboard(props: { [x: string]: any }) {
     return window.location.pathname !== '/admin/full-screen-maps';
   };
   const getActiveRoute = (routes: RoutesType[]): string => {
-    let activeRoute = 'Default Brand Text';
+    let activeRoute = 'IACS Admin Dashboard';
     for (let i = 0; i < routes.length; i++) {
       if (
         window.location.href.indexOf(routes[i].layout + routes[i].path) !== -1
@@ -67,7 +67,11 @@ export default function Dashboard(props: { [x: string]: any }) {
     return routes.map((route: any, key: any) => {
       if (route.layout === '/admin') {
         return (
-          <Route path={`${route.path}`} element={route.component} key={`hidden-${key}`} />
+          <Route
+            path={`${route.path}`}
+            element={route.component}
+            key={`hidden-${key}`}
+          />
         );
       } else {
         return null;

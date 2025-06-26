@@ -15,6 +15,7 @@ from prisma.enums import Measures, TypeOfComponent
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import asyncio
+from prisma.errors import RecordNotFoundError
 
 # Import Pydantic models
 from models import (
@@ -101,21 +102,61 @@ async def get_component(
         raise HTTPException(status_code=404, detail="Component not found")
     return component
 
+@app.get("/all_components", response_model=List[Component])
+async def get_all_components(
+    db: Prisma = Depends(get_db),
+
+):
+    components = await db.components.find_many()
+    if not components:
+        raise HTTPException(status_code=404, detail="No components found")
+    return components
+    
 ## POST
 
 @app.post("/components", response_model=Component)
 async def create_component(
+    root: str,
     component: ComponentCreate = Body(...), 
     db: Prisma = Depends(get_db)
 ):
     try:
-        created = await db.components.create(  
-            data={
-                **component.dict(),
-                "lastScanned": datetime.utcnow()
-            }
+        # Check if the component already exists
+        existing = await db.components.find_unique(
+            where={"componentName": component.componentName}
         )
-        return created
+        if existing:
+            tree = await get_tree(db=db, topName=component.componentName)
+            for comp in tree.tree.keys():
+                await db.relationships.create(
+                    data={
+                    
+                        "topComponent": root,
+                        "subComponent": comp,
+                        "amount": 0
+                      
+                    }
+                )
+            return existing
+            
+
+        else:
+            created = await db.components.create(  
+                data={
+                    **component.dict(),
+                    "lastScanned": datetime.utcnow()
+                }
+            )
+            await db.relationships.create(
+                data = {
+                    "topComponent": root,
+                    "subComponent": created.componentName,
+                    "amount": 0
+                }
+            )
+
+ 
+            return created
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -178,48 +219,87 @@ async def update_component(
             detail=f"Could not update component: {str(e)}"
         )
     
-## DELETE
-from prisma.errors import RecordNotFoundError  # Add this import at the top
-
-@app.delete("/components", response_model=Component)
+## DELETE  
+@app.delete("/components", response_model=Optional[Component])
 async def delete_component(
     componentName: str,
+    deleteOutOfDatabase: bool,
+    root: Optional[str] = None,
+    parent: Optional[str] = None,
     db: Prisma = Depends(get_db) 
 ):
-    try:
-        component = await db.components.find_unique(
-            where={"componentName": componentName}
-        )
-        if not component:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Component '{componentName}' not found"
+    component = await db.components.find_unique(
+                where={"componentName": componentName}
             )
-
-        await db.relationships.delete_many(
-            where={
-                "OR": [
-                    {"topComponent": componentName},
-                    {"subComponent": componentName}
-                ]
-            }
-        )
-
-        deleted = await db.components.delete(
-            where={"componentName": componentName}
-        )
-        return deleted
     
-    except RecordNotFoundError:
+    if not component:
         raise HTTPException(
             status_code=404,
             detail=f"Component '{componentName}' not found"
         )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while deleting the component: {str(e)}"
-        )
+    
+    if deleteOutOfDatabase:
+        try:
+            await db.relationships.delete_many(
+                where={
+                    "OR": [
+                        {"topComponent": componentName},
+                        {"subComponent": componentName}
+                    ]
+                }
+            )
+
+            deleted = await db.components.delete(
+                where={"componentName": componentName}
+            )
+            return deleted
+        
+        except RecordNotFoundError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Component '{componentName}' not found"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred while deleting the component: {str(e)}"
+            )
+    else:
+        try:
+            if root != parent:
+                await db.relationships.delete(
+                    where={
+                        "topComponent_subComponent": {  
+                            "topComponent": parent,    
+                            "subComponent": componentName
+                        }
+                    }
+                )
+
+            tree = await get_tree(db=db, topName=componentName)
+
+            for comp in tree.tree.keys():
+                await db.relationships.delete(
+                    where={
+                            "topComponent_subComponent": {
+                                "topComponent": root,
+                                "subComponent": comp
+                            }
+                        
+                    }
+                )
+            return component
+        
+        except RecordNotFoundError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Component '{componentName}' not found"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred while marking the component as deleted: {str(e)}"
+            )
 
 # Endpoints for Relationships:
 ## GET

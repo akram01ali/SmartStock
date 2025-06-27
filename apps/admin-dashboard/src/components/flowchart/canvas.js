@@ -30,51 +30,74 @@ const getNodeColor = (level) => {
   return colors[Math.min(level, colors.length - 1)];
 };
 
-const calculateNodePositions = (treeData, rootComponent) => {
+const calculateNodePositions = (treeResponse, rootComponent) => {
   const positions = new Map();
   const levels = new Map();
-  const visited = new Set();
-
-  const setLevels = (nodeName, level = 0) => {
-    if (visited.has(nodeName)) return;
-    visited.add(nodeName);
-    levels.set(nodeName, level);
-
-    if (treeData[nodeName]) {
-      treeData[nodeName].forEach(([childName]) => {
-        setLevels(childName, level + 1);
+  const flatTree = new Map();
+  const allNodeInstances = [];
+  
+  // Recursively traverse the tree to collect all node instances
+  const traverseNode = (node, level, parentPath = '') => {
+    const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
+    const nodeInstance = {
+      path: nodePath,
+      name: node.name,
+      level: level,
+      children: []
+    };
+    
+    allNodeInstances.push(nodeInstance);
+    levels.set(nodePath, level);
+    
+    // Process children
+    if (node.children && node.children.length > 0) {
+      node.children.forEach((child, index) => {
+        // The child path should match what gets created when we traverse the child
+        const childPath = `${nodePath}/child_${index}/${child.name}`;
+        nodeInstance.children.push([childPath, child.name, child.amount]);
+        traverseNode(child, level + 1, `${nodePath}/child_${index}`);
       });
     }
+    
+    flatTree.set(nodePath, nodeInstance.children);
   };
-
-  setLevels(rootComponent);
-
+  
+  // Process all root-level nodes
+  if (treeResponse.nodes && treeResponse.nodes.length > 0) {
+    treeResponse.nodes.forEach((node, index) => {
+      const rootPath = `root_${index}_${node.name}`;
+      traverseNode(node, 0, `root_${index}`);
+    });
+  }
+  
+  // Group nodes by level for positioning
   const nodesByLevel = new Map();
-  for (const [nodeName, level] of levels.entries()) {
+  allNodeInstances.forEach(instance => {
+    const level = instance.level;
     if (!nodesByLevel.has(level)) {
       nodesByLevel.set(level, []);
     }
-    nodesByLevel.get(level).push(nodeName);
-  }
+    nodesByLevel.get(level).push(instance.path);
+  });
 
   const nodeWidth = 160;
   const nodeHeight = 80;
   const levelHeight = 200;
   const minNodeSpacing = 40;
 
-  for (const [level, nodes] of nodesByLevel.entries()) {
-    const nodeCount = nodes.length;
+  for (const [level, nodePaths] of nodesByLevel.entries()) {
+    const nodeCount = nodePaths.length;
     const totalWidth = nodeCount * nodeWidth + (nodeCount - 1) * minNodeSpacing;
     const startX = -totalWidth / 2;
 
-    nodes.forEach((nodeName, index) => {
+    nodePaths.forEach((nodePath, index) => {
       const x = startX + index * (nodeWidth + minNodeSpacing) + nodeWidth / 2;
       const y = level * levelHeight;
-      positions.set(nodeName, { x, y });
+      positions.set(nodePath, { x, y });
     });
   }
 
-  return { positions, levels };
+  return { positions, levels, flatTree, allNodeInstances };
 };
 
 export default function Flow({ initialComponent }) {
@@ -200,7 +223,7 @@ export default function Flow({ initialComponent }) {
         const componentName = selectedNode.data.label;
         
         // Use the new delete method that completely removes from database
-        const result = await ApiService.deleteComponentFromDatabase(componentName);
+        const result = await ApiService.deleteComponent(componentName, true);
         setSelectedNode(null);
         toast({
           title: 'Component deleted from database',
@@ -215,11 +238,12 @@ export default function Flow({ initialComponent }) {
         // Check if this is an edge from the root node
         if (sourceComponent === initialComponent) {
           // Update the relationship to amount 0 instead of deleting
-          await ApiService.updateRelationship(
-            sourceComponent,
-            targetComponent,
-            0,
-          );
+          await ApiService.updateRelationship({
+            topComponent: sourceComponent,
+            subComponent: targetComponent,
+            root: initialComponent,
+            amount: 0,
+          });
           setSelectedEdge(null);
           toast({
             title: 'Relationship updated',
@@ -229,7 +253,7 @@ export default function Flow({ initialComponent }) {
           });
         } else {
           // For non-root edges, delete as normal
-          await ApiService.deleteRelationship(sourceComponent, targetComponent);
+          await ApiService.deleteRelationship(sourceComponent, targetComponent, initialComponent);
           setSelectedEdge(null);
           toast({
             title: 'Relationship deleted',
@@ -304,7 +328,7 @@ export default function Flow({ initialComponent }) {
       } else if (selectedEdge) {
         // For edges, just delete the specific relationship
         const [, sourceComponent, targetComponent] = selectedEdge.id.split('-');
-        await ApiService.deleteRelationship(sourceComponent, targetComponent);
+        await ApiService.deleteRelationship(sourceComponent, targetComponent, initialComponent);
         setSelectedEdge(null);
         toast({
           title: 'Relationship removed',
@@ -330,10 +354,10 @@ export default function Flow({ initialComponent }) {
     try {
       setLoading(true);
       const response = await ApiService.getTree(initialComponent);
-      const treeData = response.tree;
+      // Note: response now has structure { root: "name", nodes: [...] }
 
-      const { positions, levels: calculatedLevels } = calculateNodePositions(
-        treeData,
+      const { positions, levels: calculatedLevels, flatTree, allNodeInstances } = calculateNodePositions(
+        response,
         initialComponent,
       );
 
@@ -343,18 +367,20 @@ export default function Flow({ initialComponent }) {
       const nodePositions = new Map();
       let nodeId = 0;
 
-      for (const [nodeName, position] of positions.entries()) {
-        const level = calculatedLevels.get(nodeName) || 0;
+      // Create visual nodes for each node instance
+      allNodeInstances.forEach(instance => {
+        const level = instance.level;
         const currentNodeId = `node-${nodeId++}`;
-        nodePositions.set(nodeName, currentNodeId);
+        nodePositions.set(instance.path, currentNodeId);
 
         const nodeColor = getNodeColor(level);
-        const isRoot = level === 0;
+        const isRoot = instance.name === initialComponent && level === 0;
+        const position = positions.get(instance.path);
 
         const newNode = {
           id: currentNodeId,
           position,
-          data: { label: nodeName },
+          data: { label: instance.name },
           style: {
             background: `linear-gradient(135deg, ${nodeColor} 0%, ${nodeColor}dd 100%)`,
             color: 'white',
@@ -379,22 +405,22 @@ export default function Flow({ initialComponent }) {
         };
 
         newNodes.push(newNode);
-      }
+      });
 
       const newEdges = [];
-      Object.keys(treeData).forEach((parentName) => {
-        const parentNodeId = nodePositions.get(parentName);
-        if (parentNodeId && treeData[parentName]) {
-          treeData[parentName].forEach(([childName, amount]) => {
+      for (const [parentPath, children] of flatTree.entries()) {
+        const parentNodeId = nodePositions.get(parentPath);
+        if (parentNodeId && children && children.length > 0) {
+          children.forEach(([childPath, childName, amount]) => {
             // Only create edges for non-zero amounts
             if (amount > 0) {
-              const childNodeId = nodePositions.get(childName);
+              const childNodeId = nodePositions.get(childPath);
               if (childNodeId) {
-                const parentLevel = calculatedLevels.get(parentName) || 0;
+                const parentLevel = calculatedLevels.get(parentPath) || 0;
                 const edgeColor = getNodeColor(parentLevel);
 
                 newEdges.push({
-                  id: `edge-${parentName}-${childName}`,
+                  id: `edge-${parentPath}-${childPath}`,
                   source: parentNodeId,
                   target: childNodeId,
                   label: `${amount}`,
@@ -415,7 +441,7 @@ export default function Flow({ initialComponent }) {
             }
           });
         }
-      });
+      }
 
       setNodes(newNodes);
       setEdges(newEdges);
@@ -518,20 +544,22 @@ export default function Flow({ initialComponent }) {
     try {
       // Check if relationship exists
       try {
-        await ApiService.getRelationship(sourceComponent, targetComponent);
+        await ApiService.getRelationship(sourceComponent, targetComponent, initialComponent);
         // If we get here, relationship exists - update it
-        await ApiService.updateRelationship(
-          sourceComponent,
-          targetComponent,
-          amount,
-        );
+        await ApiService.updateRelationship({
+          topComponent: sourceComponent,
+          subComponent: targetComponent,
+          root: initialComponent,
+          amount: parseInt(amount),
+        });
       } catch (error) {
         // If relationship not found, create new one
         if (error.message.includes('not found')) {
           await ApiService.createRelationship({
             topComponent: sourceComponent,
             subComponent: targetComponent,
-            amount,
+            root: initialComponent,
+            amount: parseInt(amount),
           });
         } else {
           throw error;

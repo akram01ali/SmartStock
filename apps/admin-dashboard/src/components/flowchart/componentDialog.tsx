@@ -75,6 +75,8 @@ export function ComponentDialog({
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [allComponents, setAllComponents] = useState<string[]>([]);
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -83,23 +85,110 @@ export function ComponentDialog({
     }
   }, [component]);
 
-  // Fuzzy search for existing components
-  const handleComponentNameSearch = async (value: string) => {
+  // Fetch all components when dialog opens for create mode
+  useEffect(() => {
+    if (isOpen && mode === 'create' && !componentsLoaded) {
+      const fetchAllComponents = async () => {
+        try {
+          setIsSearching(true);
+          const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/all_components`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch components');
+          }
+          const data = await response.json();
+          const componentNames = (data || []).map((component: any) => 
+            component.componentName || component.name || component
+          );
+          setAllComponents(componentNames);
+          setComponentsLoaded(true);
+        } catch (error) {
+          console.error('Error fetching all components:', error);
+          setAllComponents([]);
+        } finally {
+          setIsSearching(false);
+        }
+      };
+
+      fetchAllComponents();
+    }
+  }, [isOpen, mode, componentsLoaded]);
+
+  // Reset components cache when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setComponentsLoaded(false);
+      setAllComponents([]);
+      setSearchResults([]);
+      setShowSuggestions(false);
+    }
+  }, [isOpen]);
+
+  // Client-side fuzzy search using cached components
+  const performFuzzySearch = (query: string): string[] => {
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    const queryLower = query.toLowerCase();
+    
+    // Simple fuzzy search algorithm
+    const matches = allComponents.filter(componentName => {
+      const nameLower = componentName.toLowerCase();
+      
+      // Exact match gets highest priority
+      if (nameLower === queryLower) return true;
+      
+      // Starts with query
+      if (nameLower.startsWith(queryLower)) return true;
+      
+      // Contains query
+      if (nameLower.includes(queryLower)) return true;
+      
+      // Fuzzy match - check if all characters of query exist in order
+      let queryIndex = 0;
+      for (let i = 0; i < nameLower.length && queryIndex < queryLower.length; i++) {
+        if (nameLower[i] === queryLower[queryIndex]) {
+          queryIndex++;
+        }
+      }
+      return queryIndex === queryLower.length;
+    });
+    
+    // Sort matches by relevance
+    const sortedMatches = matches.sort((a, b) => {
+      const aName = a.toLowerCase();
+      const bName = b.toLowerCase();
+      
+      // Exact matches first
+      if (aName === queryLower && bName !== queryLower) return -1;
+      if (bName === queryLower && aName !== queryLower) return 1;
+      
+      // Starts with query
+      if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
+      if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
+      
+      // Contains query
+      const aContains = aName.includes(queryLower);
+      const bContains = bName.includes(queryLower);
+      if (aContains && !bContains) return -1;
+      if (bContains && !aContains) return 1;
+      
+      // Alphabetical order
+      return aName.localeCompare(bName);
+    });
+    
+    // Return limited results
+    return sortedMatches.slice(0, 10);
+  };
+
+  // Fuzzy search for existing components (now uses cached data)
+  const handleComponentNameSearch = (value: string) => {
     handleChange('componentName', value);
     
     if (mode === 'create' && value.length >= 2) {
-      setIsSearching(true);
-      try {
-        const results = await ApiService.fuzzySearchComponents(value);
-        setSearchResults(results);
-        setShowSuggestions(results.length > 0);
-      } catch (error) {
-        console.error('Error searching components:', error);
-        setSearchResults([]);
-        setShowSuggestions(false);
-      } finally {
-        setIsSearching(false);
-      }
+      const results = performFuzzySearch(value);
+      setSearchResults(results);
+      setShowSuggestions(results.length > 0);
     } else {
       setSearchResults([]);
       setShowSuggestions(false);
@@ -121,25 +210,23 @@ export function ComponentDialog({
     setIsSubmitting(true);
     
     try {
-      // Create the component with the suggested name
+      // Create the component data with the suggested name
       const componentData = {
         ...formData,
         componentName: componentName
       };
       
-      await ApiService.createComponent(componentData, initialComponent);
+      // Use the onSubmit callback to ensure proper canvas refresh
+      await onSubmit(componentData, mode === 'create' ? { amount: relationshipAmount } : undefined);
       
       toast({
         title: 'Component Created',
-        description: `${componentName} has been created and added to ${initialComponent}`,
+        description: `${componentName} has been added to ${initialComponent}`,
         status: 'success',
         duration: 3000,
       });
       
       onClose();
-      
-      // Trigger a refresh of the canvas or tree view
-      window.location.reload();
     } catch (error) {
       console.error('Error creating component:', error);
       toast({

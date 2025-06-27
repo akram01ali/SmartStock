@@ -25,7 +25,8 @@ from models import (
     ComponentCreate,
     ComponentUpdate,
     ComponentTree,
-    RelationshipCreate
+    RelationshipCreate,
+    TreeNode
 )
 
 app = FastAPI(title="Components Inventory API", version="1.0.0")
@@ -69,29 +70,41 @@ async def get_groups(db: Prisma = Depends(get_db)):
     groups = await db.components.find_many(where={"type": TypeOfComponent.group})
     return groups
 
-@app.get("/tree", response_model=ComponentTree)  # Changed to Relationship model
-async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...)):  # Renamed function
-    tree = await db.relationships.find_many(
-        where={"topComponent": topName},
-
+@app.get("/tree", response_model=ComponentTree)
+async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...)):
+    # Get all relationships for this root
+    relationships = await db.relationships.find_many(
+        where={"root": topName}
     )
 
-    result = dict()
-    toLookUp = list()
+    if not relationships:
+        return ComponentTree(root=topName, nodes=[])
 
-    toLookUp = [element.subComponent for element in tree]
-    result[topName] = [[element.subComponent, element.amount] for element in tree]
+    def build_subtree(parent: str) -> List[TreeNode]:
+        children = []
+        for rel in relationships:
+            if rel.topComponent == parent:
+                child_node = TreeNode(
+                    name=rel.subComponent,
+                    amount=rel.amount,
+                    children=build_subtree(rel.subComponent)
+                )
+                children.append(child_node)
+        return children
 
-    while toLookUp:
-        current = toLookUp.pop(0)
-        if current not in result:
-            result[current] = []
-            tree = await db.relationships.find_many(
-                where={"topComponent": current},
+    # Start with root level components (empty topComponent)
+    root_nodes = []
+    for rel in relationships:
+        if rel.topComponent == "":
+            node = TreeNode(
+                name=rel.subComponent,
+                amount=0,
+                children=build_subtree(rel.subComponent)
             )
-            toLookUp.extend([element.subComponent for element in tree])
-            result[current] = [[element.subComponent, element.amount] for element in tree]
-    return ComponentTree(tree=result)
+            root_nodes.append(node)
+
+    return ComponentTree(root=topName, nodes=root_nodes)
+
 
 @app.get("/components", response_model=Component)
 async def get_component(
@@ -126,21 +139,22 @@ async def create_component(
             where={"componentName": component.componentName}
         )
         if existing:
-            tree = await get_tree(db=db, topName=component.componentName)
-            for comp in tree.tree.keys():
-                await db.relationships.create(
-                    data={
+            print(1)
+    
+            await db.relationships.create(
+                data={
+                
+                    "topComponent": "",
+                    "subComponent": component.componentName,
+                    "root": root,
+                    "amount": 0
                     
-                        "topComponent": root,
-                        "subComponent": comp,
-                        "amount": 0
-                      
-                    }
-                )
+                }
+            )
             return existing
             
-
         else:
+            print(2)
             created = await db.components.create(  
                 data={
                     **component.dict(),
@@ -149,8 +163,9 @@ async def create_component(
             )
             await db.relationships.create(
                 data = {
-                    "topComponent": root,
+                    "topComponent": "",
                     "subComponent": created.componentName,
+                    "root": root,
                     "amount": 0
                 }
             )
@@ -225,7 +240,6 @@ async def delete_component(
     componentName: str,
     deleteOutOfDatabase: bool,
     root: Optional[str] = None,
-    parent: Optional[str] = None,
     db: Prisma = Depends(get_db) 
 ):
     component = await db.components.find_unique(
@@ -266,29 +280,22 @@ async def delete_component(
             )
     else:
         try:
-            if root != parent:
-                await db.relationships.delete(
-                    where={
-                        "topComponent_subComponent": {  
-                            "topComponent": parent,    
-                            "subComponent": componentName
+            # Make adjustments here:
+            await db.relationships.delete_many(
+                where={
+                    "AND": [
+                        {"root": root},  # Fixed syntax
+                        {
+                            "OR": [
+                                {"topComponent": componentName},
+                                {"subComponent": componentName}
+                            ]
                         }
-                    }
-                )
-
-            tree = await get_tree(db=db, topName=componentName)
-
-            for comp in tree.tree.keys():
-                await db.relationships.delete(
-                    where={
-                            "topComponent_subComponent": {
-                                "topComponent": root,
-                                "subComponent": comp
-                            }
-                        
-                    }
-                )
+                    ]
+                }
+            )
             return component
+            
         
         except RecordNotFoundError:
             raise HTTPException(
@@ -307,13 +314,15 @@ async def delete_component(
 async def get_relationship(
     topComponent: str,
     subComponent: str,
+    root: str,
     db: Prisma = Depends(get_db)
 ):
     relationship = await db.relationships.find_unique(
         where={
-            "topComponent_subComponent": {
+            "topComponent_subComponent_root": {
                 "topComponent": topComponent,
-                "subComponent": subComponent
+                "subComponent": subComponent,
+                "root": root
             }
         }
     )
@@ -329,6 +338,53 @@ async def create_relationship(
     db: Prisma = Depends(get_db)  
 ):
     try:
+        # Check if the relationship already exists
+        existing = await db.relationships.find_first(
+            where={
+                "AND": [
+                    {"topComponent": relationship.topComponent},
+                    {"subComponent": relationship.subComponent},
+                    {"root": relationship.root}
+                ]
+            }
+        )
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Relationship between '{relationship.topComponent}' and '{relationship.subComponent}' already exists"
+            )
+        
+
+        # Check if the subComponent is connected to the root
+        connectedToRoot = await db.relationships.find_first(
+            where={
+                "AND": [
+                    {"topComponent": ""},
+                    {"subComponent": relationship.subComponent},
+                    {"root": relationship.root}
+                ]
+            }
+        )
+
+        
+        if connectedToRoot:
+            updated = await db.relationships.update(
+                where={
+                    "topComponent_subComponent_root": {
+                    "topComponent": "",
+                    "subComponent": relationship.subComponent,
+                    "root": relationship.root
+                }
+                },
+                data={
+                    "topComponent": relationship.topComponent,
+                    "amount": int(relationship.amount)
+                }
+            )
+            return updated
+
+        
+        # If the component isn't connected to the root, create a new relationship
         created = await db.relationships.create(  
             data={
                 **relationship.dict()
@@ -346,14 +402,16 @@ async def create_relationship(
 async def delete_relationship(
     topComponent: str,
     subComponent: str,
+    root: str,
     db: Prisma = Depends(get_db)
 ):
     try:
         deleted = await db.relationships.delete(
             where={
-                "topComponent_subComponent": {
+                "topComponent_subComponent_root": {
                     "topComponent": topComponent,
-                    "subComponent": subComponent
+                    "subComponent": subComponent,
+                    "root": root
                 }
             }
         )
@@ -374,9 +432,10 @@ async def update_relationship(
         # Check if relationship exists
         existing = await db.relationships.find_unique(
             where={
-                "topComponent_subComponent": {
+                "topComponent_subComponent_root": {
                     "topComponent": relationship.topComponent,
-                    "subComponent": relationship.subComponent
+                    "subComponent": relationship.subComponent, 
+                    "root": relationship.root
                 }
             }
         )
@@ -390,9 +449,10 @@ async def update_relationship(
         # Update the relationship
         updated = await db.relationships.update(
             where={
-                "topComponent_subComponent": {
+                "topComponent_subComponent_root": {
                     "topComponent": relationship.topComponent,
-                    "subComponent": relationship.subComponent
+                    "subComponent": relationship.subComponent,
+                    "root": relationship.root
                 }
             },
             data={

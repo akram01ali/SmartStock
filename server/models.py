@@ -53,11 +53,18 @@ class ComponentHistory(BaseModel):
 class RelationshipCreate(BaseModel):
     topComponent: str
     subComponent: str
+    root: str
     amount: int
 
 class Relationship(RelationshipCreate):
     class Config:
         from_attributes = True
         
+class TreeNode(BaseModel):
+    name: str
+    amount: int
+    children: List['TreeNode'] = []
+
 class ComponentTree(BaseModel):
-    tree: Dict[str, List[Tuple[str, int]]]
+    root: str
+    nodes: List[TreeNode]

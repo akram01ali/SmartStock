@@ -149,12 +149,36 @@ export class ApiService {
     return { success: true };
   }
 
+  // Method to remove component from subassembly (without deleting from database)
+  static async removeComponentFromSubassembly(componentName, root, parent = null) {
+    const params = new URLSearchParams({
+      componentName,
+      deleteOutOfDatabase: 'false',
+      root
+    });
+    
+    if (parent) {
+      params.append('parent', parent);
+    }
+
+    const response = await fetch(`${API_URL}/components?${params.toString()}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to remove component from subassembly');
+    }
+    
+    return await response.json();
+  }
+
   // Relationships endpoints
-  static async getRelationship(topComponent, subComponent) {
+  static async getRelationship(topComponent, subComponent, root) {
     const response = await fetch(
       `${API_URL}/relationships?topComponent=${encodeURIComponent(
         topComponent,
-      )}&subComponent=${encodeURIComponent(subComponent)}`,
+      )}&subComponent=${encodeURIComponent(subComponent)}&root=${encodeURIComponent(root)}`,
     );
     if (!response.ok) {
       if (response.status === 404) {
@@ -181,17 +205,13 @@ export class ApiService {
     return await response.json();
   }
 
-  static async updateRelationship(topComponent, subComponent, amount) {
+  static async updateRelationship(relationshipData) {
     const response = await fetch(`${API_URL}/relationships`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        topComponent,
-        subComponent,
-        amount: parseInt(amount), // Ensure it's an integer as per schema
-      }),
+      body: JSON.stringify(relationshipData),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -200,9 +220,9 @@ export class ApiService {
     return await response.json();
   }
 
-  static async deleteRelationship(topComponent, subComponent) {
+  static async deleteRelationship(topComponent, subComponent, root) {
     const response = await fetch(
-      `${API_URL}/relationships?topComponent=${topComponent}&subComponent=${subComponent}`,
+      `${API_URL}/relationships?topComponent=${encodeURIComponent(topComponent)}&subComponent=${encodeURIComponent(subComponent)}&root=${encodeURIComponent(root)}`,
       {
         method: 'DELETE',
       },
@@ -283,6 +303,56 @@ export class ApiService {
     } catch (error) {
       console.error('Error performing fuzzy search:', error);
       return [];
+    }
+  }
+
+  // Method to preview deletion impact (simulated based on tree analysis)
+  static async previewDeletionImpact(componentName, rootComponent) {
+    try {
+      // Get the tree to analyze impact
+      const treeResponse = await this.getTree(rootComponent);
+      const treeData = treeResponse.tree;
+      
+      // Find all components that depend on this component
+      const dependentComponents = [];
+      
+      // Check if the component has any children
+      const hasChildren = treeData[componentName] && treeData[componentName].length > 0;
+      const childrenCount = hasChildren ? treeData[componentName].length : 0;
+      
+      // Find all components that use this component as a subcomponent
+      for (const [parent, children] of Object.entries(treeData)) {
+        if (children && children.some(([child]) => child === componentName)) {
+          dependentComponents.push(parent);
+        }
+      }
+      
+      return {
+        componentName,
+        canDelete: true, // Assuming all components can be deleted for now
+        dependentComponents,
+        childrenCount,
+        hasChildren,
+        impact: dependentComponents.length > 0 || hasChildren 
+          ? 'high' 
+          : 'low',
+        message: dependentComponents.length > 0 
+          ? `This component is used by ${dependentComponents.length} other component(s): ${dependentComponents.join(', ')}`
+          : hasChildren 
+            ? `This component has ${childrenCount} child component(s)`
+            : 'This component can be safely deleted'
+      };
+    } catch (error) {
+      console.error('Error previewing deletion impact:', error);
+      return {
+        componentName,
+        canDelete: false,
+        dependentComponents: [],
+        childrenCount: 0,
+        hasChildren: false,
+        impact: 'unknown',
+        message: 'Could not analyze deletion impact'
+      };
     }
   }
 }

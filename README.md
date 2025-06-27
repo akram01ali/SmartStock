@@ -70,3 +70,10 @@ docker rm mydb
 If you need help with database migrations, Prisma, or connecting to the DB, see the relevant sections below or ask for help!
 DATABASE_URL="postgresql://postgres:kamehameha@localhost:5432/mydb"
 VITE_API_URL=http://localhost:8000
+
+After making changes to schema.prisma
+
+```bash
+npx prisma migrate dev --name describe_your_changes
+
+```

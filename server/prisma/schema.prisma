@@ -46,7 +46,13 @@ model ComponentHistory {
 model Relationships {
   topComponent        String
   subComponent        String
+  root                String
   amount              Int
 
-  @@unique([topComponent, subComponent])
+  @@unique([topComponent, subComponent, root])
+}
+
+model Users {
+  username            String @unique
+  password            String
 }

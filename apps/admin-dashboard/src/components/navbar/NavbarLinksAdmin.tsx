@@ -26,9 +26,15 @@ import { MdNotificationsNone, MdInfoOutline } from 'react-icons/md';
 import { IoMdMoon, IoMdSunny } from 'react-icons/io';
 import { FaEthereum } from 'react-icons/fa';
 import routes from 'routes';
+import { useAuth } from 'contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
 export default function HeaderLinks(props: { secondary: boolean }) {
 	const { secondary } = props;
 	const { colorMode, toggleColorMode } = useColorMode();
+	const { user, logout } = useAuth();
+	const navigate = useNavigate();
+
 	// Chakra Color Mode
 	const navbarIcon = useColorModeValue('gray.400', 'white');
 	let menuBg = useColorModeValue('white', 'navy.800');
@@ -43,6 +49,12 @@ export default function HeaderLinks(props: { secondary: boolean }) {
 		'14px 17px 40px 4px rgba(112, 144, 176, 0.06)'
 	);
 	const borderButton = useColorModeValue('secondaryGray.500', 'whiteAlpha.200');
+
+	const handleLogout = () => {
+		logout();
+		navigate('/auth/sign-in');
+	};
+
 	return (
 		<Flex
 			w={{ sm: '100%', md: 'auto' }}
@@ -198,7 +210,7 @@ export default function HeaderLinks(props: { secondary: boolean }) {
 							fontSize='sm'
 							fontWeight='700'
 							color={textColor}>
-							👋&nbsp; Hey, Adela
+							👋&nbsp; Hey, {user?.username || 'User'}
 						</Text>
 					</Flex>
 					<Flex flexDirection='column' p='10px'>
@@ -213,7 +225,8 @@ export default function HeaderLinks(props: { secondary: boolean }) {
 							_focus={{ bg: 'none' }}
 							color='red.400'
 							borderRadius='8px'
-							px='14px'>
+							px='14px'
+							onClick={handleLogout}>
 							<Text fontSize='sm'>Log out</Text>
 						</MenuItem>
 					</Flex>

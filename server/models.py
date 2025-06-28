@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 
 class Measures(str, Enum):
@@ -14,6 +14,28 @@ class TypeOfComponent(str, Enum):
     group = "group"
     component = "component"
     assembly = "assembly"
+
+# Authentication Models
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+class User(BaseModel):
+    username: str
+
+    class Config:
+        from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
 
 class ComponentCreate(BaseModel):
     componentName: str

@@ -10,13 +10,20 @@ import {
   VStack,
   useToast,
   useDisclosure,
+  Badge,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  HStack,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { ApiService } from '../../../services/service';
-import { MdAdd } from 'react-icons/md';
+import { MdAdd, MdInventory, MdWarning, MdTrendingUp, MdAttachMoney } from 'react-icons/md';
 import InventoryComponent from './InventoryComponent';
 import { ComponentDialog } from '../../../components/flowchart/componentDialog';
 import { useSearch } from '../../../contexts/SearchContext';
+import Card from 'components/card/Card';
 
 interface Component {
   componentName: string;
@@ -48,7 +55,12 @@ export default function InventoryPage() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { searchQuery, setSearchQuery } = useSearch();
   const toast = useToast();
-  const bgColor = useColorModeValue('white', 'gray.700');
+  
+  // Chakra Color Mode
+  const textColor = useColorModeValue('secondaryGray.900', 'white');
+  const textColorSecondary = useColorModeValue('secondaryGray.600', 'white');
+  const cardShadow = useColorModeValue('0px 18px 40px rgba(112, 144, 176, 0.12)', 'unset');
+  const brandColor = useColorModeValue('brand.500', 'white');
 
   const fetchInventory = async () => {
     try {
@@ -90,6 +102,11 @@ export default function InventoryPage() {
       component.scannedBy.toLowerCase().includes(query)
     );
   });
+
+  // Calculate statistics
+  const totalItems = inventory.length;
+  const lowStockItems = inventory.filter(item => item.amount < item.triggerMinAmount).length;
+  const totalValue = inventory.reduce((sum, item) => sum + (item.cost * item.amount), 0);
 
   const handleItemClick = (item: Component) => {
     setSelectedComponent(item);
@@ -148,10 +165,35 @@ export default function InventoryPage() {
     }
   };
 
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'printer': return 'blue';
+      case 'group': return 'purple';
+      case 'assembly': return 'green';
+      case 'component': return 'orange';
+      default: return 'gray';
+    }
+  };
+
+  const getTypeGradient = (type: string) => {
+    switch (type) {
+      case 'printer': return 'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)';
+      case 'group': return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      case 'assembly': return 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)';
+      case 'component': return 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)';
+      default: return 'linear-gradient(135deg, #718096 0%, #4a5568 100%)';
+    }
+  };
+
   if (loading) {
     return (
       <Box pt={{ base: '130px', md: '80px', xl: '80px' }}>
-        <Text>Loading Inventory...</Text>
+        <Flex justify="center" align="center" minH="200px">
+          <VStack spacing={4}>
+            <Icon as={MdInventory} w="48px" h="48px" color={brandColor} />
+            <Text fontSize="lg" color={textColorSecondary}>Loading Inventory...</Text>
+          </VStack>
+        </Flex>
       </Box>
     );
   }
@@ -167,11 +209,12 @@ export default function InventoryPage() {
         />
       ) : (
         <Box>
+          {/* Header with Stats */}
           <Flex justify="space-between" align="center" mb={6}>
             <VStack align="start" spacing={2}>
-              <Heading size="lg">Components Inventory</Heading>
+              <Heading size="lg" color={textColor}>Components Inventory</Heading>
               {searchQuery && (
-                <Text color="gray.500" fontSize="sm">
+                <Text color={textColorSecondary} fontSize="sm">
                   Showing {filteredInventory.length} of {inventory.length} components
                   {searchQuery && ` matching "${searchQuery}"`}
                 </Text>
@@ -182,81 +225,188 @@ export default function InventoryPage() {
               colorScheme="blue"
               size="lg"
               onClick={onOpen}
-              _hover={{ transform: 'translateY(-2px)' }}
-              transition="all 0.2s"
+              boxShadow={cardShadow}
+              _hover={{ 
+                transform: 'translateY(-2px)',
+                boxShadow: '0px 20px 60px rgba(112, 144, 176, 0.25)'
+              }}
+              transition="all 0.3s ease"
             >
               Add Component
             </Button>
           </Flex>
 
-          {filteredInventory.length === 0 && searchQuery ? (
-            <Box textAlign="center" py={10}>
-              <Text fontSize="lg" color="gray.500">
-                No components found matching "{searchQuery}"
-              </Text>
-              <Text fontSize="sm" color="gray.400" mt={2}>
-                Try adjusting your search terms or clear the search to see all components.
-              </Text>
-            </Box>
-          ) : (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-              {filteredInventory.map((item: Component) => (
+          {/* Statistics Cards */}
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} mb={8}>
+            <Card boxShadow={cardShadow}>
+              <Flex align="center" justify="space-between">
+                <Stat>
+                  <StatLabel color={textColorSecondary}>Total Items</StatLabel>
+                  <StatNumber color={textColor}>{totalItems}</StatNumber>
+                  <StatHelpText color={textColorSecondary}>Components in stock</StatHelpText>
+                </Stat>
                 <Box
+                  bg="linear-gradient(135deg, #868CFF 0%, #4318FF 100%)"
+                  borderRadius="20px"
+                  p="15px"
+                >
+                  <Icon as={MdInventory} w="24px" h="24px" color="white" />
+                </Box>
+              </Flex>
+            </Card>
+
+            <Card boxShadow={cardShadow}>
+              <Flex align="center" justify="space-between">
+                <Stat>
+                  <StatLabel color={textColorSecondary}>Low Stock Alert</StatLabel>
+                  <StatNumber color={lowStockItems > 0 ? 'red.500' : textColor}>
+                    {lowStockItems}
+                  </StatNumber>
+                  <StatHelpText color={textColorSecondary}>Items below minimum</StatHelpText>
+                </Stat>
+                <Box
+                  bg={lowStockItems > 0 ? 'linear-gradient(135deg, #F56565 0%, #E53E3E 100%)' : 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)'}
+                  borderRadius="20px"
+                  p="15px"
+                >
+                  <Icon as={MdWarning} w="24px" h="24px" color="white" />
+                </Box>
+              </Flex>
+            </Card>
+
+            <Card boxShadow={cardShadow}>
+              <Flex align="center" justify="space-between">
+                <Stat>
+                  <StatLabel color={textColorSecondary}>Total Value</StatLabel>
+                  <StatNumber color={textColor}>€{totalValue.toFixed(2)}</StatNumber>
+                  <StatHelpText color={textColorSecondary}>Inventory worth</StatHelpText>
+                </Stat>
+                <Box
+                  bg="linear-gradient(135deg, #48BB78 0%, #38A169 100%)"
+                  borderRadius="20px"
+                  p="15px"
+                >
+                  <Icon as={MdAttachMoney} w="24px" h="24px" color="white" />
+                </Box>
+              </Flex>
+            </Card>
+          </SimpleGrid>
+
+          {/* Inventory Grid */}
+          {filteredInventory.length === 0 && searchQuery ? (
+            <Card boxShadow={cardShadow} p={10}>
+              <VStack spacing={4}>
+                <Icon as={MdInventory} w="48px" h="48px" color="gray.400" />
+                <Text fontSize="lg" color="gray.500" textAlign="center">
+                  No components found matching "{searchQuery}"
+                </Text>
+                <Text fontSize="sm" color="gray.400" textAlign="center">
+                  Try adjusting your search terms or clear the search to see all components.
+                </Text>
+              </VStack>
+            </Card>
+          ) : (
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
+              {filteredInventory.map((item: Component) => (
+                <Card
                   key={item.componentName}
                   onClick={() => handleItemClick(item)}
-                  borderWidth="1px"
-                  borderRadius="lg"
-                  p={6}
                   cursor="pointer"
-                  bg={bgColor}
+                  boxShadow={cardShadow}
+                  position="relative"
+                  overflow="hidden"
                   _hover={{
-                    transform: 'translateY(-4px)',
-                    shadow: 'lg',
+                    transform: 'translateY(-8px)',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0px 20px 60px rgba(112, 144, 176, 0.25)',
                   }}
-                  transition="all 0.2s"
+                  transition="all 0.3s ease"
                 >
-                  <VStack align="stretch" spacing={4}>
+                  {/* Card Header with Gradient */}
+                  <Box
+                    bg={getTypeGradient(item.type)}
+                    p={4}
+                    borderRadius="20px 20px 0 0"
+                    mb={4}
+                    position="relative"
+                  >
                     <Flex justify="space-between" align="center">
-                      <Heading size="md">{item.componentName}</Heading>
-                      <Text
+                      <Text color="white" fontSize="lg" fontWeight="bold">
+                        {item.componentName}
+                      </Text>
+                      <Badge 
+                        bg="rgba(255, 255, 255, 0.2)" 
+                        color="white" 
+                        borderRadius="full"
                         px={3}
                         py={1}
-                        borderRadius="full"
-                        bg={
-                          item.amount < item.triggerMinAmount
-                            ? 'red.100'
-                            : 'green.100'
-                        }
-                        color={
-                          item.amount < item.triggerMinAmount
-                            ? 'red.700'
-                            : 'green.700'
-                        }
-                        fontSize="sm"
-                        fontWeight="medium"
+                        backdropFilter="blur(10px)"
                       >
                         {item.type}
-                      </Text>
+                      </Badge>
                     </Flex>
+                  </Box>
 
+                  {/* Card Content */}
+                  <VStack align="stretch" spacing={4} p={4} pt={0}>
                     <SimpleGrid columns={2} spacing={4}>
                       <Box>
-                        <Text color="gray.500" fontSize="sm">
+                        <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
                           Amount
                         </Text>
-                        <Text fontWeight="bold">
-                          {item.amount} {item.measure}
+                        <Text color={textColor} fontWeight="bold" fontSize="lg">
+                          {item.amount}
+                        </Text>
+                        <Text color={textColorSecondary} fontSize="xs">
+                          {item.measure}
                         </Text>
                       </Box>
                       <Box>
-                        <Text color="gray.500" fontSize="sm">
+                        <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
                           Cost
                         </Text>
-                        <Text fontWeight="bold">€{item.cost}</Text>
+                        <Text color={textColor} fontWeight="bold" fontSize="lg">
+                          €{item.cost}
+                        </Text>
+                        <Text color={textColorSecondary} fontSize="xs">
+                          per unit
+                        </Text>
                       </Box>
                     </SimpleGrid>
+
+                    {/* Stock Status */}
+                    <Box>
+                      <HStack justify="space-between" mb={2}>
+                        <Text color={textColorSecondary} fontSize="sm">
+                          Stock Level
+                        </Text>
+                        {item.amount < item.triggerMinAmount && (
+                          <Badge colorScheme="red" size="sm">
+                            Low Stock
+                          </Badge>
+                        )}
+                      </HStack>
+                      <Box bg="gray.100" borderRadius="full" h="6px" overflow="hidden">
+                        <Box
+                          bg={item.amount < item.triggerMinAmount ? 'red.400' : 'green.400'}
+                          h="100%"
+                          w={`${Math.min((item.amount / item.triggerMinAmount) * 100, 100)}%`}
+                          transition="all 0.3s ease"
+                        />
+                      </Box>
+                    </Box>
+
+                    {/* Additional Info */}
+                    <VStack align="start" spacing={1}>
+                      <Text color={textColorSecondary} fontSize="xs">
+                        Supplier: <Text as="span" color={textColor} fontWeight="500">{item.supplier}</Text>
+                      </Text>
+                      <Text color={textColorSecondary} fontSize="xs">
+                        Last scanned: <Text as="span" color={textColor} fontWeight="500">{new Date(item.lastScanned).toLocaleDateString()}</Text>
+                      </Text>
+                    </VStack>
                   </VStack>
-                </Box>
+                </Card>
               ))}
             </SimpleGrid>
           )}

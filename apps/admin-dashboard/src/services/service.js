@@ -1,8 +1,23 @@
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 export class ApiService {
+  static getAuthHeaders() {
+    const token = localStorage.getItem('authToken');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  }
+
   static async handleResponse(response) {
     if (!response.ok) {
+      if (response.status === 401) {
+        // Token expired or invalid, clear auth data and redirect to login
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authUser');
+        window.location.href = '/login';
+        throw new Error('Authentication required');
+      }
       throw new Error((await response.text()) || response.statusText);
     }
     const data = await response.json();
@@ -12,7 +27,9 @@ export class ApiService {
   // Components endpoints
   static async getPrinters() {
     try {
-      const response = await fetch(`${API_URL}/printers`);
+      const response = await fetch(`${API_URL}/printers`, {
+        headers: this.getAuthHeaders()
+      });
       const data = await this.handleResponse(response);
       return data || [];
     } catch (error) {
@@ -23,7 +40,9 @@ export class ApiService {
 
   static async getGroups() {
     try {
-      const response = await fetch(`${API_URL}/groups`);
+      const response = await fetch(`${API_URL}/groups`, {
+        headers: this.getAuthHeaders()
+      });
       const data = await this.handleResponse(response);
       return data || [];
     } catch (error) {
@@ -34,7 +53,9 @@ export class ApiService {
 
   static async getAssemblies() {
     try {
-      const response = await fetch(`${API_URL}/assemblies`);
+      const response = await fetch(`${API_URL}/assemblies`, {
+        headers: this.getAuthHeaders()
+      });
       const data = await this.handleResponse(response);
       return data || [];
     } catch (error) {
@@ -45,7 +66,9 @@ export class ApiService {
 
   static async getTree(topName) {
     try {
-      const response = await fetch(`${API_URL}/tree?topName=${topName}`);
+      const response = await fetch(`${API_URL}/tree?topName=${topName}`, {
+        headers: this.getAuthHeaders()
+      });
       const data = await this.handleResponse(response);
       return data || { tree: {} };
     } catch (error) {
@@ -57,6 +80,9 @@ export class ApiService {
   static async getComponent(componentName) {
     const response = await fetch(
       `${API_URL}/components?componentName=${componentName}`,
+      {
+        headers: this.getAuthHeaders()
+      }
     );
     if (!response.ok) {
       throw new Error('Component not found');
@@ -69,9 +95,7 @@ export class ApiService {
       `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(componentData),
       },
     );
@@ -87,9 +111,7 @@ export class ApiService {
       `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           ...printerData,
           type: 'printer',
@@ -108,9 +130,7 @@ export class ApiService {
       `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           ...groupData,
           type: 'group',
@@ -129,9 +149,7 @@ export class ApiService {
       `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           ...assemblyData,
           type: 'assembly',
@@ -160,9 +178,7 @@ export class ApiService {
       `${API_URL}/components/${encodeURIComponent(component.componentName)}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           amount: component.amount,
           measure: component.measure,
@@ -204,6 +220,7 @@ export class ApiService {
 
     const response = await fetch(`${API_URL}/components?${params.toString()}`, {
       method: 'DELETE',
+      headers: this.getAuthHeaders()
     });
 
     if (!response.ok) {
@@ -237,6 +254,7 @@ export class ApiService {
 
     const response = await fetch(`${API_URL}/components?${params.toString()}`, {
       method: 'DELETE',
+      headers: this.getAuthHeaders()
     });
 
     if (!response.ok) {
@@ -257,6 +275,9 @@ export class ApiService {
       )}&subComponent=${encodeURIComponent(
         subComponent,
       )}&root=${encodeURIComponent(root)}`,
+      {
+        headers: this.getAuthHeaders()
+      }
     );
     if (!response.ok) {
       if (response.status === 404) {
@@ -272,9 +293,7 @@ export class ApiService {
   static async createRelationship(relationshipData) {
     const response = await fetch(`${API_URL}/relationships`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(relationshipData),
     });
     if (!response.ok) {
@@ -286,9 +305,7 @@ export class ApiService {
   static async updateRelationship(relationshipData) {
     const response = await fetch(`${API_URL}/relationships`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(relationshipData),
     });
     if (!response.ok) {
@@ -307,6 +324,7 @@ export class ApiService {
       )}&root=${encodeURIComponent(root)}`,
       {
         method: 'DELETE',
+        headers: this.getAuthHeaders()
       },
     );
     if (!response.ok) {
@@ -316,7 +334,9 @@ export class ApiService {
   }
 
   static async getAllComponents() {
-    const response = await fetch(`${API_URL}/all_components`);
+    const response = await fetch(`${API_URL}/all_components`, {
+      headers: this.getAuthHeaders()
+    });
     const data = await this.handleResponse(response);
     return data;
   }
@@ -325,7 +345,9 @@ export class ApiService {
   static async fuzzySearchComponents(query) {
     try {
       // Get all components from the existing endpoint
-      const response = await fetch(`${API_URL}/all_components`);
+      const response = await fetch(`${API_URL}/all_components`, {
+        headers: this.getAuthHeaders()
+      });
       const data = await this.handleResponse(response);
       const allComponents = data || [];
 

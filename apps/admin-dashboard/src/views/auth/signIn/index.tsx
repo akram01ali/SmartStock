@@ -22,7 +22,7 @@
 */
 
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, Navigate, useNavigate } from "react-router-dom";
 // Chakra imports
 import {
   Box,
@@ -39,6 +39,8 @@ import {
   Text,
   useColorModeValue,
   Image,
+  Alert,
+  AlertIcon,
 } from "@chakra-ui/react";
 // Custom components
 import { HSeparator } from "components/separator/Separator";
@@ -49,6 +51,8 @@ import { FcGoogle } from "react-icons/fc";
 import { MdOutlineRemoveRedEye } from "react-icons/md";
 import { RiEyeCloseLine } from "react-icons/ri";
 import iacsLogo from "assets/img/iacs.png";
+// Auth context
+import { useAuth } from "contexts/AuthContext";
 
 function SignIn() {
   // Chakra color mode
@@ -68,7 +72,38 @@ function SignIn() {
     { bg: "whiteAlpha.200" }
   );
   const [show, setShow] = React.useState(false);
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [rememberMe, setRememberMe] = React.useState(false);
+  
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
   const handleClick = () => setShow(!show);
+
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!username || !password) {
+      setError('Please enter both username and password');
+      return;
+    }
+
+    const success = await login(username, password);
+    if (success) {
+      navigate('/admin/default');
+    } else {
+      setError('Invalid username or password');
+    }
+  };
+
   return (
     <DefaultAuth illustrationBackground={illustration} image={illustration}>
       {/* IACS Logo at the top-right */}
@@ -93,100 +128,119 @@ function SignIn() {
             fontWeight='400'
             fontSize='md'
             textAlign='center'>
-            Enter your email and password to sign in!
+            Enter your username and password to sign in!
           </Text>
-          <Flex
-            zIndex='2'
-            direction='column'
-            w='100%'
-            background='transparent'
-            borderRadius='15px'
-            mb={{ base: "20px", md: "auto" }}>
-            <FormControl>
-              <FormLabel
-                display='flex'
-                ms='4px'
-                fontSize='sm'
-                fontWeight='500'
-                color={textColor}
-                mb='8px'>
-                Email<Text color={brandStars}>*</Text>
-              </FormLabel>
-              <Input
-                isRequired={true}
-                variant='auth'
-                fontSize='sm'
-                ms={{ base: "0px", md: "0px" }}
-                type='email'
-                placeholder='mail@simmmple.com'
-                mb='24px'
-                fontWeight='500'
-                size='lg'
-              />
-              <FormLabel
-                ms='4px'
-                fontSize='sm'
-                fontWeight='500'
-                color={textColor}
-                display='flex'>
-                Password<Text color={brandStars}>*</Text>
-              </FormLabel>
-              <InputGroup size='md'>
+          
+          {error && (
+            <Alert status="error" borderRadius="lg" mb="24px">
+              <AlertIcon />
+              {error}
+            </Alert>
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <Flex
+              zIndex='2'
+              direction='column'
+              w='100%'
+              background='transparent'
+              borderRadius='15px'
+              mb={{ base: "20px", md: "auto" }}>
+              <FormControl>
+                <FormLabel
+                  display='flex'
+                  ms='4px'
+                  fontSize='sm'
+                  fontWeight='500'
+                  color={textColor}
+                  mb='8px'>
+                  Username<Text color={brandStars}>*</Text>
+                </FormLabel>
                 <Input
                   isRequired={true}
-                  fontSize='sm'
-                  placeholder='Min. 8 characters'
-                  mb='24px'
-                  size='lg'
-                  type={show ? "text" : "password"}
                   variant='auth'
+                  fontSize='sm'
+                  ms={{ base: "0px", md: "0px" }}
+                  type='text'
+                  placeholder='Enter your username'
+                  mb='24px'
+                  fontWeight='500'
+                  size='lg'
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                 />
-                <InputRightElement display='flex' alignItems='center' mt='4px'>
-                  <Icon
-                    color={textColorSecondary}
-                    _hover={{ cursor: "pointer" }}
-                    as={(show ? RiEyeCloseLine : MdOutlineRemoveRedEye) as any}
-                    onClick={handleClick}
-                  />
-                </InputRightElement>
-              </InputGroup>
-              <Flex justifyContent='space-between' align='center' mb='24px'>
-                <FormControl display='flex' alignItems='center'>
-                  <Checkbox
-                    id='remember-login'
-                    colorScheme='brandScheme'
-                    me='10px'
-                  />
-                  <FormLabel
-                    htmlFor='remember-login'
-                    mb='0'
-                    fontWeight='normal'
-                    color={textColor}
-                    fontSize='sm'>
-                    Keep me logged in
-                  </FormLabel>
-                </FormControl>
-                <NavLink to='/auth/forgot-password'>
-                  <Text
-                    color={textColorBrand}
+                <FormLabel
+                  ms='4px'
+                  fontSize='sm'
+                  fontWeight='500'
+                  color={textColor}
+                  display='flex'>
+                  Password<Text color={brandStars}>*</Text>
+                </FormLabel>
+                <InputGroup size='md'>
+                  <Input
+                    isRequired={true}
                     fontSize='sm'
-                    w='124px'
-                    fontWeight='500'>
-                    Forgot password?
-                  </Text>
-                </NavLink>
-              </Flex>
-              <Button
-                fontSize='sm'
-                variant='brand'
-                fontWeight='500'
-                w='100%'
-                h='50'
-                mb='24px'>
-                Sign In
-              </Button>
-            </FormControl>
-          </Flex>
+                    placeholder='Enter your password'
+                    mb='24px'
+                    size='lg'
+                    type={show ? "text" : "password"}
+                    variant='auth'
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <InputRightElement display='flex' alignItems='center' mt='4px'>
+                    <Icon
+                      color={textColorSecondary}
+                      _hover={{ cursor: "pointer" }}
+                      as={(show ? RiEyeCloseLine : MdOutlineRemoveRedEye) as any}
+                      onClick={handleClick}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+                <Flex justifyContent='space-between' align='center' mb='24px'>
+                  <FormControl display='flex' alignItems='center'>
+                    <Checkbox
+                      id='remember-login'
+                      colorScheme='brandScheme'
+                      me='10px'
+                      isChecked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    <FormLabel
+                      htmlFor='remember-login'
+                      mb='0'
+                      fontWeight='normal'
+                      color={textColor}
+                      fontSize='sm'>
+                      Keep me logged in
+                    </FormLabel>
+                  </FormControl>
+                  <NavLink to='/auth/forgot-password'>
+                    <Text
+                      color={textColorBrand}
+                      fontSize='sm'
+                      w='124px'
+                      fontWeight='500'>
+                      Forgot password?
+                    </Text>
+                  </NavLink>
+                </Flex>
+                <Button
+                  type="submit"
+                  fontSize='sm'
+                  variant='brand'
+                  fontWeight='500'
+                  w='100%'
+                  h='50'
+                  mb='24px'
+                  isLoading={isLoading}
+                  loadingText="Signing in...">
+                  Sign In
+                </Button>
+              </FormControl>
+            </Flex>
+          </form>
         </Box>
       </Flex>
     </DefaultAuth>

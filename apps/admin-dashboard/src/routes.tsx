@@ -65,16 +65,6 @@ const routes = [
     ),
     component: <InventoryPage />,
   },
-
-  {
-    name: 'Sign In',
-    layout: '/auth',
-    path: '/sign-in',
-    icon: (
-      <Icon as={MdLock as any} width="20px" height="20px" color="inherit" />
-    ),
-    component: <SignInCentered />,
-  },
 ];
 
 // Hidden routes (not shown in sidebar but accessible via navigation)
@@ -84,6 +74,15 @@ export const hiddenRoutes = [
     layout: '/admin',
     path: '/graph/:componentName',
     component: <Graph />,
+  },
+  {
+    name: 'Sign In',
+    layout: '/auth',
+    path: '/sign-in',
+    icon: (
+      <Icon as={MdLock as any} width="20px" height="20px" color="inherit" />
+    ),
+    component: <SignInCentered />,
   },
 ];
 

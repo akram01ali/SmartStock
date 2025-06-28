@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import routes from 'routes';
+import routes, { hiddenRoutes } from 'routes';
 
 // Chakra imports
 import { Box, useColorModeValue } from '@chakra-ui/react';
@@ -20,6 +20,21 @@ export default function Auth() {
       if (route.layout === '/auth') {
         return (
           <Route path={`${route.path}`} element={route.component} key={key} />
+        );
+      } else {
+        return null;
+      }
+    });
+  };
+  const getHiddenRoutes = (routes: any[]): any => {
+    return routes.map((route: any, key: any) => {
+      if (route.layout === '/auth') {
+        return (
+          <Route
+            path={`${route.path}`}
+            element={route.component}
+            key={`hidden-${key}`}
+          />
         );
       } else {
         return null;
@@ -52,9 +67,10 @@ export default function Auth() {
             <Box mx="auto" minH="100vh">
               <Routes>
                 {getRoutes(routes)}
+                {getHiddenRoutes(hiddenRoutes)}
                 <Route
                   path="/"
-                  element={<Navigate to="/auth/sign-in/default" replace />}
+                  element={<Navigate to="/auth/sign-in" replace />}
                 />
               </Routes>
             </Box>

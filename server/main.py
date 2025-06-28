@@ -1,21 +1,25 @@
 import sys
 from pathlib import Path
 from fastapi import Body
-from datetime import datetime
+from datetime import datetime, timedelta
 from copy import deepcopy
 
 # Add the prisma directory to Python path
 prisma_path = Path(__file__).parent / "prisma"
 sys.path.insert(0, str(prisma_path))
 
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from prisma import Client, Prisma
 from prisma.enums import Measures, TypeOfComponent
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import asyncio
 from prisma.errors import RecordNotFoundError
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+import os
 
 # Import Pydantic models
 from models import (
@@ -26,8 +30,24 @@ from models import (
     ComponentUpdate,
     ComponentTree,
     RelationshipCreate,
-    TreeNode
+    TreeNode,
+    UserLogin,
+    UserCreate,
+    User,
+    Token,
+    TokenData
 )
+
+# JWT Configuration
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-this-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Security scheme
+security = HTTPBearer()
 
 app = FastAPI(title="Components Inventory API", version="1.0.0")
 
@@ -47,6 +67,58 @@ async def get_db():
         await prisma.connect()
     return prisma
 
+# Authentication helper functions
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_user(username: str, db: Prisma):
+    try:
+        user = await db.users.find_unique(where={"username": username})
+        return user
+    except:
+        return None
+
+async def authenticate_user(username: str, password: str, db: Prisma):
+    user = await get_user(username, db)
+    if not user:
+        return False
+    if not verify_password(password, user.password):
+        return False
+    return user
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Prisma = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    user = await get_user(username=token_data.username, db=db)
+    if user is None:
+        raise credentials_exception
+    return user
+
 @app.on_event("startup")
 async def startup():
     await prisma.connect()
@@ -57,26 +129,71 @@ async def shutdown():
     await prisma.disconnect()
     print("Disconnected from database")
 
+# Authentication Endpoints
+@app.post("/register", response_model=User)
+async def register(user: UserCreate, db: Prisma = Depends(get_db)):
+    # Check if user already exists
+    existing_user = await get_user(user.username, db)
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already registered"
+        )
+    
+    # Hash password and create user
+    hashed_password = get_password_hash(user.password)
+    try:
+        created_user = await db.users.create(
+            data={
+                "username": user.username,
+                "password": hashed_password
+            }
+        )
+        return User(username=created_user.username)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not create user: {str(e)}"
+        )
+
+@app.post("/login", response_model=Token)
+async def login(user_credentials: UserLogin, db: Prisma = Depends(get_db)):
+    user = await authenticate_user(user_credentials.username, user_credentials.password, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 # Endpoints for Components:
 ## GET
 @app.get("/printers", response_model=list[Component])
-async def get_printers(db: Prisma = Depends(get_db)):
+async def get_printers(db: Prisma = Depends(get_db), current_user: User = Depends(get_current_user)):
     printers = await db.components.find_many(where={"type": TypeOfComponent.printer})
     return printers
 
 @app.get("/groups", response_model=List[Component])
-async def get_groups(db: Prisma = Depends(get_db)):
+async def get_groups(db: Prisma = Depends(get_db), current_user: User = Depends(get_current_user)):
     groups = await db.components.find_many(where={"type": TypeOfComponent.group})
     return groups
 
 @app.get("/assemblies", response_model=List[Component])
-async def get_assemblies(db: Prisma = Depends(get_db)):
+async def get_assemblies(db: Prisma = Depends(get_db), current_user: User = Depends(get_current_user)):
     assemblies = await db.components.find_many(where={"type": TypeOfComponent.assembly})
     return assemblies
 
 @app.get("/tree", response_model=ComponentTree)
-async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...)):
+async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...), current_user: User = Depends(get_current_user)):
     # Get all relationships for this root
     relationships = await db.relationships.find_many(
         where={"root": topName}
@@ -113,7 +230,7 @@ async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...)):
 
 @app.get("/components", response_model=Component)
 async def get_component(
-    componentName: str, db: Prisma = Depends(get_db)
+    componentName: str, db: Prisma = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     component = await db.components.find_first(where={"componentName": componentName})
     if not component:
@@ -122,8 +239,7 @@ async def get_component(
 
 @app.get("/all_components", response_model=List[Component])
 async def get_all_components(
-    db: Prisma = Depends(get_db),
-
+    db: Prisma = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     components = await db.components.find_many()
     if not components:
@@ -136,7 +252,8 @@ async def get_all_components(
 async def create_component(
     root: str,
     component: ComponentCreate = Body(...), 
-    db: Prisma = Depends(get_db)
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
         existing = await db.components.find_unique(
@@ -220,7 +337,8 @@ Body:
 async def update_component(
     component_name: str,
     component: ComponentUpdate = Body(...),
-    db: Prisma = Depends(get_db)
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
         # First check if component exists
@@ -260,7 +378,8 @@ async def delete_component(
     componentName: str,
     deleteOutOfDatabase: bool,
     root: Optional[str] = None,
-    db: Prisma = Depends(get_db) 
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     component = await db.components.find_unique(
                 where={"componentName": componentName}
@@ -335,7 +454,8 @@ async def get_relationship(
     topComponent: str,
     subComponent: str,
     root: str,
-    db: Prisma = Depends(get_db)
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     relationship = await db.relationships.find_unique(
         where={
@@ -355,7 +475,8 @@ async def get_relationship(
 @app.post("/relationships", response_model=Relationship)
 async def create_relationship(
     relationship: RelationshipCreate = Body(...), 
-    db: Prisma = Depends(get_db)  
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
         # Check if the relationship already exists
@@ -423,7 +544,8 @@ async def delete_relationship(
     topComponent: str,
     subComponent: str,
     root: str,
-    db: Prisma = Depends(get_db)
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
         deleted = await db.relationships.delete(
@@ -446,7 +568,8 @@ async def delete_relationship(
 @app.put("/relationships", response_model=Relationship)
 async def update_relationship(
     relationship: RelationshipCreate = Body(...),
-    db: Prisma = Depends(get_db)
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
         # Check if relationship exists

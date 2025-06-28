@@ -14,19 +14,7 @@ function AuthIllustration(props: { children: ReactNode; illustrationBackground: 
 	// Chakra color mode
 	return (
 		<Flex position='relative' h='100vh' align='center' justify='center' direction='column'>
-			<NavLink
-				to='/admin'
-				style={() => ({
-					width: 'fit-content',
-					marginTop: '40px'
-				})}>
-				<Flex align='center' ps={{ base: '25px', lg: '0px' }} pt={{ lg: '0px', xl: '0px' }} w='fit-content'>
-					<Icon as={FaChevronLeft} me='12px' h='13px' w='8px' color='#718096' />
-					<Text ms='0px' fontSize='sm' color='secondaryGray.600'>
-						Back to Simmmple
-					</Text>
-				</Flex>
-			</NavLink>
+
 			{children}
 			<Footer />
 			<FixedPlugin />

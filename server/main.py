@@ -70,6 +70,11 @@ async def get_groups(db: Prisma = Depends(get_db)):
     groups = await db.components.find_many(where={"type": TypeOfComponent.group})
     return groups
 
+@app.get("/assemblies", response_model=List[Component])
+async def get_assemblies(db: Prisma = Depends(get_db)):
+    assemblies = await db.components.find_many(where={"type": TypeOfComponent.assembly})
+    return assemblies
+
 @app.get("/tree", response_model=ComponentTree)
 async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...)):
     # Get all relationships for this root
@@ -134,44 +139,59 @@ async def create_component(
     db: Prisma = Depends(get_db)
 ):
     try:
-        # Check if the component already exists
         existing = await db.components.find_unique(
             where={"componentName": component.componentName}
         )
+        
         if existing:
-            print(1)
-    
-            await db.relationships.create(
-                data={
+            if root:
+                existing_rel = await db.relationships.find_first(
+                    where={
+                        "AND": [
+                            {"topComponent": ""},
+                            {"subComponent": component.componentName},
+                            {"root": root}
+                        ]
+                    }
+                )
                 
-                    "topComponent": "",
-                    "subComponent": component.componentName,
-                    "root": root,
-                    "amount": 0
-                    
-                }
-            )
-            return existing
-            
+                if not existing_rel:
+                    await db.relationships.create(
+                        data={
+                            "topComponent": "",
+                            "subComponent": component.componentName,
+                            "root": root,
+                            "amount": 0
+                        }
+                    )
+                return existing
+                
         else:
-            print(2)
             created = await db.components.create(  
                 data={
                     **component.dict(),
                     "lastScanned": datetime.utcnow()
                 }
             )
-            await db.relationships.create(
-                data = {
-                    "topComponent": "",
-                    "subComponent": created.componentName,
-                    "root": root,
-                    "amount": 0
-                }
-            )
-
- 
+            
+            try:
+                if root:
+                    await db.relationships.create(
+                        data={
+                            "topComponent": "",
+                            "subComponent": created.componentName,
+                            "root": root,
+                            "amount": 0
+                        }
+                    )
+            except Exception as rel_error:
+                await db.components.delete(
+                    where={"componentName": created.componentName}
+                )
+                raise Exception(f"Failed to create relationship: {str(rel_error)}")
+                
             return created
+            
     except Exception as e:
         raise HTTPException(
             status_code=400,

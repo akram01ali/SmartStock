@@ -35,7 +35,7 @@ interface ComponentData {
   triggerMinAmount: number;
   supplier: string;
   cost: number;
-  type: 'printer' | 'group' | 'component';
+  type: 'printer' | 'group' | 'component' | 'assembly';
 }
 
 interface ComponentDialogProps {
@@ -449,6 +449,7 @@ export function ComponentDialog({
                   <option value="printer">Printer</option>
                   <option value="group">Group</option>
                   <option value="component">Component</option>
+                  <option value="assembly">Assembly</option>
                 </Select>
               </FormControl>
             </VStack>

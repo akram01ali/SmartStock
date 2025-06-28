@@ -18,7 +18,9 @@ enum Measures {
 enum TypeOfComponent {
   printer
   group
+  assembly
   component
+
 }
 
 model Components {

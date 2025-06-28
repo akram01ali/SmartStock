@@ -13,6 +13,7 @@ class TypeOfComponent(str, Enum):
     printer = "printer"
     group = "group"
     component = "component"
+    assembly = "assembly"
 
 class ComponentCreate(BaseModel):
     componentName: str

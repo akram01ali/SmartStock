@@ -10,6 +10,7 @@ import {
   MdBuild,
   MdAutoGraph,
   MdDashboard,
+  MdInventory,
 } from 'react-icons/md';
 
 // Admin Imports
@@ -20,6 +21,7 @@ import DataTables from 'views/admin/dataTables';
 import RTL from 'views/admin/rtl';
 import ComponentsPage from 'views/admin/components/ComponentsPage';
 import Graph from 'views/admin/graph/graph';
+import InventoryPage from 'views/admin/inventory/InventoryPage';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -30,7 +32,12 @@ const routes = [
     layout: '/admin',
     path: '/default',
     icon: (
-      <Icon as={MdDashboard as any} width="20px" height="20px" color="inherit" />
+      <Icon
+        as={MdDashboard as any}
+        width="20px"
+        height="20px"
+        color="inherit"
+      />
     ),
     component: <MainDashboard />,
   },
@@ -42,6 +49,21 @@ const routes = [
       <Icon as={MdBuild as any} width="20px" height="20px" color="inherit" />
     ),
     component: <ComponentsPage />,
+  },
+
+  {
+    name: 'Inventory',
+    layout: '/admin',
+    path: '/inventory',
+    icon: (
+      <Icon
+        as={MdInventory as any}
+        width="20px"
+        height="20px"
+        color="inherit"
+      />
+    ),
+    component: <InventoryPage />,
   },
 
   {

@@ -32,6 +32,17 @@ export class ApiService {
     }
   }
 
+  static async getAssemblies() {
+    try {
+      const response = await fetch(`${API_URL}/assemblies`);
+      const data = await this.handleResponse(response);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching assemblies:', error);
+      return [];
+    }
+  }
+
   static async getTree(topName) {
     try {
       const response = await fetch(`${API_URL}/tree?topName=${topName}`);
@@ -54,13 +65,16 @@ export class ApiService {
   }
 
   static async createComponent(componentData, rootComponent) {
-    const response = await fetch(`${API_URL}/components?root=${encodeURIComponent(rootComponent)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(componentData),
       },
-      body: JSON.stringify(componentData),
-    });
+    );
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to create component');
@@ -69,16 +83,19 @@ export class ApiService {
   }
 
   static async createPrinter(printerData, rootComponent) {
-    const response = await fetch(`${API_URL}/components?root=${encodeURIComponent(rootComponent)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...printerData,
+          type: 'printer',
+        }),
       },
-      body: JSON.stringify({
-        ...printerData,
-        type: 'printer'
-      }),
-    });
+    );
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to create printer');
@@ -87,16 +104,19 @@ export class ApiService {
   }
 
   static async createGroup(groupData, rootComponent) {
-    const response = await fetch(`${API_URL}/components?root=${encodeURIComponent(rootComponent)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...groupData,
+          type: 'group',
+        }),
       },
-      body: JSON.stringify({
-        ...groupData,
-        type: 'group'
-      }),
-    });
+    );
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to create group');
@@ -104,30 +124,80 @@ export class ApiService {
     return await response.json();
   }
 
-  static async updateComponent(componentName, updateData) {
-    const response = await fetch(`${API_URL}/components/${componentName}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
+  static async createAssembly(assemblyData, rootComponent) {
+    const response = await fetch(
+      `${API_URL}/components?root=${encodeURIComponent(rootComponent)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...assemblyData,
+          type: 'assembly',
+        }),
       },
-      body: JSON.stringify(updateData),
-    });
+    );
     if (!response.ok) {
-      throw new Error('Failed to update component');
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create assembly');
     }
     return await response.json();
   }
 
-  static async deleteComponent(componentName, deleteOutOfDatabase, root = null, parent = null) {
+  /**
+   * Updates an existing component
+   * @param {Object} component - The component to update
+   * @returns {Promise<Object>} The updated component
+   */
+  static async updateComponent(component) {
+    // Check if component name exists
+    if (!component.componentName) {
+      throw new Error('Component name is required for update');
+    }
+
+    const response = await fetch(
+      `${API_URL}/components/${encodeURIComponent(component.componentName)}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: component.amount,
+          measure: component.measure,
+          scannedBy: component.scannedBy,
+          durationOfDevelopment: component.durationOfDevelopment,
+          triggerMinAmount: component.triggerMinAmount,
+          supplier: component.supplier,
+          cost: component.cost,
+          type: component.type,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update component');
+    }
+
+    return response.json();
+  }
+  static async deleteComponent(
+    componentName,
+    deleteOutOfDatabase,
+    root = null,
+    parent = null,
+  ) {
     const params = new URLSearchParams({
       componentName,
-      deleteOutOfDatabase: deleteOutOfDatabase.toString()
+      deleteOutOfDatabase: deleteOutOfDatabase.toString(),
     });
-    
+
     if (root) {
       params.append('root', root);
     }
-    
+
     if (parent) {
       params.append('parent', parent);
     }
@@ -135,28 +205,32 @@ export class ApiService {
     const response = await fetch(`${API_URL}/components?${params.toString()}`, {
       method: 'DELETE',
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to delete component');
     }
-    
+
     // Only return JSON if there's content (deleteOutOfDatabase=true)
     if (deleteOutOfDatabase) {
       return await response.json();
     }
-    
+
     return { success: true };
   }
 
   // Method to remove component from subassembly (without deleting from database)
-  static async removeComponentFromSubassembly(componentName, root, parent = null) {
+  static async removeComponentFromSubassembly(
+    componentName,
+    root,
+    parent = null,
+  ) {
     const params = new URLSearchParams({
       componentName,
       deleteOutOfDatabase: 'false',
-      root
+      root,
     });
-    
+
     if (parent) {
       params.append('parent', parent);
     }
@@ -164,12 +238,14 @@ export class ApiService {
     const response = await fetch(`${API_URL}/components?${params.toString()}`, {
       method: 'DELETE',
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to remove component from subassembly');
+      throw new Error(
+        error.detail || 'Failed to remove component from subassembly',
+      );
     }
-    
+
     return await response.json();
   }
 
@@ -178,7 +254,9 @@ export class ApiService {
     const response = await fetch(
       `${API_URL}/relationships?topComponent=${encodeURIComponent(
         topComponent,
-      )}&subComponent=${encodeURIComponent(subComponent)}&root=${encodeURIComponent(root)}`,
+      )}&subComponent=${encodeURIComponent(
+        subComponent,
+      )}&root=${encodeURIComponent(root)}`,
     );
     if (!response.ok) {
       if (response.status === 404) {
@@ -222,7 +300,11 @@ export class ApiService {
 
   static async deleteRelationship(topComponent, subComponent, root) {
     const response = await fetch(
-      `${API_URL}/relationships?topComponent=${encodeURIComponent(topComponent)}&subComponent=${encodeURIComponent(subComponent)}&root=${encodeURIComponent(root)}`,
+      `${API_URL}/relationships?topComponent=${encodeURIComponent(
+        topComponent,
+      )}&subComponent=${encodeURIComponent(
+        subComponent,
+      )}&root=${encodeURIComponent(root)}`,
       {
         method: 'DELETE',
       },
@@ -233,6 +315,12 @@ export class ApiService {
     return await response.json();
   }
 
+  static async getAllComponents() {
+    const response = await fetch(`${API_URL}/all_components`);
+    const data = await this.handleResponse(response);
+    return data;
+  }
+
   // Fuzzy search functionality for existing components
   static async fuzzySearchComponents(query) {
     try {
@@ -240,66 +328,74 @@ export class ApiService {
       const response = await fetch(`${API_URL}/all_components`);
       const data = await this.handleResponse(response);
       const allComponents = data || [];
-      
+
       // Implement client-side fuzzy search
       if (!query || query.length < 2) {
         return [];
       }
-      
+
       const queryLower = query.toLowerCase();
-      
+
       // Simple fuzzy search algorithm
-      const matches = allComponents.filter(component => {
-        const componentName = component.componentName || component.name || component;
+      const matches = allComponents.filter((component) => {
+        const componentName =
+          component.componentName || component.name || component;
         const nameLower = componentName.toLowerCase();
-        
+
         // Exact match gets highest priority
         if (nameLower === queryLower) return true;
-        
+
         // Starts with query
         if (nameLower.startsWith(queryLower)) return true;
-        
+
         // Contains query
         if (nameLower.includes(queryLower)) return true;
-        
+
         // Fuzzy match - check if all characters of query exist in order
         let queryIndex = 0;
-        for (let i = 0; i < nameLower.length && queryIndex < queryLower.length; i++) {
+        for (
+          let i = 0;
+          i < nameLower.length && queryIndex < queryLower.length;
+          i++
+        ) {
           if (nameLower[i] === queryLower[queryIndex]) {
             queryIndex++;
           }
         }
         return queryIndex === queryLower.length;
       });
-      
+
       // Sort matches by relevance
       const sortedMatches = matches.sort((a, b) => {
         const aName = (a.componentName || a.name || a).toLowerCase();
         const bName = (b.componentName || b.name || b).toLowerCase();
-        
+
         // Exact matches first
         if (aName === queryLower && bName !== queryLower) return -1;
         if (bName === queryLower && aName !== queryLower) return 1;
-        
+
         // Starts with query
-        if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
-        if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
-        
+        if (aName.startsWith(queryLower) && !bName.startsWith(queryLower))
+          return -1;
+        if (bName.startsWith(queryLower) && !aName.startsWith(queryLower))
+          return 1;
+
         // Contains query
         const aContains = aName.includes(queryLower);
         const bContains = bName.includes(queryLower);
         if (aContains && !bContains) return -1;
         if (bContains && !aContains) return 1;
-        
+
         // Alphabetical order
         return aName.localeCompare(bName);
       });
-      
+
       // Return only component names, limit to 10 results
       return sortedMatches
         .slice(0, 10)
-        .map(component => component.componentName || component.name || component);
-        
+        .map(
+          (component) => component.componentName || component.name || component,
+        );
     } catch (error) {
       console.error('Error performing fuzzy search:', error);
       return [];
@@ -312,35 +408,37 @@ export class ApiService {
       // Get the tree to analyze impact
       const treeResponse = await this.getTree(rootComponent);
       const treeData = treeResponse.tree;
-      
+
       // Find all components that depend on this component
       const dependentComponents = [];
-      
+
       // Check if the component has any children
-      const hasChildren = treeData[componentName] && treeData[componentName].length > 0;
+      const hasChildren =
+        treeData[componentName] && treeData[componentName].length > 0;
       const childrenCount = hasChildren ? treeData[componentName].length : 0;
-      
+
       // Find all components that use this component as a subcomponent
       for (const [parent, children] of Object.entries(treeData)) {
         if (children && children.some(([child]) => child === componentName)) {
           dependentComponents.push(parent);
         }
       }
-      
+
       return {
         componentName,
         canDelete: true, // Assuming all components can be deleted for now
         dependentComponents,
         childrenCount,
         hasChildren,
-        impact: dependentComponents.length > 0 || hasChildren 
-          ? 'high' 
-          : 'low',
-        message: dependentComponents.length > 0 
-          ? `This component is used by ${dependentComponents.length} other component(s): ${dependentComponents.join(', ')}`
-          : hasChildren 
+        impact: dependentComponents.length > 0 || hasChildren ? 'high' : 'low',
+        message:
+          dependentComponents.length > 0
+            ? `This component is used by ${
+                dependentComponents.length
+              } other component(s): ${dependentComponents.join(', ')}`
+            : hasChildren
             ? `This component has ${childrenCount} child component(s)`
-            : 'This component can be safely deleted'
+            : 'This component can be safely deleted',
       };
     } catch (error) {
       console.error('Error previewing deletion impact:', error);
@@ -351,7 +449,7 @@ export class ApiService {
         childrenCount: 0,
         hasChildren: false,
         impact: 'unknown',
-        message: 'Could not analyze deletion impact'
+        message: 'Could not analyze deletion impact',
       };
     }
   }

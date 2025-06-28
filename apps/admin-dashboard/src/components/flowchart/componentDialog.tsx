@@ -15,6 +15,7 @@ import {
   FormLabel,
   VStack,
   useToast,
+  useColorModeValue,
   Text,
   Box,
   List,
@@ -79,11 +80,56 @@ export function ComponentDialog({
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const toast = useToast();
 
+  // Color mode values for dark mode support
+  const bgColor = useColorModeValue('white', 'gray.700');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const textColorSecondary = useColorModeValue('gray.600', 'gray.400');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const suggestionsBg = useColorModeValue('white', 'gray.800');
+  const suggestionsHoverBg = useColorModeValue('blue.50', 'gray.700');
+  const headerBg = useColorModeValue('blue.50', 'blue.900');
+  const headerBorderColor = useColorModeValue('blue.200', 'blue.600');
+  const inputBg = useColorModeValue('white', 'gray.800');
+  const optionBg = useColorModeValue('white', '#2D3748');
+  const optionColor = useColorModeValue('#1A202C', 'white');
+
   useEffect(() => {
-    if (component) {
-      setFormData(component);
+    if (isOpen) {
+      if (component && mode === 'edit') {
+        // Pre-fill form with existing component data for edit mode
+        setFormData({
+          ...component,
+          lastScanned: component.lastScanned || new Date().toISOString(),
+        });
+      } else if (mode === 'create') {
+        // Reset form for create mode
+        setFormData({
+          componentName: '',
+          amount: 0,
+          measure: 'amount',
+          lastScanned: new Date().toISOString(),
+          scannedBy: '',
+          durationOfDevelopment: 0,
+          triggerMinAmount: 0,
+          supplier: '',
+          cost: 0,
+          type: 'component',
+        });
+      }
     }
-  }, [component]);
+  }, [isOpen, component, mode]);
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setComponentsLoaded(false);
+      setAllComponents([]);
+      setSearchResults([]);
+      setShowSuggestions(false);
+      setRelationshipAmount(1);
+      // Don't reset formData here as it might interfere with the opening logic
+    }
+  }, [isOpen]);
 
   // Fetch all components when dialog opens for create mode
   useEffect(() => {
@@ -112,16 +158,6 @@ export function ComponentDialog({
       fetchAllComponents();
     }
   }, [isOpen, mode, componentsLoaded]);
-
-  // Reset components cache when dialog closes
-  useEffect(() => {
-    if (!isOpen) {
-      setComponentsLoaded(false);
-      setAllComponents([]);
-      setSearchResults([]);
-      setShowSuggestions(false);
-    }
-  }, [isOpen]);
 
   // Client-side fuzzy search using cached components
   const performFuzzySearch = (query: string): string[] => {
@@ -279,18 +315,18 @@ export function ComponentDialog({
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent>
-          <ModalHeader color="#4318FF">
+        <ModalContent bg={bgColor} color={textColor}>
+          <ModalHeader color={useColorModeValue("#4318FF", "#868CFF")}>
             {mode === 'create' ? 'Create New Component' : 'Edit Component'}
           </ModalHeader>
           <ModalBody>
             <VStack spacing={4}>
               <FormControl position="relative">
-                <FormLabel>
+                <FormLabel color={textColor}>
                   <HStack spacing={2}>
                     <Text>Component Name</Text>
                     {mode === 'create' && (
-                      <Icon as={MdSearch} color="gray.400" boxSize={4} />
+                      <Icon as={MdSearch} color={textColorSecondary} boxSize={4} />
                     )}
                   </HStack>
                 </FormLabel>
@@ -305,6 +341,10 @@ export function ComponentDialog({
                   }}
                   isReadOnly={mode === 'edit'}
                   placeholder={mode === 'create' ? 'Type to search existing components...' : 'Enter component name'}
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  _placeholder={{ color: textColorSecondary }}
                 />
                 
                 {mode === 'create' && showSuggestions && searchResults.length > 0 && (
@@ -314,18 +354,18 @@ export function ComponentDialog({
                     left={0}
                     right={0}
                     zIndex={1000}
-                    bg="white"
+                    bg={suggestionsBg}
                     border="1px solid"
-                    borderColor="gray.200"
+                    borderColor={borderColor}
                     borderRadius="md"
                     maxH="200px"
                     overflowY="auto"
                     boxShadow="lg"
                   >
-                    <Box p={2} bg="blue.50" borderBottom="1px solid" borderColor="blue.200">
+                    <Box p={2} bg={headerBg} borderBottom="1px solid" borderColor={headerBorderColor}>
                       <HStack spacing={2}>
                         <Icon as={MdInfo} color="blue.500" boxSize={4} />
-                        <Text fontSize="xs" color="blue.700" fontWeight="medium">
+                        <Text fontSize="xs" color={useColorModeValue("blue.700", "blue.300")} fontWeight="medium">
                           Click to create component with this name:
                         </Text>
                       </HStack>
@@ -336,19 +376,19 @@ export function ComponentDialog({
                           key={index}
                           p={3}
                           cursor="pointer"
-                          _hover={{ bg: 'blue.50', transform: 'translateX(2px)' }}
-                          _active={{ bg: 'blue.100' }}
+                          _hover={{ bg: suggestionsHoverBg, transform: 'translateX(2px)' }}
+                          _active={{ bg: useColorModeValue('blue.100', 'gray.600') }}
                           borderBottom={index < searchResults.length - 1 ? '1px solid' : 'none'}
-                          borderColor="gray.100"
+                          borderColor={borderColor}
                           transition="all 0.2s"
                           onClick={() => handleSuggestionClick(result)}
                         >
                           <HStack spacing={2}>
                             <Icon as={MdSearch} color="blue.400" boxSize={4} />
-                            <Text fontSize="sm" fontWeight="medium" color="blue.600">
+                            <Text fontSize="sm" fontWeight="medium" color={useColorModeValue("blue.600", "blue.300")}>
                               {result}
                             </Text>
-                            <Text fontSize="xs" color="gray.500">
+                            <Text fontSize="xs" color={textColorSecondary}>
                               (click to add)
                             </Text>
                           </HStack>
@@ -359,97 +399,140 @@ export function ComponentDialog({
                 )}
                 
                 {mode === 'create' && isSearching && (
-                  <Text fontSize="xs" color="gray.500" mt={1}>
+                  <Text fontSize="xs" color={textColorSecondary} mt={1}>
                     Searching existing components...
                   </Text>
                 )}
               </FormControl>
 
               <FormControl>
-                <FormLabel>Amount</FormLabel>
+                <FormLabel color={textColor}>Amount</FormLabel>
                 <NumberInput
                   value={formData.amount}
                   onChange={(_, val) => handleChange('amount', val)}
                 >
-                  <NumberInputField />
+                  <NumberInputField 
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    color={textColor}
+                  />
                 </NumberInput>
               </FormControl>
 
               <FormControl>
-                <FormLabel>Measure</FormLabel>
+                <FormLabel color={textColor}>Measure</FormLabel>
                 <Select
                   value={formData.measure}
                   onChange={(e) => handleChange('measure', e.target.value)}
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
                 >
-                  <option value="centimeters">Centimeters</option>
-                  <option value="meters">Meters</option>
-                  <option value="amount">Amount</option>
+                  <option value="centimeters" style={{ backgroundColor: optionBg, color: optionColor }}>Centimeters</option>
+                  <option value="meters" style={{ backgroundColor: optionBg, color: optionColor }}>Meters</option>
+                  <option value="amount" style={{ backgroundColor: optionBg, color: optionColor }}>Amount</option>
                 </Select>
               </FormControl>
 
               {mode === 'create' && initialComponent && (
                 <FormControl>
-                  <FormLabel>Initial Amount in {initialComponent}</FormLabel>
+                  <FormLabel color={textColor}>Initial Amount in {initialComponent}</FormLabel>
                   <NumberInput
                     value={relationshipAmount}
                     onChange={(_, val) => setRelationshipAmount(Number(val))}
                   >
-                    <NumberInputField />
+                    <NumberInputField 
+                      bg={inputBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                    />
                   </NumberInput>
                 </FormControl>
               )}
 
               <FormControl>
-                <FormLabel>Trigger Min Amount</FormLabel>
+                <FormLabel color={textColor}>Trigger Min Amount</FormLabel>
                 <NumberInput
                   value={formData.triggerMinAmount}
                   onChange={(_, val) => handleChange('triggerMinAmount', val)}
                 >
-                  <NumberInputField />
+                  <NumberInputField 
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    color={textColor}
+                  />
                 </NumberInput>
               </FormControl>
 
               <FormControl>
-                <FormLabel>Supplier</FormLabel>
+                <FormLabel color={textColor}>Supplier</FormLabel>
                 <Input
                   value={formData.supplier}
                   onChange={(e) => handleChange('supplier', e.target.value)}
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  _placeholder={{ color: textColorSecondary }}
                 />
               </FormControl>
 
               <FormControl>
-                <FormLabel>Cost</FormLabel>
+                <FormLabel color={textColor}>Scanned By</FormLabel>
+                <Input
+                  value={formData.scannedBy}
+                  onChange={(e) => handleChange('scannedBy', e.target.value)}
+                  placeholder="Enter who scanned this component"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  _placeholder={{ color: textColorSecondary }}
+                />
+              </FormControl>
+
+              <FormControl>
+                <FormLabel color={textColor}>Cost</FormLabel>
                 <NumberInput
                   value={formData.cost}
                   onChange={(_, val) => handleChange('cost', val)}
                   precision={2}
                 >
-                  <NumberInputField />
+                  <NumberInputField 
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    color={textColor}
+                  />
                 </NumberInput>
               </FormControl>
 
               <FormControl>
-                <FormLabel>Development Duration (days)</FormLabel>
+                <FormLabel color={textColor}>Development Duration (days)</FormLabel>
                 <NumberInput
                   value={formData.durationOfDevelopment}
                   onChange={(_, val) =>
                     handleChange('durationOfDevelopment', val)
                   }
                 >
-                  <NumberInputField />
+                  <NumberInputField 
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    color={textColor}
+                  />
                 </NumberInput>
               </FormControl>
 
               <FormControl>
-                <FormLabel>Type</FormLabel>
+                <FormLabel color={textColor}>Type</FormLabel>
                 <Select
                   value={formData.type}
                   onChange={(e) => handleChange('type', e.target.value)}
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
                 >
-                  <option value="printer">Printer</option>
-                  <option value="group">Group</option>
-                  <option value="component">Component</option>
-                  <option value="assembly">Assembly</option>
+                  <option value="printer" style={{ backgroundColor: optionBg, color: optionColor }}>Printer</option>
+                  <option value="group" style={{ backgroundColor: optionBg, color: optionColor }}>Group</option>
+                  <option value="component" style={{ backgroundColor: optionBg, color: optionColor }}>Component</option>
+                  <option value="assembly" style={{ backgroundColor: optionBg, color: optionColor }}>Assembly</option>
                 </Select>
               </FormControl>
             </VStack>

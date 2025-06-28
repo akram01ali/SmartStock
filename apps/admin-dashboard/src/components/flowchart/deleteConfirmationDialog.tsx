@@ -10,10 +10,10 @@ import {
   Text,
   VStack,
   HStack,
-  Icon,
   Box,
   Badge,
   Spinner,
+  Icon,
 } from '@chakra-ui/react';
 import { MdWarning, MdDelete, MdLinkOff } from 'react-icons/md';
 import { ApiService } from '../../services/service';

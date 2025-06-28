@@ -23,7 +23,9 @@ import { MdAdd, MdInventory, MdWarning, MdTrendingUp, MdAttachMoney } from 'reac
 import InventoryComponent from './InventoryComponent';
 import { ComponentDialog } from '../../../components/flowchart/componentDialog';
 import { useSearch } from '../../../contexts/SearchContext';
-import Card from 'components/card/Card';
+import SmoothCard from 'components/card/MotionCard';
+import SmoothMotionBox, { fadeIn, slideInFromLeft } from 'components/transitions/MotionBox';
+import { AnimatePresence } from 'framer-motion';
 
 interface Component {
   componentName: string;
@@ -187,239 +189,243 @@ export default function InventoryPage() {
 
   if (loading) {
     return (
-      <Box pt={{ base: '130px', md: '80px', xl: '80px' }}>
+      <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }} variants={fadeIn}>
         <Flex justify="center" align="center" minH="200px">
           <VStack spacing={4}>
             <Icon as={MdInventory} w="48px" h="48px" color={brandColor} />
             <Text fontSize="lg" color={textColorSecondary}>Loading Inventory...</Text>
           </VStack>
         </Flex>
-      </Box>
+      </SmoothMotionBox>
     );
   }
 
   return (
-    <Box pt={{ base: '130px', md: '80px', xl: '80px' }}>
-      {selectedComponent ? (
-        <InventoryComponent
-          component={selectedComponent}
-          onBack={handleBackToList}
-          onEdit={handleEditComponent}
-          onDelete={handleDeleteComponent}
-        />
-      ) : (
-        <Box>
-          {/* Header with Stats */}
-          <Flex justify="space-between" align="center" mb={6}>
-            <VStack align="start" spacing={2}>
-              <Heading size="lg" color={textColor}>Components Inventory</Heading>
-              {searchQuery && (
-                <Text color={textColorSecondary} fontSize="sm">
-                  Showing {filteredInventory.length} of {inventory.length} components
-                  {searchQuery && ` matching "${searchQuery}"`}
-                </Text>
-              )}
-            </VStack>
-            <Button
-              leftIcon={<MdAdd />}
-              colorScheme="blue"
-              size="lg"
-              onClick={onOpen}
-              boxShadow={cardShadow}
-              _hover={{ 
-                transform: 'translateY(-2px)',
-                boxShadow: '0px 20px 60px rgba(112, 144, 176, 0.25)'
-              }}
-              transition="all 0.3s ease"
-            >
-              Add Component
-            </Button>
-          </Flex>
-
-          {/* Statistics Cards */}
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} mb={8}>
-            <Card boxShadow={cardShadow}>
-              <Flex align="center" justify="space-between">
-                <Stat>
-                  <StatLabel color={textColorSecondary}>Total Items</StatLabel>
-                  <StatNumber color={textColor}>{totalItems}</StatNumber>
-                  <StatHelpText color={textColorSecondary}>Components in stock</StatHelpText>
-                </Stat>
-                <Box
-                  bg="linear-gradient(135deg, #868CFF 0%, #4318FF 100%)"
-                  borderRadius="20px"
-                  p="15px"
-                >
-                  <Icon as={MdInventory} w="24px" h="24px" color="white" />
-                </Box>
-              </Flex>
-            </Card>
-
-            <Card boxShadow={cardShadow}>
-              <Flex align="center" justify="space-between">
-                <Stat>
-                  <StatLabel color={textColorSecondary}>Low Stock Alert</StatLabel>
-                  <StatNumber color={lowStockItems > 0 ? 'red.500' : textColor}>
-                    {lowStockItems}
-                  </StatNumber>
-                  <StatHelpText color={textColorSecondary}>Items below minimum</StatHelpText>
-                </Stat>
-                <Box
-                  bg={lowStockItems > 0 ? 'linear-gradient(135deg, #F56565 0%, #E53E3E 100%)' : 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)'}
-                  borderRadius="20px"
-                  p="15px"
-                >
-                  <Icon as={MdWarning} w="24px" h="24px" color="white" />
-                </Box>
-              </Flex>
-            </Card>
-
-            <Card boxShadow={cardShadow}>
-              <Flex align="center" justify="space-between">
-                <Stat>
-                  <StatLabel color={textColorSecondary}>Total Value</StatLabel>
-                  <StatNumber color={textColor}>€{totalValue.toFixed(2)}</StatNumber>
-                  <StatHelpText color={textColorSecondary}>Inventory worth</StatHelpText>
-                </Stat>
-                <Box
-                  bg="linear-gradient(135deg, #48BB78 0%, #38A169 100%)"
-                  borderRadius="20px"
-                  p="15px"
-                >
-                  <Icon as={MdAttachMoney} w="24px" h="24px" color="white" />
-                </Box>
-              </Flex>
-            </Card>
-          </SimpleGrid>
-
-          {/* Inventory Grid */}
-          {filteredInventory.length === 0 && searchQuery ? (
-            <Card boxShadow={cardShadow} p={10}>
-              <VStack spacing={4}>
-                <Icon as={MdInventory} w="48px" h="48px" color="gray.400" />
-                <Text fontSize="lg" color="gray.500" textAlign="center">
-                  No components found matching "{searchQuery}"
-                </Text>
-                <Text fontSize="sm" color="gray.400" textAlign="center">
-                  Try adjusting your search terms or clear the search to see all components.
-                </Text>
+    <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
+      <AnimatePresence mode="wait">
+        {selectedComponent ? (
+          <SmoothMotionBox key="component-detail" variants={slideInFromLeft}>
+            <InventoryComponent
+              component={selectedComponent}
+              onBack={handleBackToList}
+              onEdit={handleEditComponent}
+              onDelete={handleDeleteComponent}
+            />
+          </SmoothMotionBox>
+        ) : (
+          <SmoothMotionBox key="inventory-list">
+            {/* Header with Stats */}
+            <Flex justify="space-between" align="center" mb={6}>
+              <VStack align="start" spacing={2}>
+                <Heading size="lg" color={textColor}>Components Inventory</Heading>
+                {searchQuery && (
+                  <Text color={textColorSecondary} fontSize="sm">
+                    Showing {filteredInventory.length} of {inventory.length} components
+                    {searchQuery && ` matching "${searchQuery}"`}
+                  </Text>
+                )}
               </VStack>
-            </Card>
-          ) : (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
-              {filteredInventory.map((item: Component) => (
-                <Card
-                  key={item.componentName}
-                  onClick={() => handleItemClick(item)}
-                  cursor="pointer"
-                  boxShadow={cardShadow}
-                  position="relative"
-                  overflow="hidden"
-                  _hover={{
-                    transform: 'translateY(-8px)',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0px 20px 60px rgba(112, 144, 176, 0.25)',
-                  }}
-                  transition="all 0.3s ease"
-                >
-                  {/* Card Header with Gradient */}
+              <Button
+                leftIcon={<MdAdd />}
+                colorScheme="blue"
+                size="lg"
+                onClick={onOpen}
+                boxShadow={cardShadow}
+                _hover={{ 
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0px 20px 60px rgba(112, 144, 176, 0.25)'
+                }}
+                transition="all 0.3s ease"
+              >
+                Add Component
+              </Button>
+            </Flex>
+
+            {/* Statistics Cards */}
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} mb={8}>
+              <SmoothCard boxShadow={cardShadow}>
+                <Flex align="center" justify="space-between">
+                  <Stat>
+                    <StatLabel color={textColorSecondary}>Total Items</StatLabel>
+                    <StatNumber color={textColor}>{totalItems}</StatNumber>
+                    <StatHelpText color={textColorSecondary}>Components in stock</StatHelpText>
+                  </Stat>
                   <Box
-                    bg={getTypeGradient(item.type)}
-                    p={4}
-                    borderRadius="20px 20px 0 0"
-                    mb={4}
-                    position="relative"
+                    bg="linear-gradient(135deg, #868CFF 0%, #4318FF 100%)"
+                    borderRadius="20px"
+                    p="15px"
                   >
-                    <Flex justify="space-between" align="center">
-                      <Text color="white" fontSize="lg" fontWeight="bold">
-                        {item.componentName}
-                      </Text>
-                      <Badge 
-                        bg="rgba(255, 255, 255, 0.2)" 
-                        color="white" 
-                        borderRadius="full"
-                        px={3}
-                        py={1}
-                        backdropFilter="blur(10px)"
-                      >
-                        {item.type}
-                      </Badge>
-                    </Flex>
+                    <Icon as={MdInventory} w="24px" h="24px" color="white" />
                   </Box>
+                </Flex>
+              </SmoothCard>
 
-                  {/* Card Content */}
-                  <VStack align="stretch" spacing={4} p={4} pt={0}>
-                    <SimpleGrid columns={2} spacing={4}>
-                      <Box>
-                        <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
-                          Amount
-                        </Text>
-                        <Text color={textColor} fontWeight="bold" fontSize="lg">
-                          {item.amount}
-                        </Text>
-                        <Text color={textColorSecondary} fontSize="xs">
-                          {item.measure}
-                        </Text>
-                      </Box>
-                      <Box>
-                        <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
-                          Cost
-                        </Text>
-                        <Text color={textColor} fontWeight="bold" fontSize="lg">
-                          €{item.cost}
-                        </Text>
-                        <Text color={textColorSecondary} fontSize="xs">
-                          per unit
-                        </Text>
-                      </Box>
-                    </SimpleGrid>
+              <SmoothCard boxShadow={cardShadow}>
+                <Flex align="center" justify="space-between">
+                  <Stat>
+                    <StatLabel color={textColorSecondary}>Low Stock Alert</StatLabel>
+                    <StatNumber color={lowStockItems > 0 ? 'red.500' : textColor}>
+                      {lowStockItems}
+                    </StatNumber>
+                    <StatHelpText color={textColorSecondary}>Items below minimum</StatHelpText>
+                  </Stat>
+                  <Box
+                    bg={lowStockItems > 0 ? 'linear-gradient(135deg, #F56565 0%, #E53E3E 100%)' : 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)'}
+                    borderRadius="20px"
+                    p="15px"
+                  >
+                    <Icon as={MdWarning} w="24px" h="24px" color="white" />
+                  </Box>
+                </Flex>
+              </SmoothCard>
 
-                    {/* Stock Status */}
-                    <Box>
-                      <HStack justify="space-between" mb={2}>
-                        <Text color={textColorSecondary} fontSize="sm">
-                          Stock Level
+              <SmoothCard boxShadow={cardShadow}>
+                <Flex align="center" justify="space-between">
+                  <Stat>
+                    <StatLabel color={textColorSecondary}>Total Value</StatLabel>
+                    <StatNumber color={textColor}>€{totalValue.toFixed(2)}</StatNumber>
+                    <StatHelpText color={textColorSecondary}>Inventory worth</StatHelpText>
+                  </Stat>
+                  <Box
+                    bg="linear-gradient(135deg, #48BB78 0%, #38A169 100%)"
+                    borderRadius="20px"
+                    p="15px"
+                  >
+                    <Icon as={MdAttachMoney} w="24px" h="24px" color="white" />
+                  </Box>
+                </Flex>
+              </SmoothCard>
+            </SimpleGrid>
+
+            {/* Inventory Grid */}
+            {filteredInventory.length === 0 && searchQuery ? (
+              <SmoothCard boxShadow={cardShadow} p={10}>
+                <VStack spacing={4}>
+                  <Icon as={MdInventory} w="48px" h="48px" color="gray.400" />
+                  <Text fontSize="lg" color="gray.500" textAlign="center">
+                    No components found matching "{searchQuery}"
+                  </Text>
+                  <Text fontSize="sm" color="gray.400" textAlign="center">
+                    Try adjusting your search terms or clear the search to see all components.
+                  </Text>
+                </VStack>
+              </SmoothCard>
+            ) : (
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
+                {filteredInventory.map((item: Component, index: number) => (
+                  <SmoothCard
+                    key={item.componentName}
+                    onClick={() => handleItemClick(item)}
+                    cursor="pointer"
+                    boxShadow={cardShadow}
+                    position="relative"
+                    overflow="hidden"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ 
+                      opacity: 1, 
+                      y: 0,
+                      transition: { delay: index * 0.1, duration: 0.3 }
+                    }}
+                  >
+                    {/* Card Header with Gradient */}
+                    <Box
+                      bg={getTypeGradient(item.type)}
+                      p={4}
+                      borderRadius="20px 20px 0 0"
+                      mb={4}
+                      position="relative"
+                    >
+                      <Flex justify="space-between" align="center">
+                        <Text color="white" fontSize="lg" fontWeight="bold">
+                          {item.componentName}
                         </Text>
-                        {item.amount < item.triggerMinAmount && (
-                          <Badge colorScheme="red" size="sm">
-                            Low Stock
-                          </Badge>
-                        )}
-                      </HStack>
-                      <Box bg="gray.100" borderRadius="full" h="6px" overflow="hidden">
-                        <Box
-                          bg={item.amount < item.triggerMinAmount ? 'red.400' : 'green.400'}
-                          h="100%"
-                          w={`${Math.min((item.amount / item.triggerMinAmount) * 100, 100)}%`}
-                          transition="all 0.3s ease"
-                        />
-                      </Box>
+                        <Badge 
+                          bg="rgba(255, 255, 255, 0.2)" 
+                          color="white" 
+                          borderRadius="full"
+                          px={3}
+                          py={1}
+                          backdropFilter="blur(10px)"
+                        >
+                          {item.type}
+                        </Badge>
+                      </Flex>
                     </Box>
 
-                    {/* Additional Info */}
-                    <VStack align="start" spacing={1}>
-                      <Text color={textColorSecondary} fontSize="xs">
-                        Supplier: <Text as="span" color={textColor} fontWeight="500">{item.supplier}</Text>
-                      </Text>
-                      <Text color={textColorSecondary} fontSize="xs">
-                        Last scanned: <Text as="span" color={textColor} fontWeight="500">{new Date(item.lastScanned).toLocaleDateString()}</Text>
-                      </Text>
-                    </VStack>
-                  </VStack>
-                </Card>
-              ))}
-            </SimpleGrid>
-          )}
+                    {/* Card Content */}
+                    <VStack align="stretch" spacing={4} p={4} pt={0}>
+                      <SimpleGrid columns={2} spacing={4}>
+                        <Box>
+                          <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
+                            Amount
+                          </Text>
+                          <Text color={textColor} fontWeight="bold" fontSize="lg">
+                            {item.amount}
+                          </Text>
+                          <Text color={textColorSecondary} fontSize="xs">
+                            {item.measure}
+                          </Text>
+                        </Box>
+                        <Box>
+                          <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
+                            Cost
+                          </Text>
+                          <Text color={textColor} fontWeight="bold" fontSize="lg">
+                            €{item.cost}
+                          </Text>
+                          <Text color={textColorSecondary} fontSize="xs">
+                            per unit
+                          </Text>
+                        </Box>
+                      </SimpleGrid>
 
-          <ComponentDialog
-            isOpen={isOpen}
-            onClose={onClose}
-            onSubmit={handleAddComponent}
-            component={null} // No component when creating new
-            mode="create" // Set to create mode
-          />
-        </Box>
-      )}
-    </Box>
+                      {/* Stock Status */}
+                      <Box>
+                        <HStack justify="space-between" mb={2}>
+                          <Text color={textColorSecondary} fontSize="sm">
+                            Stock Level
+                          </Text>
+                          {item.amount < item.triggerMinAmount && (
+                            <Badge colorScheme="red" size="sm">
+                              Low Stock
+                            </Badge>
+                          )}
+                        </HStack>
+                        <Box bg="gray.100" borderRadius="full" h="6px" overflow="hidden">
+                          <Box
+                            bg={item.amount < item.triggerMinAmount ? 'red.400' : 'green.400'}
+                            h="100%"
+                            w={`${Math.min((item.amount / item.triggerMinAmount) * 100, 100)}%`}
+                            transition="all 0.3s ease"
+                          />
+                        </Box>
+                      </Box>
+
+                      {/* Additional Info */}
+                      <VStack align="start" spacing={1}>
+                        <Text color={textColorSecondary} fontSize="xs">
+                          Supplier: <Text as="span" color={textColor} fontWeight="500">{item.supplier}</Text>
+                        </Text>
+                        <Text color={textColorSecondary} fontSize="xs">
+                          Last scanned: <Text as="span" color={textColor} fontWeight="500">{new Date(item.lastScanned).toLocaleDateString()}</Text>
+                        </Text>
+                      </VStack>
+                    </VStack>
+                  </SmoothCard>
+                ))}
+              </SimpleGrid>
+            )}
+
+            <ComponentDialog
+              isOpen={isOpen}
+              onClose={onClose}
+              onSubmit={handleAddComponent}
+              component={null} // No component when creating new
+              mode="create" // Set to create mode
+            />
+          </SmoothMotionBox>
+        )}
+      </AnimatePresence>
+    </SmoothMotionBox>
   );
 }

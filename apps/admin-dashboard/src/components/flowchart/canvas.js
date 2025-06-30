@@ -128,9 +128,42 @@ export default function Flow({ initialComponent }) {
   }, [setNodes, setEdges, initialComponent, levels]);
 
   const handleDelete = async () => {
-    // This function is now only called to open the delete dialog
-    // The actual deletion logic is handled by the specific delete methods below
-    if (selectedNode || selectedEdge) {
+    if (selectedEdge) {
+      // For edges, delete directly without dialog
+      try {
+        // Extract component names from edge ID (edge-sourceComponent-targetComponent)
+        const [, sourceComponentPath, targetComponentPath] = selectedEdge.id.split('-');
+        
+        // Extract just the component names from the paths
+        const extractComponentName = (path) => {
+          const pathParts = path.split('/');
+          return pathParts[pathParts.length - 1];
+        };
+        
+        const sourceComponent = extractComponentName(sourceComponentPath);
+        const targetComponent = extractComponentName(targetComponentPath);
+
+        await ApiService.deleteRelationship(sourceComponent, targetComponent, initialComponent);
+        setSelectedEdge(null);
+        
+        toast({
+          title: 'Relationship deleted',
+          description: `Relationship between ${sourceComponent} and ${targetComponent} has been removed`,
+          status: 'success',
+          duration: 3000,
+        });
+        
+        await fetchTreeData();
+      } catch (error) {
+        toast({
+          title: 'Error deleting relationship',
+          description: error.message,
+          status: 'error',
+          duration: 5000,
+        });
+      }
+    } else if (selectedNode) {
+      // For nodes, open the confirmation dialog
       setIsDeleteDialogOpen(true);
     }
   };
@@ -415,6 +448,31 @@ export default function Flow({ initialComponent }) {
     }
   };
 
+  const handleUpdateComponent = async (componentData) => {
+    try {
+      // Update the component using PUT request
+      await ApiService.updateComponent(componentData);
+
+      // Refresh the tree to show the updated component
+      await fetchTreeData();
+      
+      toast({
+        title: 'Component updated',
+        description: `Component ${componentData.componentName} has been updated`,
+        status: 'success',
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error('Error handling component update:', error);
+      toast({
+        title: 'Error updating component',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+      });
+    }
+  };
+
   const handleNodeDoubleClick = useCallback(async (event, node) => {
     try {
       const componentName = node.data.label;
@@ -426,10 +484,52 @@ export default function Flow({ initialComponent }) {
     }
   }, []);
 
+  const handleEdgeDoubleClick = useCallback(async (event, edge) => {
+    try {
+      // Extract component names from edge ID (edge-parentPath-childPath)
+      const edgeIdParts = edge.id.split('-');
+      if (edgeIdParts.length >= 3) {
+        const sourceComponentPath = edgeIdParts[1];
+        const targetComponentPath = edgeIdParts[2];
+        
+        // Extract just the component names from the paths
+        // Path format: root_0/matica/child_1/component1 -> component1
+        // For root component: root_0/matica -> matica
+        const extractComponentName = (path) => {
+          const pathParts = path.split('/');
+          return pathParts[pathParts.length - 1]; // Get the last part of the path
+        };
+        
+        const sourceComponent = extractComponentName(sourceComponentPath);
+        const targetComponent = extractComponentName(targetComponentPath);
+        
+        // Get the current amount from the edge label
+        const currentAmount = parseInt(edge.label) || 1;
+        
+        // Open relationship dialog with current relationship data
+        setRelationshipDialog({
+          isOpen: true,
+          sourceComponent,
+          targetComponent,
+          currentAmount,
+        });
+      }
+    } catch (error) {
+      console.error('Error handling edge double click:', error);
+      toast({
+        title: 'Error opening relationship editor',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  }, [toast]);
+
   const [relationshipDialog, setRelationshipDialog] = useState({
     isOpen: false,
     sourceComponent: '',
     targetComponent: '',
+    currentAmount: 1,
   });
 
   const onConnect = useCallback(
@@ -462,6 +562,7 @@ export default function Flow({ initialComponent }) {
           isOpen: true,
           sourceComponent,
           targetComponent,
+          currentAmount: 1,
         });
       } catch (error) {
         console.error('Error handling connection:', error);
@@ -610,6 +711,7 @@ export default function Flow({ initialComponent }) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDoubleClick={handleNodeDoubleClick}
+        onEdgeDoubleClick={handleEdgeDoubleClick}
         fitView
         fitViewOptions={{
           padding: 0.15,
@@ -705,7 +807,7 @@ export default function Flow({ initialComponent }) {
         onClose={() => setIsDialogOpen(false)}
         component={selectedComponent}
         mode="edit"
-        onSubmit={handleCreateComponent}
+        onSubmit={handleUpdateComponent}
       />
       <ComponentDialog
         isOpen={isCreateDialogOpen}
@@ -722,6 +824,7 @@ export default function Flow({ initialComponent }) {
         }
         sourceComponent={relationshipDialog.sourceComponent}
         targetComponent={relationshipDialog.targetComponent}
+        initialAmount={relationshipDialog.currentAmount}
         onSubmit={handleRelationshipSubmit}
       />
       <DeleteConfirmationDialog

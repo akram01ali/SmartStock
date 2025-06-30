@@ -19,6 +19,7 @@
     "@types/node": "^12.20.55",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
+    "@xyflow/react": "^12.8.1",
     "apexcharts": "3.50.0",
     "framer-motion": "^11.3.7",
     "npm-force-resolutions": "^0.0.10",

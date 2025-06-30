@@ -99,4 +99,16 @@ class AppUser(BaseModel):
     initials: str
     password: str
 
+class ReturnUser(BaseModel):
+    name: str
+    surname: str
+    initials: str
+
+class CreateAppUser(BaseModel):
+    name: str
+    surname: str
+    password: str
+
+    class Config:
+        from_attributes = True
     

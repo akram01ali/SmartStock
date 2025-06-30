@@ -3,12 +3,15 @@ from pathlib import Path
 from fastapi import Body
 from datetime import datetime, timedelta
 from copy import deepcopy
-
+from pyzbar.pyzbar import decode
+import cv2
+import numpy as np
+import io
 # Add the prisma directory to Python path
 prisma_path = Path(__file__).parent / "prisma"
 sys.path.insert(0, str(prisma_path))
 
-from fastapi import FastAPI, HTTPException, Depends, Query, status
+from fastapi import File, UploadFile, FastAPI, HTTPException, Depends, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from prisma import Client, Prisma
@@ -36,7 +39,9 @@ from models import (
     User,
     Token,
     TokenData,
-    AppUser
+    AppUser,
+    ReturnUser,
+    CreateAppUser
 )
 
 # JWT Configuration
@@ -55,7 +60,7 @@ app = FastAPI(title="Components Inventory API", version="1.0.0")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"],  # Add your frontend URLs
+    allow_origins=["*"],  # Allow all origins for development - change this in production!
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
@@ -143,9 +148,18 @@ async def shutdown():
     await prisma.disconnect()
     print("Disconnected from database")
 
+# Health check endpoint for debugging connectivity
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "message": "SmartStock API is running",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
 # Authentication Endpoints
 @app.post("/register", response_model=User)
-async def register(user: UserCreate, db: Prisma = Depends(get_db)):
+async def register(user: UserCreate = Body(...), db: Prisma = Depends(get_db)):
     # Check if user already exists
     existing_user = await get_user(user.username, db)
     if existing_user:
@@ -629,7 +643,7 @@ async def update_relationship(
 # FOR THE APP
 ## Register and login to the app:
 @app.post("/app/login", response_model=Token)
-async def app_login(user_credentials: AppUser = Body(...), db: Prisma = Depends(get_db)):
+async def app_login(user_credentials: CreateAppUser = Body(...), db: Prisma = Depends(get_db)):
     user = await authenticate_app_user(
         user_credentials.name,
         user_credentials.surname, 
@@ -649,7 +663,7 @@ async def app_login(user_credentials: AppUser = Body(...), db: Prisma = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.post("/app/register", response_model=User)
+@app.post("/app/register", response_model=ReturnUser)
 async def app_register(user: AppUser = Body(...), db: Prisma = Depends(get_db)):
     hashed_password = get_password_hash(user.password)
     try:
@@ -661,7 +675,11 @@ async def app_register(user: AppUser = Body(...), db: Prisma = Depends(get_db)):
                 "password": hashed_password
             }
         )
-        return AppUser(created_user)
+        return ReturnUser(
+            name=created_user.name,
+            surname=created_user.surname,
+            initials=created_user.initials
+        )
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -687,14 +705,30 @@ async def app_read_users_me(current_user: User = Depends(get_current_user)):
 # Endpoints for Stock Management
 @app.put("/stock", response_model=Component)
 async def update_stock(
-    componentName: str,
     amount: float,
     absolute: bool = False,
+    image: UploadFile = File(...),
     db: Prisma = Depends(get_db),
     current_user: AppUser = Depends(get_current_user)
 ):
     initials = current_user.initials if current_user else "Unknown"
     try:
+        # Read the QR code to get the componentName
+        contents = await image.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+        
+        decoded_objects = decode(img)
+        if not decoded_objects:
+            raise HTTPException(
+                status_code=400,
+                detail="No QR code found in image"
+            )
+        componentName = decoded_objects[0].data.decode('utf-8')
+
+        print(f"Component Name from QR Code: {componentName}")
+        
+
         if absolute:
             updated = await db.components.update(
                 where={"componentName": componentName},

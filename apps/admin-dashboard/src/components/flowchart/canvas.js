@@ -210,15 +210,35 @@ export default function Flow({ initialComponent }) {
 
         // Find the parent of the selected component by looking at the tree data
         const treeResponse = await ApiService.getTree(initialComponent);
-        const treeData = treeResponse.tree;
         
+        // The response structure is {root: string, nodes: TreeNode[]}
+        // We need to create a flat structure to find the parent component
         let parentComponent = null;
-        // Look through the tree to find which component points to this one
-        for (const [parent, children] of Object.entries(treeData)) {
-          if (children && children.some(([child]) => child === componentName)) {
-            parentComponent = parent;
-            break;
+        
+        // Helper function to find parent in tree structure
+        const findParentInTree = (nodes, targetComponent, currentParent = '') => {
+          for (const node of nodes) {
+            if (node.name === targetComponent) {
+              return currentParent;
+            }
+            if (node.children && node.children.length > 0) {
+              const found = findParentInTree(node.children, targetComponent, node.name);
+              if (found !== null) {
+                return found;
+              }
+            }
           }
+          return null;
+        };
+
+        // Check if it's a root-level component (direct child of the assembly)
+        const isRootLevelComponent = treeResponse.nodes.some(node => node.name === componentName);
+        
+        if (isRootLevelComponent) {
+          parentComponent = initialComponent; // The root assembly is the parent
+        } else {
+          // Find parent in the tree structure
+          parentComponent = findParentInTree(treeResponse.nodes, componentName);
         }
 
         if (!parentComponent) {

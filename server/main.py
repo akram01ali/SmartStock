@@ -35,7 +35,8 @@ from models import (
     UserCreate,
     User,
     Token,
-    TokenData
+    TokenData,
+    AppUser
 )
 
 # JWT Configuration
@@ -99,7 +100,10 @@ async def authenticate_user(username: str, password: str, db: Prisma):
         return False
     return user
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Prisma = Depends(get_db)):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security), 
+    db: Prisma = Depends(get_db)
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -109,15 +113,25 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        user_type: str = payload.get("type", "web_user")
+        
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+            
+        # Handle different user types
+        if user_type == "app_user":
+            user = await db.appuser.find_first(where={"name": username})
+            if user:
+                return User(username=user.name, initials=user.initials)
+        else:
+            user = await db.users.find_unique(where={"username": username})
+            if user:
+                return User(username=user.username)
+                
+        raise credentials_exception
+            
     except JWTError:
         raise credentials_exception
-    user = await get_user(username=token_data.username, db=db)
-    if user is None:
-        raise credentials_exception
-    return user
 
 @app.on_event("startup")
 async def startup():
@@ -242,9 +256,7 @@ async def get_all_components(
     db: Prisma = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     components = await db.components.find_many()
-    if not components:
-        raise HTTPException(status_code=404, detail="No components found")
-    return components
+    return components or []
     
 ## POST
 
@@ -613,7 +625,150 @@ async def update_relationship(
             status_code=500,
             detail=f"Could not update relationship: {str(e)}"
         )
+
+# FOR THE APP
+## Register and login to the app:
+@app.post("/app/login", response_model=Token)
+async def app_login(user_credentials: AppUser = Body(...), db: Prisma = Depends(get_db)):
+    user = await authenticate_app_user(
+        user_credentials.name,
+        user_credentials.surname, 
+        user_credentials.password, 
+        db
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(
+        data={"sub": user.name, "type": "app_user"}, 
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/app/register", response_model=User)
+async def app_register(user: AppUser = Body(...), db: Prisma = Depends(get_db)):
+    hashed_password = get_password_hash(user.password)
+    try:
+        created_user = await db.appuser.create(
+            data={
+                "name": user.name,
+                "surname": user.surname,
+                "initials": user.name[0].upper() + user.surname[0].upper(),
+                "password": hashed_password
+            }
+        )
+        return AppUser(created_user)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not create user: {str(e)}"
+        )
     
+async def authenticate_app_user(name: str, surname: str, password: str, db: Prisma):
+    try:
+        user = await db.appuser.find_first(where={"name": name, "surname": surname})
+        if not user or not verify_password(password, user.password):
+            return False
+        return user
+    except:
+        return False
+
+
+
+
+@app.get("/app/me", response_model=User)
+async def app_read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+# Endpoints for Stock Management
+@app.put("/stock", response_model=Component)
+async def update_stock(
+    componentName: str,
+    amount: float,
+    absolute: bool = False,
+    db: Prisma = Depends(get_db),
+    current_user: AppUser = Depends(get_current_user)
+):
+    initials = current_user.initials if current_user else "Unknown"
+    try:
+        if absolute:
+            updated = await db.components.update(
+                where={"componentName": componentName},
+                data={"amount": amount, "lastScanned": datetime.utcnow(), "scannedBy": initials}
+            )
+            return updated
+
+        else:
+            current_component = await db.components.find_unique(
+                    where={"componentName": componentName}
+                )
+
+            if not current_component:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Component '{componentName}' not found"
+                )
+            
+            current_amount = current_component.amount
+            new_amount = current_amount + amount
+
+            # If amount is negative, this means that this component is being removed from stock
+            if amount < 0:
+                updated = await db.components.update(
+                    where={"componentName": componentName},
+                    data={
+                        "amount": new_amount,
+                        "lastScanned": datetime.utcnow(),
+                        "scannedBy": initials
+                    }
+                )
+
+            # If amount is positive, this means that this component is being added to stock
+            elif amount > 0:
+                updated = await db.components.update(
+                    where={"componentName": componentName},
+                    data={
+                        "amount": new_amount,
+                        "lastScanned": datetime.utcnow(),
+                        "scannedBy": initials
+                    }
+                )
+
+                # Now we need to adjust the subcomponents
+                relationships = await db.relationships.find_many(
+                    where={"topComponent": componentName}
+                )
+
+                for rel in relationships:
+                    subcomponent = await db.components.find_unique(
+                        where={"componentName": rel.subComponent}
+                    )
+                    
+                    subcomponent_amount = subcomponent.amount - rel.amount * amount
+
+                    await db.components.update(
+                        where={"componentName": rel.subComponent},
+                        data={
+                            "amount": subcomponent_amount,
+                            "lastScanned": datetime.utcnow(),
+                            "scannedBy": initials
+                        }
+                    )
+
+            return updated
+
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not update stock: {str(e)}"
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

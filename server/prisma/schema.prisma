@@ -58,3 +58,12 @@ model Users {
   username            String @unique
   password            String
 }
+
+model AppUser {
+  name        String
+  surname     String
+  initials    String
+  password    String
+
+  @@unique([name, surname])
+}

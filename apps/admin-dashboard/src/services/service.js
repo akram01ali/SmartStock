@@ -27,8 +27,12 @@ export class ApiService {
   // Components endpoints
   static async getPrinters() {
     try {
+      const headers = this.getAuthHeaders();
+      console.log('getPrinters - Headers:', headers);
+      console.log('getPrinters - Token from localStorage:', localStorage.getItem('authToken'));
+      
       const response = await fetch(`${API_URL}/printers`, {
-        headers: this.getAuthHeaders()
+        headers
       });
       const data = await this.handleResponse(response);
       return data || [];
@@ -334,11 +338,20 @@ export class ApiService {
   }
 
   static async getAllComponents() {
-    const response = await fetch(`${API_URL}/all_components`, {
-      headers: this.getAuthHeaders()
-    });
-    const data = await this.handleResponse(response);
-    return data;
+    try {
+      const headers = this.getAuthHeaders();
+      console.log('getAllComponents - Headers:', headers);
+      console.log('getAllComponents - Token from localStorage:', localStorage.getItem('authToken'));
+      
+      const response = await fetch(`${API_URL}/all_components`, {
+        headers
+      });
+      const data = await this.handleResponse(response);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching all components:', error);
+      return [];
+    }
   }
 
   // Fuzzy search functionality for existing components

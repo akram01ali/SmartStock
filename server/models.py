@@ -26,6 +26,7 @@ class UserCreate(BaseModel):
 
 class User(BaseModel):
     username: str
+    initials: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -91,3 +92,11 @@ class TreeNode(BaseModel):
 class ComponentTree(BaseModel):
     root: str
     nodes: List[TreeNode]
+
+class AppUser(BaseModel):
+    name: str
+    surname: str
+    initials: str
+    password: str
+
+    

@@ -137,11 +137,7 @@ export function ComponentDialog({
       const fetchAllComponents = async () => {
         try {
           setIsSearching(true);
-          const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/all_components`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch components');
-          }
-          const data = await response.json();
+          const data = await ApiService.getAllComponents();
           const componentNames = (data || []).map((component: any) => 
             component.componentName || component.name || component
           );

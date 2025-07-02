@@ -4,6 +4,27 @@ from enum import Enum
 from typing import Dict, List, Tuple, Optional
 
 
+class NodeData(BaseModel):
+    label: str
+
+class Node(BaseModel):
+    id: str
+    data: NodeData
+
+
+class Edge(BaseModel):
+    id: str
+    source: str
+    target: str
+    type: str = "smoothstep"
+    animated: bool = True
+    label: Optional[float] = None
+
+class GraphData(BaseModel):
+    nodes: list[Node]
+    edges: list[Edge]
+
+
 class Measures(str, Enum):
     centimeters = "centimeters"
     meters = "meters"

@@ -22,6 +22,7 @@ import RTL from 'views/admin/rtl';
 import ComponentsPage from 'views/admin/components/ComponentsPage';
 import Graph from 'views/admin/graph/graph';
 import InventoryPage from 'views/admin/inventory/InventoryPage';
+import GraphDagre from 'views/admin/graphDagre/index';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -72,16 +73,13 @@ export const hiddenRoutes = [
   {
     name: 'Graph View',
     layout: '/admin',
-    path: '/graph/:componentName',
-    component: <Graph />,
+    path: '/graph/:initialComponent',
+    component: <GraphDagre />,
   },
   {
     name: 'Sign In',
     layout: '/auth',
     path: '/sign-in',
-    icon: (
-      <Icon as={MdLock as any} width="20px" height="20px" color="inherit" />
-    ),
     component: <SignInCentered />,
   },
 ];

@@ -41,7 +41,11 @@ from models import (
     TokenData,
     AppUser,
     ReturnUser,
-    CreateAppUser
+    CreateAppUser,
+    Node, 
+    NodeData,
+    Edge,
+    GraphData
 )
 
 # JWT Configuration
@@ -255,6 +259,34 @@ async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...), curr
 
     return ComponentTree(root=topName, nodes=root_nodes)
 
+@app.get("/graph", response_model=GraphData)
+async def get_tree(db: Prisma = Depends(get_db), topName: str = Query(...), current_user: User = Depends(get_current_user)):
+    components = await db.relationships.find_many(
+        where={"root": topName}
+    )
+
+    output_graph = GraphData(
+        nodes=[],
+        edges=[]
+    )
+
+    for component in components:
+        output_graph.nodes.append(Node(id=component.subComponent, data=NodeData(label=component.subComponent)))
+        if component.topComponent and component.subComponent:
+            output_graph.edges.append(
+                Edge(
+                    id=f"{component.topComponent}_{component.subComponent}",
+                    source=component.topComponent,
+                    target=component.subComponent,
+                    amount=component.amount,
+                    label=component.amount
+                )
+            )
+    return output_graph
+
+
+
+
 
 @app.get("/components", response_model=Component)
 async def get_component(
@@ -445,20 +477,19 @@ async def delete_component(
             )
     else:
         try:
-            # Make adjustments here:
-            await db.relationships.delete_many(
-                where={
-                    "AND": [
-                        {"root": root},  # Fixed syntax
-                        {
-                            "OR": [
-                                {"topComponent": componentName},
-                                {"subComponent": componentName}
-                            ]
-                        }
-                    ]
-                }
-            )
+
+            components = await db.relationships.find_many(
+                where={"root": componentName}
+    )
+            for comp in components:
+                await db.relationships.delete(
+                    where={
+                        "root": root,
+                        "subComponent": comp.subComponent,
+                        "topComponent": comp.topComponent,
+                        "amount": comp.amount
+                    }
+                )
             return component
             
         
@@ -516,11 +547,21 @@ async def create_relationship(
             }
         )
         if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Relationship between '{relationship.topComponent}' and '{relationship.subComponent}' already exists"
+            # Update the relationship
+            updated = await db.relationships.update(
+                where={
+                    "topComponent_subComponent_root": {
+                        "topComponent": relationship.topComponent,
+                        "subComponent": relationship.subComponent,
+                        "root": relationship.root
+                    }
+                },
+                data={
+                    "amount": int(relationship.amount)  # Ensure it's an integer
+                }
             )
-        
+            return updated
+            
 
         # Check if the subComponent is connected to the root
         connectedToRoot = await db.relationships.find_first(

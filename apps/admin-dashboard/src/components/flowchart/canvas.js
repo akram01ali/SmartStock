@@ -132,27 +132,32 @@ export default function Flow({ initialComponent }) {
       // For edges, delete directly without dialog
       try {
         // Extract component names from edge ID (edge-sourceComponent-targetComponent)
-        const [, sourceComponentPath, targetComponentPath] = selectedEdge.id.split('-');
-        
+        const [, sourceComponentPath, targetComponentPath] =
+          selectedEdge.id.split('-');
+
         // Extract just the component names from the paths
         const extractComponentName = (path) => {
           const pathParts = path.split('/');
           return pathParts[pathParts.length - 1];
         };
-        
+
         const sourceComponent = extractComponentName(sourceComponentPath);
         const targetComponent = extractComponentName(targetComponentPath);
 
-        await ApiService.deleteRelationship(sourceComponent, targetComponent, initialComponent);
+        await ApiService.deleteRelationship(
+          sourceComponent,
+          targetComponent,
+          initialComponent,
+        );
         setSelectedEdge(null);
-        
+
         toast({
           title: 'Relationship deleted',
           description: `Relationship between ${sourceComponent} and ${targetComponent} has been removed`,
           status: 'success',
           duration: 3000,
         });
-        
+
         await fetchTreeData();
       } catch (error) {
         toast({
@@ -172,7 +177,7 @@ export default function Flow({ initialComponent }) {
     try {
       if (selectedNode) {
         const componentName = selectedNode.data.label;
-        
+
         // Use the new delete method that completely removes from database
         const result = await ApiService.deleteComponent(componentName, true);
         setSelectedNode(null);
@@ -204,7 +209,11 @@ export default function Flow({ initialComponent }) {
           });
         } else {
           // For non-root edges, delete as normal
-          await ApiService.deleteRelationship(sourceComponent, targetComponent, initialComponent);
+          await ApiService.deleteRelationship(
+            sourceComponent,
+            targetComponent,
+            initialComponent,
+          );
           setSelectedEdge(null);
           toast({
             title: 'Relationship deleted',
@@ -229,12 +238,13 @@ export default function Flow({ initialComponent }) {
     try {
       if (selectedNode) {
         const componentName = selectedNode.data.label;
-        
+
         // Don't allow deleting the root component from its own subassembly
         if (componentName === initialComponent) {
           toast({
             title: 'Cannot remove root component',
-            description: 'You cannot remove the root component from its own subassembly',
+            description:
+              'You cannot remove the root component from its own subassembly',
             status: 'warning',
             duration: 3000,
           });
@@ -243,19 +253,27 @@ export default function Flow({ initialComponent }) {
 
         // Find the parent of the selected component by looking at the tree data
         const treeResponse = await ApiService.getTree(initialComponent);
-        
+
         // The response structure is {root: string, nodes: TreeNode[]}
         // We need to create a flat structure to find the parent component
         let parentComponent = null;
-        
+
         // Helper function to find parent in tree structure
-        const findParentInTree = (nodes, targetComponent, currentParent = '') => {
+        const findParentInTree = (
+          nodes,
+          targetComponent,
+          currentParent = '',
+        ) => {
           for (const node of nodes) {
             if (node.name === targetComponent) {
               return currentParent;
             }
             if (node.children && node.children.length > 0) {
-              const found = findParentInTree(node.children, targetComponent, node.name);
+              const found = findParentInTree(
+                node.children,
+                targetComponent,
+                node.name,
+              );
               if (found !== null) {
                 return found;
               }
@@ -265,8 +283,10 @@ export default function Flow({ initialComponent }) {
         };
 
         // Check if it's a root-level component (direct child of the assembly)
-        const isRootLevelComponent = treeResponse.nodes.some(node => node.name === componentName);
-        
+        const isRootLevelComponent = treeResponse.nodes.some(
+          (node) => node.name === componentName,
+        );
+
         if (isRootLevelComponent) {
           parentComponent = initialComponent; // The root assembly is the parent
         } else {
@@ -285,9 +305,9 @@ export default function Flow({ initialComponent }) {
         }
 
         const result = await ApiService.removeComponentFromSubassembly(
-          componentName, 
-          initialComponent, 
-          parentComponent
+          componentName,
+          initialComponent,
+          parentComponent,
         );
         setSelectedNode(null);
         toast({
@@ -299,7 +319,11 @@ export default function Flow({ initialComponent }) {
       } else if (selectedEdge) {
         // For edges, just delete the specific relationship
         const [, sourceComponent, targetComponent] = selectedEdge.id.split('-');
-        await ApiService.deleteRelationship(sourceComponent, targetComponent, initialComponent);
+        await ApiService.deleteRelationship(
+          sourceComponent,
+          targetComponent,
+          initialComponent,
+        );
         setSelectedEdge(null);
         toast({
           title: 'Relationship removed',
@@ -327,10 +351,12 @@ export default function Flow({ initialComponent }) {
       const response = await ApiService.getTree(initialComponent);
       // Note: response now has structure { root: "name", nodes: [...] }
 
-      const { positions, levels: calculatedLevels, flatTree, allNodeInstances } = calculateNodePositions(
-        response,
-        initialComponent,
-      );
+      const {
+        positions,
+        levels: calculatedLevels,
+        flatTree,
+        allNodeInstances,
+      } = calculateNodePositions(response, initialComponent);
 
       setLevels(calculatedLevels);
 
@@ -339,7 +365,7 @@ export default function Flow({ initialComponent }) {
       let nodeId = 0;
 
       // Create visual nodes for each node instance
-      allNodeInstances.forEach(instance => {
+      allNodeInstances.forEach((instance) => {
         const level = instance.level;
         const currentNodeId = `node-${nodeId++}`;
         nodePositions.set(instance.path, currentNodeId);
@@ -430,7 +456,7 @@ export default function Flow({ initialComponent }) {
 
       // Refresh the tree to show the new component
       await fetchTreeData();
-      
+
       toast({
         title: 'Component created',
         description: `Component ${componentData.componentName} has been created and added to ${initialComponent}`,
@@ -455,7 +481,7 @@ export default function Flow({ initialComponent }) {
 
       // Refresh the tree to show the updated component
       await fetchTreeData();
-      
+
       toast({
         title: 'Component updated',
         description: `Component ${componentData.componentName} has been updated`,
@@ -484,46 +510,49 @@ export default function Flow({ initialComponent }) {
     }
   }, []);
 
-  const handleEdgeDoubleClick = useCallback(async (event, edge) => {
-    try {
-      // Extract component names from edge ID (edge-parentPath-childPath)
-      const edgeIdParts = edge.id.split('-');
-      if (edgeIdParts.length >= 3) {
-        const sourceComponentPath = edgeIdParts[1];
-        const targetComponentPath = edgeIdParts[2];
-        
-        // Extract just the component names from the paths
-        // Path format: root_0/matica/child_1/component1 -> component1
-        // For root component: root_0/matica -> matica
-        const extractComponentName = (path) => {
-          const pathParts = path.split('/');
-          return pathParts[pathParts.length - 1]; // Get the last part of the path
-        };
-        
-        const sourceComponent = extractComponentName(sourceComponentPath);
-        const targetComponent = extractComponentName(targetComponentPath);
-        
-        // Get the current amount from the edge label
-        const currentAmount = parseInt(edge.label) || 1;
-        
-        // Open relationship dialog with current relationship data
-        setRelationshipDialog({
-          isOpen: true,
-          sourceComponent,
-          targetComponent,
-          currentAmount,
+  const handleEdgeDoubleClick = useCallback(
+    async (event, edge) => {
+      try {
+        // Extract component names from edge ID (edge-parentPath-childPath)
+        const edgeIdParts = edge.id.split('-');
+        if (edgeIdParts.length >= 3) {
+          const sourceComponentPath = edgeIdParts[1];
+          const targetComponentPath = edgeIdParts[2];
+
+          // Extract just the component names from the paths
+          // Path format: root_0/matica/child_1/component1 -> component1
+          // For root component: root_0/matica -> matica
+          const extractComponentName = (path) => {
+            const pathParts = path.split('/');
+            return pathParts[pathParts.length - 1]; // Get the last part of the path
+          };
+
+          const sourceComponent = extractComponentName(sourceComponentPath);
+          const targetComponent = extractComponentName(targetComponentPath);
+
+          // Get the current amount from the edge label
+          const currentAmount = parseInt(edge.label) || 1;
+
+          // Open relationship dialog with current relationship data
+          setRelationshipDialog({
+            isOpen: true,
+            sourceComponent,
+            targetComponent,
+            currentAmount,
+          });
+        }
+      } catch (error) {
+        console.error('Error handling edge double click:', error);
+        toast({
+          title: 'Error opening relationship editor',
+          description: error.message,
+          status: 'error',
+          duration: 3000,
         });
       }
-    } catch (error) {
-      console.error('Error handling edge double click:', error);
-      toast({
-        title: 'Error opening relationship editor',
-        description: error.message,
-        status: 'error',
-        duration: 3000,
-      });
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   const [relationshipDialog, setRelationshipDialog] = useState({
     isOpen: false,
@@ -583,7 +612,11 @@ export default function Flow({ initialComponent }) {
     try {
       // Check if relationship exists
       try {
-        await ApiService.getRelationship(sourceComponent, targetComponent, initialComponent);
+        await ApiService.getRelationship(
+          sourceComponent,
+          targetComponent,
+          initialComponent,
+        );
         // If we get here, relationship exists - update it
         await ApiService.updateRelationship({
           topComponent: sourceComponent,
@@ -830,7 +863,13 @@ export default function Flow({ initialComponent }) {
       <DeleteConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
-        componentName={selectedNode ? selectedNode.data.label : (selectedEdge ? selectedEdge.id.split('-')[2] : '')}
+        componentName={
+          selectedNode
+            ? selectedNode.data.label
+            : selectedEdge
+            ? selectedEdge.id.split('-')[2]
+            : ''
+        }
         parentComponent={initialComponent}
         onDeleteFromDatabase={handleDeleteFromDatabase}
         onDeleteFromSubassembly={handleDeleteFromSubassembly}

@@ -5,7 +5,7 @@ export class ApiService {
     const token = localStorage.getItem('authToken');
     return {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      ...(token && { Authorization: `Bearer ${token}` }),
     };
   }
 
@@ -29,10 +29,13 @@ export class ApiService {
     try {
       const headers = this.getAuthHeaders();
       console.log('getPrinters - Headers:', headers);
-      console.log('getPrinters - Token from localStorage:', localStorage.getItem('authToken'));
-      
+      console.log(
+        'getPrinters - Token from localStorage:',
+        localStorage.getItem('authToken'),
+      );
+
       const response = await fetch(`${API_URL}/printers`, {
-        headers
+        headers,
       });
       const data = await this.handleResponse(response);
       return data || [];
@@ -45,7 +48,7 @@ export class ApiService {
   static async getGroups() {
     try {
       const response = await fetch(`${API_URL}/groups`, {
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
       });
       const data = await this.handleResponse(response);
       return data || [];
@@ -58,7 +61,7 @@ export class ApiService {
   static async getAssemblies() {
     try {
       const response = await fetch(`${API_URL}/assemblies`, {
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
       });
       const data = await this.handleResponse(response);
       return data || [];
@@ -71,7 +74,7 @@ export class ApiService {
   static async getTree(topName) {
     try {
       const response = await fetch(`${API_URL}/tree?topName=${topName}`, {
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
       });
       const data = await this.handleResponse(response);
       return data || { tree: {} };
@@ -85,8 +88,8 @@ export class ApiService {
     const response = await fetch(
       `${API_URL}/components?componentName=${componentName}`,
       {
-        headers: this.getAuthHeaders()
-      }
+        headers: this.getAuthHeaders(),
+      },
     );
     if (!response.ok) {
       throw new Error('Component not found');
@@ -224,7 +227,7 @@ export class ApiService {
 
     const response = await fetch(`${API_URL}/components?${params.toString()}`, {
       method: 'DELETE',
-      headers: this.getAuthHeaders()
+      headers: this.getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -258,7 +261,7 @@ export class ApiService {
 
     const response = await fetch(`${API_URL}/components?${params.toString()}`, {
       method: 'DELETE',
-      headers: this.getAuthHeaders()
+      headers: this.getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -280,8 +283,8 @@ export class ApiService {
         subComponent,
       )}&root=${encodeURIComponent(root)}`,
       {
-        headers: this.getAuthHeaders()
-      }
+        headers: this.getAuthHeaders(),
+      },
     );
     if (!response.ok) {
       if (response.status === 404) {
@@ -328,7 +331,7 @@ export class ApiService {
       )}&root=${encodeURIComponent(root)}`,
       {
         method: 'DELETE',
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
       },
     );
     if (!response.ok) {
@@ -341,11 +344,32 @@ export class ApiService {
     try {
       const headers = this.getAuthHeaders();
       console.log('getAllComponents - Headers:', headers);
-      console.log('getAllComponents - Token from localStorage:', localStorage.getItem('authToken'));
-      
+      console.log(
+        'getAllComponents - Token from localStorage:',
+        localStorage.getItem('authToken'),
+      );
+
       const response = await fetch(`${API_URL}/all_components`, {
-        headers
+        headers,
       });
+      const data = await this.handleResponse(response);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching all components:', error);
+      return [];
+    }
+  }
+
+  static async getGraph(topName) {
+    try {
+      const headers = this.getAuthHeaders();
+
+      const response = await fetch(
+        `${API_URL}/graph?topName=${encodeURIComponent(topName)}`,
+        {
+          headers,
+        },
+      );
       const data = await this.handleResponse(response);
       return data || [];
     } catch (error) {
@@ -359,7 +383,7 @@ export class ApiService {
     try {
       // Get all components from the existing endpoint
       const response = await fetch(`${API_URL}/all_components`, {
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
       });
       const data = await this.handleResponse(response);
       const allComponents = data || [];

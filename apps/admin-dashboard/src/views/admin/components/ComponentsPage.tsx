@@ -57,7 +57,9 @@ export default function ComponentsPage() {
     supplier: '',
     cost: 0,
   });
-  const [createType, setCreateType] = useState<'printer' | 'group' | 'assembly' | null>(null);
+  const [createType, setCreateType] = useState<
+    'printer' | 'group' | 'assembly' | null
+  >(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
@@ -106,12 +108,13 @@ export default function ComponentsPage() {
   // Filter components based on search query
   const filterComponents = (components: Component[]) => {
     if (!searchQuery) return components;
-    
+
     const query = searchQuery.toLowerCase();
-    return components.filter((component) => 
-      component.componentName.toLowerCase().includes(query) ||
-      component.supplier.toLowerCase().includes(query) ||
-      component.type.toLowerCase().includes(query)
+    return components.filter(
+      (component) =>
+        component.componentName.toLowerCase().includes(query) ||
+        component.supplier.toLowerCase().includes(query) ||
+        component.type.toLowerCase().includes(query),
     );
   };
 
@@ -120,15 +123,19 @@ export default function ComponentsPage() {
   const filteredAssemblies = filterComponents(assemblies);
 
   const getTotalResults = () => {
-    return filteredGroups.length + filteredPrinters.length + filteredAssemblies.length;
+    return (
+      filteredGroups.length +
+      filteredPrinters.length +
+      filteredAssemblies.length
+    );
   };
 
   const getTotalComponents = () => {
     return groups.length + printers.length + assemblies.length;
   };
 
-  const handleCardClick = (componentName: string) => {
-    navigate(`/admin/graph/${componentName}`);
+  const handleCardClick = (initialComponent: string) => {
+    navigate(`/admin/graph/${initialComponent}`);
   };
 
   const handleCreateClick = (type: 'printer' | 'group' | 'assembly') => {
@@ -177,7 +184,9 @@ export default function ComponentsPage() {
       }
 
       toast({
-        title: `${createType.charAt(0).toUpperCase() + createType.slice(1)} Created`,
+        title: `${
+          createType.charAt(0).toUpperCase() + createType.slice(1)
+        } Created`,
         description: `${formData.componentName} has been created successfully`,
         status: 'success',
         duration: 3000,
@@ -197,7 +206,8 @@ export default function ComponentsPage() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create component',
+        description:
+          error instanceof Error ? error.message : 'Failed to create component',
         status: 'error',
         duration: 5000,
       });
@@ -207,7 +217,7 @@ export default function ComponentsPage() {
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const renderComponentSection = (
@@ -217,7 +227,7 @@ export default function ComponentsPage() {
     createType: 'printer' | 'group' | 'assembly',
     icon: any,
     gradientBg: string,
-    buttonColor: string
+    buttonColor: string,
   ) => {
     const getSingularForm = (title: string) => {
       return title.endsWith('s') ? title.slice(0, -1) : title;
@@ -260,10 +270,10 @@ export default function ComponentsPage() {
                 position="relative"
                 overflow="hidden"
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ 
-                  opacity: 1, 
+                animate={{
+                  opacity: 1,
                   y: 0,
-                  transition: { delay: index * 0.1, duration: 0.3 }
+                  transition: { delay: index * 0.1, duration: 0.3 },
                 }}
               >
                 <Flex
@@ -324,7 +334,7 @@ export default function ComponentsPage() {
           'printer',
           MdPrint,
           'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)',
-          'blue'
+          'blue',
         )}
 
         {renderComponentSection(
@@ -334,7 +344,7 @@ export default function ComponentsPage() {
           'group',
           MdGroups,
           'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          'purple'
+          'purple',
         )}
 
         {renderComponentSection(
@@ -344,7 +354,7 @@ export default function ComponentsPage() {
           'assembly',
           MdBuild,
           'linear-gradient(135deg, #48BB78 0%, #38A169 100%)',
-          'green'
+          'green',
         )}
       </VStack>
 
@@ -353,7 +363,8 @@ export default function ComponentsPage() {
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>
-            Create New {createType?.charAt(0).toUpperCase() + createType?.slice(1)}
+            Create New{' '}
+            {createType?.charAt(0).toUpperCase() + createType?.slice(1)}
           </ModalHeader>
           <ModalBody>
             <VStack spacing={4}>
@@ -361,7 +372,9 @@ export default function ComponentsPage() {
                 <FormLabel>Component Name</FormLabel>
                 <Input
                   value={formData.componentName}
-                  onChange={(e) => handleInputChange('componentName', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('componentName', e.target.value)
+                  }
                   placeholder="Enter component name"
                 />
               </FormControl>
@@ -371,7 +384,9 @@ export default function ComponentsPage() {
                 <Input
                   type="number"
                   value={formData.amount}
-                  onChange={(e) => handleInputChange('amount', parseInt(e.target.value))}
+                  onChange={(e) =>
+                    handleInputChange('amount', parseInt(e.target.value))
+                  }
                   placeholder="Enter amount"
                 />
               </FormControl>
@@ -380,7 +395,9 @@ export default function ComponentsPage() {
                 <FormLabel>Supplier</FormLabel>
                 <Input
                   value={formData.supplier}
-                  onChange={(e) => handleInputChange('supplier', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('supplier', e.target.value)
+                  }
                   placeholder="Enter supplier name"
                 />
               </FormControl>
@@ -391,7 +408,9 @@ export default function ComponentsPage() {
                   type="number"
                   step="0.01"
                   value={formData.cost}
-                  onChange={(e) => handleInputChange('cost', parseFloat(e.target.value))}
+                  onChange={(e) =>
+                    handleInputChange('cost', parseFloat(e.target.value))
+                  }
                   placeholder="Enter cost"
                 />
               </FormControl>
@@ -401,7 +420,12 @@ export default function ComponentsPage() {
                 <Input
                   type="number"
                   value={formData.triggerMinAmount}
-                  onChange={(e) => handleInputChange('triggerMinAmount', parseInt(e.target.value))}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'triggerMinAmount',
+                      parseInt(e.target.value),
+                    )
+                  }
                   placeholder="Enter minimum amount"
                 />
               </FormControl>
@@ -410,7 +434,9 @@ export default function ComponentsPage() {
                 <FormLabel>Scanned By</FormLabel>
                 <Input
                   value={formData.scannedBy}
-                  onChange={(e) => handleInputChange('scannedBy', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('scannedBy', e.target.value)
+                  }
                   placeholder="Enter scanner name"
                 />
               </FormControl>
@@ -426,7 +452,8 @@ export default function ComponentsPage() {
               isLoading={isSubmitting}
               loadingText="Creating..."
             >
-              Create {createType?.charAt(0).toUpperCase() + createType?.slice(1)}
+              Create{' '}
+              {createType?.charAt(0).toUpperCase() + createType?.slice(1)}
             </Button>
           </ModalFooter>
         </ModalContent>

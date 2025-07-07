@@ -21,7 +21,6 @@ import {
   List,
   ListItem,
   HStack,
-  Icon,
 } from '@chakra-ui/react';
 import { MdSearch, MdInfo } from 'react-icons/md';
 import { ApiService } from '../../services/service';
@@ -133,16 +132,24 @@ export function ComponentDialog({
 
   // Fetch all components when dialog opens for create mode
   useEffect(() => {
+    console.log('useEffect for fetching components:', { isOpen, mode, componentsLoaded });
+    
     if (isOpen && mode === 'create' && !componentsLoaded) {
       const fetchAllComponents = async () => {
         try {
+          console.log('Starting to fetch all components...');
           setIsSearching(true);
           const data = await ApiService.getAllComponents();
+          console.log('Received data from getAllComponents:', data);
+          
           const componentNames = (data || []).map((component: any) => 
             component.componentName || component.name || component
           );
+          console.log('Extracted component names:', componentNames);
+          
           setAllComponents(componentNames);
           setComponentsLoaded(true);
+          console.log('Components loaded successfully');
         } catch (error) {
           console.error('Error fetching all components:', error);
           setAllComponents([]);
@@ -157,6 +164,9 @@ export function ComponentDialog({
 
   // Client-side fuzzy search using cached components
   const performFuzzySearch = (query: string): string[] => {
+    console.log('performFuzzySearch called with:', query);
+    console.log('allComponents available:', allComponents.length);
+    
     if (!query || query.length < 2) {
       return [];
     }
@@ -210,25 +220,41 @@ export function ComponentDialog({
     });
     
     // Return limited results
-    return sortedMatches.slice(0, 10);
+    const results = sortedMatches.slice(0, 10);
+    console.log('Search results:', results);
+    return results;
   };
 
   // Fuzzy search for existing components (now uses cached data)
   const handleComponentNameSearch = (value: string) => {
+    console.log('handleComponentNameSearch called with:', value);
     handleChange('componentName', value);
     
     if (mode === 'create' && value.length >= 2) {
       const results = performFuzzySearch(value);
       setSearchResults(results);
       setShowSuggestions(results.length > 0);
+      console.log('Setting showSuggestions to:', results.length > 0);
+      console.log('searchResults set to:', results);
     } else {
       setSearchResults([]);
       setShowSuggestions(false);
+      console.log('Clearing suggestions');
     }
   };
 
   const handleSuggestionClick = async (componentName: string) => {
+    console.log('=== HANDLE SUGGESTION CLICK START ===');
+    console.log('handleSuggestionClick called with:', componentName);
+    console.log('initialComponent:', initialComponent);
+    console.log('onSubmit function type:', typeof onSubmit);
+    console.log('onSubmit function:', onSubmit);
+    console.log('mode:', mode);
+    console.log('Current formData:', JSON.stringify(formData, null, 2));
+    console.log('relationshipAmount:', relationshipAmount);
+    
     if (!initialComponent) {
+      console.log('❌ No initialComponent, showing error toast');
       toast({
         title: 'Error',
         description: 'No root component specified for creating component',
@@ -240,6 +266,7 @@ export function ComponentDialog({
     
     setShowSuggestions(false);
     setIsSubmitting(true);
+    console.log('✅ About to call onSubmit...');
     
     try {
       // Create the component data with the suggested name
@@ -248,8 +275,15 @@ export function ComponentDialog({
         componentName: componentName
       };
       
+      console.log('📝 Component data to submit:', JSON.stringify(componentData, null, 2));
+      const relationshipData = mode === 'create' ? { amount: relationshipAmount } : undefined;
+      console.log('🔗 Relationship data:', relationshipData);
+      
+      console.log('🚀 Calling onSubmit with data...');
       // Use the onSubmit callback to ensure proper canvas refresh
-      await onSubmit(componentData, mode === 'create' ? { amount: relationshipAmount } : undefined);
+      const result = await onSubmit(componentData, relationshipData);
+      
+      console.log('✅ onSubmit completed successfully, result:', result);
       
       toast({
         title: 'Component Created',
@@ -258,9 +292,16 @@ export function ComponentDialog({
         duration: 3000,
       });
       
+      console.log('✅ Success toast shown, closing dialog');
       onClose();
     } catch (error) {
-      console.error('Error creating component:', error);
+      console.error('❌ Error creating component:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+        error: error
+      });
       toast({
         title: 'Error Creating Component',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -269,6 +310,7 @@ export function ComponentDialog({
       });
     } finally {
       setIsSubmitting(false);
+      console.log('=== HANDLE SUGGESTION CLICK END ===');
     }
   };
 
@@ -322,7 +364,7 @@ export function ComponentDialog({
                   <HStack spacing={2}>
                     <Text>Component Name</Text>
                     {mode === 'create' && (
-                      <Icon as={MdSearch} color={textColorSecondary} boxSize={4} />
+                      <MdSearch color={textColorSecondary} size="16px" />
                     )}
                   </HStack>
                 </FormLabel>
@@ -343,56 +385,63 @@ export function ComponentDialog({
                   _placeholder={{ color: textColorSecondary }}
                 />
                 
-                {mode === 'create' && showSuggestions && searchResults.length > 0 && (
-                  <Box
-                    position="absolute"
-                    top="100%"
-                    left={0}
-                    right={0}
-                    zIndex={1000}
-                    bg={suggestionsBg}
-                    border="1px solid"
-                    borderColor={borderColor}
-                    borderRadius="md"
-                    maxH="200px"
-                    overflowY="auto"
-                    boxShadow="lg"
-                  >
-                    <Box p={2} bg={headerBg} borderBottom="1px solid" borderColor={headerBorderColor}>
-                      <HStack spacing={2}>
-                        <Icon as={MdInfo} color="blue.500" boxSize={4} />
-                        <Text fontSize="xs" color={useColorModeValue("blue.700", "blue.300")} fontWeight="medium">
-                          Click to create component with this name:
-                        </Text>
-                      </HStack>
+                {mode === 'create' && showSuggestions && searchResults.length > 0 && (() => {
+                  console.log('Rendering suggestions box with results:', searchResults);
+                  return (
+                    <Box
+                      position="absolute"
+                      top="100%"
+                      left={0}
+                      right={0}
+                      zIndex={1000}
+                      bg={suggestionsBg}
+                      border="1px solid"
+                      borderColor={borderColor}
+                      borderRadius="md"
+                      maxH="200px"
+                      overflowY="auto"
+                      boxShadow="lg"
+                    >
+                      <Box p={2} bg={headerBg} borderBottom="1px solid" borderColor={headerBorderColor}>
+                        <HStack spacing={2}>
+                          <MdInfo color="blue" size="16px" />
+                          <Text fontSize="xs" color={useColorModeValue("blue.700", "blue.300")} fontWeight="medium">
+                            Click to create component with this name:
+                          </Text>
+                        </HStack>
+                      </Box>
+                      <List spacing={0}>
+                        {searchResults.map((result, index) => (
+                          <ListItem
+                            key={index}
+                            p={3}
+                            cursor="pointer"
+                            _hover={{ bg: suggestionsHoverBg, transform: 'translateX(2px)' }}
+                            _active={{ bg: useColorModeValue('blue.100', 'gray.600') }}
+                            borderBottom={index < searchResults.length - 1 ? '1px solid' : 'none'}
+                            borderColor={borderColor}
+                            transition="all 0.2s"
+                            onMouseDown={(e) => {
+                              e.preventDefault(); // Prevent blur from firing
+                              console.log('ListItem onMouseDown for result:', result);
+                              handleSuggestionClick(result);
+                            }}
+                          >
+                            <HStack spacing={2}>
+                              <MdSearch color="blue" size="16px" />
+                              <Text fontSize="sm" fontWeight="medium" color={useColorModeValue("blue.600", "blue.300")}>
+                                {result}
+                              </Text>
+                              <Text fontSize="xs" color={textColorSecondary}>
+                                (click to add)
+                              </Text>
+                            </HStack>
+                          </ListItem>
+                        ))}
+                      </List>
                     </Box>
-                    <List spacing={0}>
-                      {searchResults.map((result, index) => (
-                        <ListItem
-                          key={index}
-                          p={3}
-                          cursor="pointer"
-                          _hover={{ bg: suggestionsHoverBg, transform: 'translateX(2px)' }}
-                          _active={{ bg: useColorModeValue('blue.100', 'gray.600') }}
-                          borderBottom={index < searchResults.length - 1 ? '1px solid' : 'none'}
-                          borderColor={borderColor}
-                          transition="all 0.2s"
-                          onClick={() => handleSuggestionClick(result)}
-                        >
-                          <HStack spacing={2}>
-                            <Icon as={MdSearch} color="blue.400" boxSize={4} />
-                            <Text fontSize="sm" fontWeight="medium" color={useColorModeValue("blue.600", "blue.300")}>
-                              {result}
-                            </Text>
-                            <Text fontSize="xs" color={textColorSecondary}>
-                              (click to add)
-                            </Text>
-                          </HStack>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
+                  );
+                })()}
                 
                 {mode === 'create' && isSearching && (
                   <Text fontSize="xs" color={textColorSecondary} mt={1}>

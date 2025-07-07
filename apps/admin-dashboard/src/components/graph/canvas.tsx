@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Background,
   ReactFlow,
-  addEdge,
   ConnectionLineType,
   Panel,
   useNodesState,
@@ -11,11 +10,12 @@ import {
   Controls,
   NodeToolbar,
   NodeResizer,
-  Edge,
   Connection,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
-import { Button, Icon, useToast } from '@chakra-ui/react';
+import { Button, useToast, Box } from '@chakra-ui/react';
 import { MdAdd, MdDelete } from 'react-icons/md';
 import '@xyflow/react/dist/style.css';
 import { ComponentDialog } from './componentDialog';
@@ -26,14 +26,8 @@ import { RelationshipDialog } from './relationshipDialog';
 import {
   GraphNode,
   GraphEdge,
-  RelationshipDialogState,
-  ComponentData,
-  FlowProps,
   ApiError,
   ComponentCreate,
-  ComponentUpdate,
-  Measures,
-  TypeOfComponent,
 } from './types';
 
 const styles = {
@@ -101,6 +95,96 @@ const getLayoutedElements = (
   return { nodes: newNodes, edges };
 };
 
+// Custom Edge Label Component
+function CustomEdgeLabel({ id, sourceX, sourceY, targetX, targetY, label }: any) {
+  // Determine layout direction based on the relative positions
+  const isVertical = Math.abs(targetY - sourceY) > Math.abs(targetX - sourceX);
+  
+  let labelX, labelY;
+  
+  if (isVertical) {
+    // Vertical layout: place label directly above the target node
+    labelX = targetX;
+    labelY = targetY - 25; // 25px above the target node
+  } else {
+    // Horizontal layout: place label directly to the left of the target node
+    labelX = targetX - 35; // 35px to the left of the target node
+    labelY = targetY;
+  }
+  
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+        pointerEvents: 'all',
+        zIndex: 1000,
+      }}
+      className="react-flow__edge-label"
+    >
+      <Box
+        bg="white"
+        px={2}
+        py={1}
+        borderRadius="md"
+        border="1px solid #ddd"
+        fontSize="xs"
+        fontWeight="bold"
+        color="#4318FF"
+        boxShadow="0 2px 4px rgba(0,0,0,0.1)"
+        _hover={{
+          bg: '#f7fafc',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+        }}
+        transition="all 0.2s"
+      >
+        {label}
+      </Box>
+    </div>
+  );
+}
+
+// Custom Edge Component
+function CustomEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style = {}, data, markerEnd, label }: any) {
+  const [edgePath] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  return (
+    <>
+      <path
+        id={id}
+        style={style}
+        className="react-flow__edge-path"
+        d={edgePath}
+        markerEnd={markerEnd}
+      />
+      {label && (
+        <EdgeLabelRenderer>
+          <CustomEdgeLabel
+            id={id}
+            sourceX={sourceX}
+            sourceY={sourceY}
+            targetX={targetX}
+            targetY={targetY}
+            label={label}
+          />
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+}
+
+// Edge types configuration
+const edgeTypes = {
+  'smoothstep': CustomEdge,
+};
+
 const Flow = () => {
   const { initialComponent } = useParams<{ initialComponent: string }>();
   const toast = useToast();
@@ -120,7 +204,7 @@ const Flow = () => {
     isOpen: false,
     sourceComponent: '',
     targetComponent: '',
-    currentAmount: 1,
+    currentAmount: 1.0,
   });
 
   // Graph loading and updates
@@ -185,7 +269,7 @@ const Flow = () => {
           isOpen: true,
           sourceComponent,
           targetComponent,
-          currentAmount: 1,
+          currentAmount: 1.0,
         });
       } catch (error) {
         const apiError = error as ApiError;
@@ -261,10 +345,15 @@ const Flow = () => {
   );
 
   // CRUD Operations
-  const handleCreateComponent = async (componentData: ComponentCreate) => {
+  const handleCreateComponent = async (
+    componentData: ComponentCreate,
+    relationshipData?: { amount: number },
+  ) => {
     try {
       await ApiService.createComponent(componentData, initialComponent);
+
       await loadGraph();
+
       toast({
         title: 'Component created',
         description: `Component ${componentData.componentName} has been created`,
@@ -311,13 +400,9 @@ const Flow = () => {
         const sourceComponent = selectedEdge.source;
         const targetComponent = selectedEdge.target;
 
-        await ApiService.deleteRelationship(
-          sourceComponent,
-          targetComponent,
-          initialComponent,
-        );
+        await ApiService.deleteRelationship(sourceComponent, targetComponent);
 
-        setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
+        loadGraph();
         setSelectedEdge(null);
 
         toast({
@@ -343,8 +428,12 @@ const Flow = () => {
 
   const handleDeleteNode = async (fromDatabase: boolean) => {
     try {
-      const componentName = selectedNode.id;
-      await ApiService.deleteComponent(componentName, fromDatabase);
+      const componentName = selectedNode.data.label;
+      // Make
+      const path_array = selectedNode.id.split('/');
+      const parent = path_array[path_array.length - 2];
+
+      await ApiService.deleteComponent(componentName, fromDatabase, parent);
       setSelectedNode(null);
       await loadGraph();
 
@@ -409,6 +498,7 @@ const Flow = () => {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -430,10 +520,13 @@ const Flow = () => {
             <Button onClick={() => onLayout('TB')} colorScheme="green">
               Vertical Layout
             </Button>
+            <Button onClick={() => onLayout('LR')} colorScheme="orange">
+              Horizontal Layout
+            </Button>
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
               colorScheme="blue"
-              leftIcon={<Icon as={MdAdd} />}
+              leftIcon={<MdAdd style={{ fontSize: '16px' }} />}
             >
               Add Node
             </Button>
@@ -441,7 +534,7 @@ const Flow = () => {
               <Button
                 onClick={handleDelete}
                 colorScheme="red"
-                leftIcon={<Icon as={MdDelete} />}
+                leftIcon={<MdDelete style={{ fontSize: '16px' }} />}
               >
                 Delete {selectedNode ? 'Component' : 'Relationship'}
               </Button>

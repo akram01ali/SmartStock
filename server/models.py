@@ -69,6 +69,8 @@ class ComponentCreate(BaseModel):
     supplier: str
     cost: float
     type: TypeOfComponent
+    description: Optional[str] = None
+    image: Optional[str] = None
 
 class ComponentUpdate(BaseModel):
     amount: float | None = None
@@ -79,6 +81,8 @@ class ComponentUpdate(BaseModel):
     supplier: str | None = None
     cost: float | None = None
     type: TypeOfComponent | None = None
+    description: Optional[str] = None
+    image: Optional[str] = None
 
 class Component(ComponentCreate):
     lastScanned: datetime
@@ -99,7 +103,12 @@ class RelationshipCreate(BaseModel):
     topComponent: str
     subComponent: str
     root: str
-    amount: int
+    amount: float
+
+class RelationshipRequest(BaseModel):
+    topComponent: str
+    subComponent: str
+    amount: float
 
 class Relationship(RelationshipCreate):
     class Config:
@@ -107,7 +116,7 @@ class Relationship(RelationshipCreate):
         
 class TreeNode(BaseModel):
     name: str
-    amount: int
+    amount: float
     children: List['TreeNode'] = []
 
 class ComponentTree(BaseModel):

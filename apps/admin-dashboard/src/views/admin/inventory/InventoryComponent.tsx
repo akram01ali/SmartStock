@@ -5,59 +5,50 @@ import {
   Text,
   useColorModeValue,
   Flex,
-  Icon,
   Button,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Input,
-  FormControl,
-  FormLabel,
   VStack,
   useToast,
   useDisclosure,
   HStack,
   Badge,
   Divider,
-  Avatar,
-  CircularProgress,
-  CircularProgressLabel,
+  Image,
+  Card,
+  CardBody,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ApiService } from '../../../services/service';
-import Card from 'components/card/Card';
 import {
-  MdGroups,
-  MdPrint,
-  MdAdd,
-  MdBuild,
   MdArrowBack,
   MdDelete,
+  MdEdit,
   MdInventory,
-  MdTrendingUp,
-  MdAccessTime,
-  MdPerson,
   MdAttachMoney,
+  MdPerson,
+  MdAccessTime,
+  MdBusiness,
   MdWarning,
-  MdCheckCircle,
 } from 'react-icons/md';
-import { ComponentDialog } from '../../../components/flowchart/componentDialog';
+import { ComponentDialog } from '../../../components/graph/componentDialog';
+import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
 
 interface Component {
   componentName: string;
   amount: number;
-  measure: 'centimeters' | 'meters' | 'amount';
+  measure: Measures;
   lastScanned: string;
   scannedBy: string;
   durationOfDevelopment: number;
   triggerMinAmount: number;
   supplier: string;
   cost: number;
-  type: 'printer' | 'group' | 'component' | 'assembly';
+  type: TypeOfComponent;
+  description?: string;
+  image?: string;
 }
 
 interface InventoryComponentProps {
@@ -73,40 +64,24 @@ export default function InventoryComponent({
   onEdit,
   onDelete,
 }: InventoryComponentProps) {
-  const bgColor = useColorModeValue('white', 'gray.700');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const textColor = useColorModeValue('gray.700', 'white');
-  const textColorSecondary = useColorModeValue('gray.600', 'gray.400');
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
-  const shadowColor = useColorModeValue('rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const textColorSecondary = useColorModeValue('gray.600', 'gray.400');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
   const isLowStock = component.amount < component.triggerMinAmount;
-  const stockPercentage = Math.min((component.amount / (component.triggerMinAmount * 2)) * 100, 100);
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type: TypeOfComponent) => {
     switch (type) {
-      case 'printer': return 'blue';
-      case 'group': return 'purple';
-      case 'component': return 'green';
-      case 'assembly': return 'orange';
+      case TypeOfComponent.Printer: return 'blue';
+      case TypeOfComponent.Group: return 'purple';
+      case TypeOfComponent.Component: return 'green';
+      case TypeOfComponent.Assembly: return 'orange';
       default: return 'gray';
     }
-  };
-
-  const getTypeGradient = (type: string) => {
-    switch (type) {
-      case 'printer': return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-      case 'group': return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-      case 'component': return 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-      case 'assembly': return 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)';
-      default: return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    }
-  };
-
-  const handleEditClick = () => {
-    onOpen();
   };
 
   const handleDelete = async () => {
@@ -131,14 +106,16 @@ export default function InventoryComponent({
     }
   };
 
-  const handleEditSubmit = async (editedComponent: Component) => {
+  const handleEditSubmit = async (editedComponent: ComponentCreate) => {
     try {
-      // Pass the original component name
-      editedComponent.componentName = component.componentName;
-
+      const componentData = {
+        ...editedComponent,
+        componentName: component.componentName,
+      };
+      
       const updatedComponent = (await ApiService.updateComponent(
-        editedComponent,
-      )) as Component; // Type assertion here
+        componentData,
+      )) as Component;
 
       toast({
         title: 'Component updated',
@@ -146,7 +123,6 @@ export default function InventoryComponent({
         duration: 3000,
       });
 
-      // Update parent component and close dialog
       if (onEdit) {
         await onEdit(updatedComponent);
       }
@@ -162,348 +138,218 @@ export default function InventoryComponent({
   };
 
   return (
-    <Box pt={{ base: '130px', md: '80px', xl: '80px' }}>
-      <Button
-        mb={8}
-        onClick={onBack}
-        leftIcon={<MdArrowBack />}
-        size="lg"
-        variant="ghost"
-        color={textColor}
-        _hover={{ 
-          bg: useColorModeValue('gray.100', 'gray.600'),
-          transform: 'translateX(-4px)',
-        }}
-        transition="all 0.3s ease"
-        fontWeight="600"
-      >
-        Back to Inventory
-      </Button>
+    <Box minH="100vh" bg={bgColor} p={6}>
+      {/* Header */}
+      <Flex justify="space-between" align="center" mb={8}>
+        <Button
+          leftIcon={<MdArrowBack />}
+          variant="ghost"
+          onClick={onBack}
+          size="lg"
+          fontWeight="600"
+        >
+          Back to Inventory
+        </Button>
 
-      <Card 
-        bg={cardBg}
-        boxShadow={`0 20px 40px ${shadowColor}`}
-        borderRadius="20px"
-        overflow="hidden"
-      >
-        <VStack spacing={8} align="stretch">
-          {/* Header Section */}
-          <Box
-            bg={getTypeGradient(component.type)}
-            p={8}
-            m={-6}
-            mb={0}
-            borderRadius="20px 20px 0 0"
-            position="relative"
-            overflow="hidden"
+        <HStack spacing={3}>
+          <Button
+            leftIcon={<MdEdit />}
+            colorScheme="blue"
+            onClick={onOpen}
+            size="md"
           >
-            <Box
-              position="absolute"
-              top="0"
-              right="0"
-              w="100px"
-              h="100px"
-              bg="rgba(255,255,255,0.1)"
-              borderRadius="full"
-              transform="translate(30px, -30px)"
-            />
-            <Flex justify="space-between" align="center" position="relative">
-              <VStack align="start" spacing={2}>
-                <Heading size="xl" color="white" fontWeight="700">
-                  {component.componentName}
-                </Heading>
-                <HStack spacing={3}>
-                  <Badge 
-                    colorScheme={getTypeColor(component.type)} 
-                    variant="solid"
-                    px={3}
-                    py={1}
-                    borderRadius="full"
-                    bg="rgba(255,255,255,0.2)"
-                    color="white"
-                    fontWeight="600"
-                    textTransform="capitalize"
-                  >
-                    {component.type}
-                  </Badge>
-                  {isLowStock && (
-                    <Badge 
-                      colorScheme="red" 
-                      variant="solid"
-                      px={3}
-                      py={1}
-                      borderRadius="full"
-                      bg="rgba(255,0,0,0.2)"
-                      color="white"
-                      fontWeight="600"
-                    >
-                      Low Stock
-                    </Badge>
-                  )}
-                </HStack>
-              </VStack>
-              
-              <VStack align="end" spacing={1}>
-                <Text color="rgba(255,255,255,0.8)" fontSize="sm" fontWeight="500">
-                  Current Stock
-                </Text>
-                <Heading size="2xl" color="white" fontWeight="800">
-                  {component.amount}
-                </Heading>
-                <Text color="rgba(255,255,255,0.9)" fontSize="md" fontWeight="500">
-                  {component.measure}
-                </Text>
-              </VStack>
-            </Flex>
-          </Box>
+            Edit
+          </Button>
+          <Button
+            leftIcon={<MdDelete />}
+            colorScheme="red"
+            onClick={handleDelete}
+            size="md"
+          >
+            Delete
+          </Button>
+        </HStack>
+      </Flex>
 
-          {/* Main Content Grid */}
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8} px={2}>
-            {/* Stock Information Card */}
-            <Box
-              bg={cardBg}
-              borderWidth="1px"
-              borderRadius="16px"
-              p={6}
-              borderColor={borderColor}
-              boxShadow={`0 8px 32px ${shadowColor}`}
-              transition="all 0.3s ease"
-              _hover={{
-                transform: 'translateY(-4px)',
-                boxShadow: `0 12px 48px ${shadowColor}`,
-              }}
-            >
-              <HStack spacing={4} mb={6}>
-                <Box
-                  bg="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
-                  borderRadius="12px"
-                  p={3}
-                >
-                  <Icon as={MdInventory} w="24px" h="24px" color="white" />
-                </Box>
-                <VStack align="start" spacing={0}>
-                  <Heading size="md" color={textColor} fontWeight="600">
-                    Stock Information
+      {/* Main Content */}
+      <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+        {/* Component Info Card */}
+        <Card bg={cardBg} gridColumn={{ base: 1, lg: '1 / 3' }}>
+          <CardBody>
+            <VStack align="start" spacing={6}>
+              {/* Title and Type */}
+              <Flex justify="space-between" align="start" w="100%">
+                <VStack align="start" spacing={2}>
+                  <Heading size="xl" color={textColor}>
+                    {component.componentName}
                   </Heading>
-                  <Text color={textColorSecondary} fontSize="sm">
-                    Current inventory details
-                  </Text>
+                  <HStack spacing={3}>
+                    <Badge 
+                      colorScheme={getTypeColor(component.type)} 
+                      px={3} 
+                      py={1} 
+                      borderRadius="full"
+                      textTransform="capitalize"
+                    >
+                      {component.type}
+                    </Badge>
+                    {isLowStock && (
+                      <Badge colorScheme="red" px={3} py={1} borderRadius="full">
+                        Low Stock
+                      </Badge>
+                    )}
+                  </HStack>
                 </VStack>
-              </HStack>
 
-              <SimpleGrid columns={2} spacing={6}>
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Amount
-                  </Text>
-                  <Text fontSize="xl" fontWeight="700" color={textColor}>
+                <VStack align="end" spacing={1}>
+                  <Text fontSize="sm" color={textColorSecondary}>Current Stock</Text>
+                  <Heading size="lg" color={isLowStock ? 'red.500' : textColor}>
                     {component.amount} {component.measure}
-                  </Text>
+                  </Heading>
                 </VStack>
-                
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Minimum Amount
-                  </Text>
-                  <Text fontSize="xl" fontWeight="700" color={isLowStock ? "red.500" : textColor}>
-                    {component.triggerMinAmount}
-                  </Text>
-                </VStack>
-                
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Unit Cost
-                  </Text>
-                  <HStack>
-                    <Icon as={MdAttachMoney} color="green.500" w="20px" h="20px" />
-                    <Text fontSize="xl" fontWeight="700" color={textColor}>
-                      €{component.cost}
-                    </Text>
-                  </HStack>
-                </VStack>
-                
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Supplier
-                  </Text>
-                  <HStack>
-                    <Avatar 
-                      size="xs" 
-                      name={component.supplier || 'Unknown'} 
-                      bg="blue.500"
-                    />
-                    <Text fontSize="lg" fontWeight="600" color={textColor} noOfLines={1}>
-                      {component.supplier || 'Not specified'}
-                    </Text>
-                  </HStack>
-                </VStack>
+              </Flex>
+
+              <Divider />
+
+              {/* Key Stats */}
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="100%">
+                <Stat>
+                  <StatLabel color={textColorSecondary}>
+                    <HStack>
+                      <MdAttachMoney size="16px" />
+                      <Text>Unit Cost</Text>
+                    </HStack>
+                  </StatLabel>
+                  <StatNumber color={textColor}>€{component.cost}</StatNumber>
+                </Stat>
+
+                <Stat>
+                  <StatLabel color={textColorSecondary}>
+                    <HStack>
+                      <MdWarning size="16px" />
+                      <Text>Min. Amount</Text>
+                    </HStack>
+                  </StatLabel>
+                  <StatNumber color={textColor}>{component.triggerMinAmount}</StatNumber>
+                </Stat>
+
+                <Stat>
+                  <StatLabel color={textColorSecondary}>
+                    <HStack>
+                      <MdBusiness size="16px" />
+                      <Text>Supplier</Text>
+                    </HStack>
+                  </StatLabel>
+                  <StatNumber fontSize="md" color={textColor} noOfLines={1}>
+                    {component.supplier || 'Not specified'}
+                  </StatNumber>
+                </Stat>
+
+                <Stat>
+                  <StatLabel color={textColorSecondary}>
+                    <HStack>
+                      <MdAccessTime size="16px" />
+                      <Text>Dev. Time</Text>
+                    </HStack>
+                  </StatLabel>
+                  <StatNumber color={textColor}>{component.durationOfDevelopment} days</StatNumber>
+                </Stat>
               </SimpleGrid>
 
-              <Divider my={4} />
-              
-              <HStack justify="space-between" align="center">
-                <VStack align="start" spacing={0}>
-                  <Text fontSize="xs" color={textColorSecondary}>
-                    Stock Level
-                  </Text>
-                  <Text fontSize="sm" fontWeight="600" color={isLowStock ? "red.500" : "green.500"}>
-                    {isLowStock ? "Below minimum" : "Above minimum"}
-                  </Text>
-                </VStack>
-                <CircularProgress 
-                  value={stockPercentage} 
-                  size="50px" 
-                  color={isLowStock ? "red.500" : "green.500"}
-                  thickness="6px"
-                >
-                  <CircularProgressLabel fontSize="xs" fontWeight="bold">
-                    {Math.round(stockPercentage)}%
-                  </CircularProgressLabel>
-                </CircularProgress>
-              </HStack>
-            </Box>
+              <Divider />
 
-            {/* Development Details Card */}
-            <Box
-              bg={cardBg}
-              borderWidth="1px"
-              borderRadius="16px"
-              p={6}
-              borderColor={borderColor}
-              boxShadow={`0 8px 32px ${shadowColor}`}
-              transition="all 0.3s ease"
-              _hover={{
-                transform: 'translateY(-4px)',
-                boxShadow: `0 12px 48px ${shadowColor}`,
-              }}
-            >
-              <HStack spacing={4} mb={6}>
-                <Box
-                  bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                  borderRadius="12px"
-                  p={3}
-                >
-                  <Icon as={MdTrendingUp} w="24px" h="24px" color="white" />
-                </Box>
-                <VStack align="start" spacing={0}>
-                  <Heading size="md" color={textColor} fontWeight="600">
-                    Development Details
-                  </Heading>
-                  <Text color={textColorSecondary} fontSize="sm">
-                    Production & tracking info
-                  </Text>
-                </VStack>
-              </HStack>
-
-              <SimpleGrid columns={2} spacing={6}>
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Development Time
-                  </Text>
-                  <HStack>
-                    <Icon as={MdAccessTime} color="orange.500" w="20px" h="20px" />
-                    <Text fontSize="xl" fontWeight="700" color={textColor}>
-                      {component.durationOfDevelopment} days
-                    </Text>
-                  </HStack>
-                </VStack>
-                
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Component Type
-                  </Text>
-                  <Badge 
-                    colorScheme={getTypeColor(component.type)} 
-                    variant="subtle"
-                    px={3}
-                    py={1}
-                    borderRadius="full"
-                    fontWeight="600"
-                    textTransform="capitalize"
-                  >
-                    {component.type}
-                  </Badge>
-                </VStack>
-                
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Last Scanned
-                  </Text>
-                  <Text fontSize="lg" fontWeight="600" color={textColor}>
-                    {new Date(component.lastScanned).toLocaleDateString()}
-                  </Text>
-                </VStack>
-                
-                <VStack align="start" spacing={2}>
-                  <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
-                    Scanned By
-                  </Text>
-                  <HStack>
-                    <Icon as={MdPerson} color="purple.500" w="20px" h="20px" />
-                    <Text fontSize="lg" fontWeight="600" color={textColor} noOfLines={1}>
+              {/* Additional Info */}
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="100%">
+                <HStack>
+                  <MdPerson size="20px" color="gray" />
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="sm" color={textColorSecondary}>Last Scanned By</Text>
+                    <Text fontWeight="500" color={textColor}>
                       {component.scannedBy || 'Not specified'}
                     </Text>
-                  </HStack>
-                </VStack>
+                  </VStack>
+                </HStack>
+
+                <HStack>
+                  <MdAccessTime size="20px" color="gray" />
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="sm" color={textColorSecondary}>Last Scanned</Text>
+                    <Text fontWeight="500" color={textColor}>
+                      {new Date(component.lastScanned).toLocaleDateString()}
+                    </Text>
+                  </VStack>
+                </HStack>
               </SimpleGrid>
-            </Box>
-          </SimpleGrid>
 
-          {/* Action Buttons */}
-          <HStack spacing={4} justify="flex-end" pt={4}>
-            <Button
-              leftIcon={<MdBuild />}
-              colorScheme="blue"
-              size="lg"
-              onClick={handleEditClick}
-              bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-              color="white"
-              _hover={{ 
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-              }}
-              _active={{
-                transform: 'translateY(0px)',
-              }}
-              transition="all 0.3s ease"
-              fontWeight="600"
-              borderRadius="12px"
-              px={8}
-            >
-              Edit Component
-            </Button>
-            <Button
-              leftIcon={<Icon as={MdDelete} />}
-              colorScheme="red"
-              size="lg"
-              onClick={handleDelete}
-              bg="linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)"
-              color="white"
-              _hover={{ 
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(255, 107, 107, 0.4)',
-              }}
-              _active={{
-                transform: 'translateY(0px)',
-              }}
-              transition="all 0.3s ease"
-              fontWeight="600"
-              borderRadius="12px"
-              px={8}
-            >
-              Delete
-            </Button>
-          </HStack>
+              {/* Description */}
+              {component.description && (
+                <>
+                  <Divider />
+                  <VStack align="start" spacing={3} w="100%">
+                    <Text fontSize="lg" fontWeight="600" color={textColor}>
+                      Description
+                    </Text>
+                    <Text 
+                      color={textColorSecondary} 
+                      lineHeight="1.6"
+                      whiteSpace="pre-wrap"
+                    >
+                      {component.description}
+                    </Text>
+                  </VStack>
+                </>
+              )}
+            </VStack>
+          </CardBody>
+        </Card>
 
-          <ComponentDialog
-            isOpen={isOpen}
-            onClose={onClose}
-            onSubmit={handleEditSubmit}
-            component={component}
-            mode="edit"
-          />
-        </VStack>
-      </Card>
+        {/* Image Card */}
+        {component.image && (
+          <Card bg={cardBg}>
+            <CardBody>
+              <VStack spacing={4}>
+                <Text fontSize="lg" fontWeight="600" color={textColor}>
+                  Component Image
+                </Text>
+                <Box
+                  borderRadius="lg"
+                  overflow="hidden"
+                  border="1px solid"
+                  borderColor={borderColor}
+                  w="100%"
+                  bg={useColorModeValue('gray.50', 'gray.700')}
+                >
+                  <Image
+                    src={component.image}
+                    alt={`${component.componentName} image`}
+                    w="100%"
+                    maxH="400px"
+                    objectFit="contain"
+                    fallback={
+                      <Flex
+                        h="200px"
+                        align="center"
+                        justify="center"
+                        bg={useColorModeValue('gray.100', 'gray.600')}
+                      >
+                        <Text color={textColorSecondary}>Image not available</Text>
+                      </Flex>
+                    }
+                  />
+                </Box>
+              </VStack>
+            </CardBody>
+          </Card>
+        )}
+      </SimpleGrid>
+
+      <ComponentDialog
+        isOpen={isOpen}
+        onClose={onClose}
+        onSubmit={handleEditSubmit}
+        component={component as ComponentCreate}
+        mode="edit"
+      />
     </Box>
   );
 }

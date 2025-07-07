@@ -7,6 +7,7 @@ import {
   NumberInputField,
   Select,
   Text,
+  Textarea,
 } from '@chakra-ui/react';
 
 import { FormFieldProps, Measures, TypeOfComponent } from './types';
@@ -39,6 +40,19 @@ export const FormField: React.FC<FormFieldProps> = ({
           borderColor={borderColor}
           color={textColor}
           isReadOnly={isReadOnly}
+        />
+      )}
+      {type === 'textarea' && (
+        <Textarea
+          value={value || ''}
+          onChange={(e) => onChange(name, e.target.value)}
+          placeholder={placeholder}
+          bg={inputBg}
+          borderColor={borderColor}
+          color={textColor}
+          isReadOnly={isReadOnly}
+          resize="vertical"
+          minH="100px"
         />
       )}
       {type === 'number' && (
@@ -132,5 +146,11 @@ export const componentFormFields = [
       { value: TypeOfComponent.Component, label: 'Component' },
       { value: TypeOfComponent.Assembly, label: 'Assembly' },
     ],
+  },
+  {
+    id: 'description',
+    label: 'Description',
+    type: 'textarea',
+    placeholder: 'Enter component description (optional)',
   },
 ];

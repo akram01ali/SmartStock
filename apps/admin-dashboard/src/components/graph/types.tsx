@@ -70,6 +70,8 @@ export interface ComponentCreate {
   cost: number;
   type: TypeOfComponent;
   lastScanned: string;
+  description?: string;
+  image?: string;
 }
 
 export interface ComponentUpdate {
@@ -81,6 +83,8 @@ export interface ComponentUpdate {
   supplier?: string;
   cost?: number;
   type?: TypeOfComponent;
+  description?: string;
+  image?: string;
 }
 
 export interface ComponentDialogProps {
@@ -100,7 +104,7 @@ export interface FormFieldProps {
   name: string;
   value: any;
   onChange: (name: string, value: any) => void;
-  type: 'text' | 'number' | 'select';
+  type: 'text' | 'number' | 'select' | 'textarea';
   options?: { value: string; label: string }[];
   placeholder?: string;
   precision?: number;

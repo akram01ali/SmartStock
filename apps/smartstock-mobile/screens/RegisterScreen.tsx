@@ -18,7 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../services/api';
 import { loginScreenStyles as styles } from '../styles/LoginScreenStyles';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const navigation = useNavigation();
   const { login } = useAuth();
   const [name, setName] = useState('');
@@ -29,22 +29,8 @@ export default function LoginScreen() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const testConnection = async () => {
-    setTestingConnection(true);
-    setErrorMessage('');
-    try {
-      const result = await ApiService.testConnectivity();
-      console.log('Connection test result:', result);
-      // You could show a success message here if needed
-    } catch (error) {
-      console.error('Connection test failed:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Connection test failed');
-    } finally {
-      setTestingConnection(false);
-    }
-  };
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     if (!name.trim() || !surname.trim() || !password.trim()) {
       setErrorMessage('Please fill in all fields');
       return;
@@ -54,12 +40,12 @@ export default function LoginScreen() {
     setErrorMessage('');
 
     try {
-      await login({
+      await ApiService.register({
         name: name.trim(),
         surname: surname.trim(),
         password: password.trim(),
       });
-      console.log('Login successful, should navigate to Home');
+      navigation.navigate('Login' as never);
     } catch (error) {
       console.error('Login failed:', error);
       setErrorMessage(
@@ -68,10 +54,6 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRegister = () => {
-    navigation.navigate('Register' as never);
   };
 
   const clearError = () => {
@@ -98,8 +80,7 @@ export default function LoginScreen() {
               />
             </View>
             
-            <Text style={styles.title}>Welcome to SmartStock</Text>
-            <Text style={styles.subtitle}>Please sign in to continue</Text>
+            <Text style={styles.title}>Register to Create an Account</Text>
 
             <View style={styles.inputContainer}>
               <Ionicons
@@ -172,47 +153,23 @@ export default function LoginScreen() {
               <Text style={styles.errorMessage}>{errorMessage}</Text>
             )}
 
-            <TouchableOpacity
-              style={styles.rememberContainer}
-              onPress={() => setRememberMe(!rememberMe)}
-            >
-              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                {rememberMe && (
-                  <Ionicons name="checkmark" size={16} color="white" />
-                )}
-              </View>
-              <Text style={styles.rememberText}>Remember me</Text>
-            </TouchableOpacity>
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-                onPress={handleLogin}
+                onPress={handleRegister}
                 disabled={loading}
               >
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.loginButtonText}>Sign In</Text>
+                  <Text style={styles.loginButtonText}>Sign Up</Text>
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-                onPress={handleRegister}
-                disabled={loading}
-              >
-                <Text style={styles.registerButtonText}>Register</Text>
-              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Need help?</Text>
-            <TouchableOpacity>
-              <Text style={styles.footerLink}>Contact Support</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

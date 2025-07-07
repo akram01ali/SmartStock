@@ -5,7 +5,6 @@ import {
   Text,
   useColorModeValue,
   Flex,
-  Icon,
   Button,
   VStack,
   useToast,
@@ -16,12 +15,14 @@ import {
   StatNumber,
   StatHelpText,
   HStack,
+  Image,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { ApiService } from '../../../services/service';
 import { MdAdd, MdInventory, MdWarning, MdTrendingUp, MdAttachMoney } from 'react-icons/md';
 import InventoryComponent from './InventoryComponent';
-import { ComponentDialog } from '../../../components/flowchart/componentDialog';
+import { ComponentDialog } from '../../../components/graph/componentDialog';
+import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
 import { useSearch } from '../../../contexts/SearchContext';
 import SmoothCard from 'components/card/MotionCard';
 import SmoothMotionBox, { fadeIn, slideInFromLeft } from 'components/transitions/MotionBox';
@@ -30,22 +31,16 @@ import { AnimatePresence } from 'framer-motion';
 interface Component {
   componentName: string;
   amount: number;
-  measure: 'centimeters' | 'meters' | 'amount';
+  measure: Measures;
   lastScanned: string;
   scannedBy: string;
   durationOfDevelopment: number;
   triggerMinAmount: number;
   supplier: string;
   cost: number;
-  type: 'printer' | 'group' | 'component' | 'assembly';
-}
-
-interface ComponentDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (componentData: Component) => Promise<void>;
-  component?: Component | null; // Component being edited, if any
-  mode: 'create' | 'edit'; // Dialog mode
+  type: TypeOfComponent;
+  description?: string;
+  image?: string;
 }
 
 export default function InventoryPage() {
@@ -54,6 +49,7 @@ export default function InventoryPage() {
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(
     null,
   );
+  const [typeFilter, setTypeFilter] = useState<'all' | TypeOfComponent>('all');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { searchQuery, setSearchQuery } = useSearch();
   const toast = useToast();
@@ -92,17 +88,27 @@ export default function InventoryPage() {
     };
   }, [setSearchQuery]);
 
-  // Filter inventory based on search query
+  // Filter inventory based on search query and type filter
   const filteredInventory = inventory.filter((component) => {
-    if (!searchQuery) return true;
-    
-    const query = searchQuery.toLowerCase();
-    return (
-      component.componentName.toLowerCase().includes(query) ||
-      component.type.toLowerCase().includes(query) ||
-      component.supplier.toLowerCase().includes(query) ||
-      component.scannedBy.toLowerCase().includes(query)
-    );
+    // Search filter
+    let matchesSearch = true;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      matchesSearch = (
+        component.componentName.toLowerCase().includes(query) ||
+        component.type.toLowerCase().includes(query) ||
+        component.supplier.toLowerCase().includes(query) ||
+        component.scannedBy.toLowerCase().includes(query)
+      );
+    }
+
+    // Type filter
+    let matchesType = true;
+    if (typeFilter !== 'all') {
+      matchesType = component.type === typeFilter;
+    }
+
+    return matchesSearch && matchesType;
   });
 
   // Calculate statistics
@@ -118,9 +124,9 @@ export default function InventoryPage() {
     setSelectedComponent(null);
   };
 
-  const handleAddComponent = async (componentData: Component) => {
+  const handleAddComponent = async (componentData: ComponentCreate) => {
     try {
-      await ApiService.createComponent(componentData);
+      await ApiService.createComponent(componentData, null);
       toast({
         title: 'Component created',
         status: 'success',
@@ -167,22 +173,22 @@ export default function InventoryPage() {
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type: TypeOfComponent) => {
     switch (type) {
-      case 'printer': return 'blue';
-      case 'group': return 'purple';
-      case 'assembly': return 'green';
-      case 'component': return 'orange';
+      case TypeOfComponent.Printer: return 'blue';
+      case TypeOfComponent.Group: return 'purple';
+      case TypeOfComponent.Assembly: return 'green';
+      case TypeOfComponent.Component: return 'orange';
       default: return 'gray';
     }
   };
 
-  const getTypeGradient = (type: string) => {
+  const getTypeGradient = (type: TypeOfComponent) => {
     switch (type) {
-      case 'printer': return 'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)';
-      case 'group': return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-      case 'assembly': return 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)';
-      case 'component': return 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)';
+      case TypeOfComponent.Printer: return 'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)';
+      case TypeOfComponent.Group: return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      case TypeOfComponent.Assembly: return 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)';
+      case TypeOfComponent.Component: return 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)';
       default: return 'linear-gradient(135deg, #718096 0%, #4a5568 100%)';
     }
   };
@@ -192,7 +198,7 @@ export default function InventoryPage() {
       <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }} variants={fadeIn}>
         <Flex justify="center" align="center" minH="200px">
           <VStack spacing={4}>
-            <Icon as={MdInventory} w="48px" h="48px" color={brandColor} />
+            <MdInventory size="48px" color={brandColor} />
             <Text fontSize="lg" color={textColorSecondary}>Loading Inventory...</Text>
           </VStack>
         </Flex>
@@ -218,24 +224,21 @@ export default function InventoryPage() {
             <Flex justify="space-between" align="center" mb={6}>
               <VStack align="start" spacing={2}>
                 <Heading size="lg" color={textColor}>Components Inventory</Heading>
-                {searchQuery && (
+                {(searchQuery || typeFilter !== 'all') && (
                   <Text color={textColorSecondary} fontSize="sm">
                     Showing {filteredInventory.length} of {inventory.length} components
                     {searchQuery && ` matching "${searchQuery}"`}
+                    {typeFilter !== 'all' && ` filtered by "${typeFilter}"`}
                   </Text>
                 )}
               </VStack>
               <Button
-                leftIcon={<MdAdd />}
+                leftIcon={<MdAdd style={{ fontSize: '16px' }} />}
                 colorScheme="blue"
                 size="lg"
                 onClick={onOpen}
-                boxShadow={cardShadow}
-                _hover={{ 
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0px 20px 60px rgba(112, 144, 176, 0.25)'
-                }}
-                transition="all 0.3s ease"
+                _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
+                transition="all 0.2s"
               >
                 Add Component
               </Button>
@@ -255,7 +258,7 @@ export default function InventoryPage() {
                     borderRadius="20px"
                     p="15px"
                   >
-                    <Icon as={MdInventory} w="24px" h="24px" color="white" />
+                    <MdInventory size="24px" color="white" />
                   </Box>
                 </Flex>
               </SmoothCard>
@@ -274,7 +277,7 @@ export default function InventoryPage() {
                     borderRadius="20px"
                     p="15px"
                   >
-                    <Icon as={MdWarning} w="24px" h="24px" color="white" />
+                    <MdWarning size="24px" color="white" />
                   </Box>
                 </Flex>
               </SmoothCard>
@@ -291,17 +294,66 @@ export default function InventoryPage() {
                     borderRadius="20px"
                     p="15px"
                   >
-                    <Icon as={MdAttachMoney} w="24px" h="24px" color="white" />
+                    <MdAttachMoney size="24px" color="white" />
                   </Box>
                 </Flex>
               </SmoothCard>
             </SimpleGrid>
 
+            {/* Type Filter Buttons */}
+            <Box mb={6}>
+              <Text color={textColorSecondary} fontSize="sm" mb={3} fontWeight="500">
+                Filter by Type:
+              </Text>
+              <HStack spacing={3} flexWrap="wrap">
+                <Button
+                  size="sm"
+                  variant={typeFilter === 'all' ? 'solid' : 'outline'}
+                  colorScheme="gray"
+                  onClick={() => setTypeFilter('all')}
+                >
+                  All ({inventory.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={typeFilter === TypeOfComponent.Component ? 'solid' : 'outline'}
+                  colorScheme="orange"
+                  onClick={() => setTypeFilter(TypeOfComponent.Component)}
+                >
+                  Components ({inventory.filter(item => item.type === TypeOfComponent.Component).length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={typeFilter === TypeOfComponent.Assembly ? 'solid' : 'outline'}
+                  colorScheme="green"
+                  onClick={() => setTypeFilter(TypeOfComponent.Assembly)}
+                >
+                  Assemblies ({inventory.filter(item => item.type === TypeOfComponent.Assembly).length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={typeFilter === TypeOfComponent.Group ? 'solid' : 'outline'}
+                  colorScheme="purple"
+                  onClick={() => setTypeFilter(TypeOfComponent.Group)}
+                >
+                  Groups ({inventory.filter(item => item.type === TypeOfComponent.Group).length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={typeFilter === TypeOfComponent.Printer ? 'solid' : 'outline'}
+                  colorScheme="blue"
+                  onClick={() => setTypeFilter(TypeOfComponent.Printer)}
+                >
+                  Printers ({inventory.filter(item => item.type === TypeOfComponent.Printer).length})
+                </Button>
+              </HStack>
+            </Box>
+
             {/* Inventory Grid */}
             {filteredInventory.length === 0 && searchQuery ? (
               <SmoothCard boxShadow={cardShadow} p={10}>
                 <VStack spacing={4}>
-                  <Icon as={MdInventory} w="48px" h="48px" color="gray.400" />
+                  <MdInventory size="48px" color="gray.400" />
                   <Text fontSize="lg" color="gray.500" textAlign="center">
                     No components found matching "{searchQuery}"
                   </Text>
@@ -354,6 +406,49 @@ export default function InventoryPage() {
 
                     {/* Card Content */}
                     <VStack align="stretch" spacing={4} p={4} pt={0}>
+                      {/* Image Preview if available */}
+                      {item.image && (
+                        <Box>
+                          <Image
+                            src={item.image}
+                            alt={`${item.componentName} preview`}
+                            h="120px"
+                            w="100%"
+                            objectFit="cover"
+                            borderRadius="md"
+                            fallback={
+                              <Box
+                                h="120px"
+                                bg={useColorModeValue('gray.100', 'gray.600')}
+                                borderRadius="md"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                              >
+                                <Text color={textColorSecondary} fontSize="sm">No image</Text>
+                              </Box>
+                            }
+                          />
+                        </Box>
+                      )}
+
+                      {/* Description Preview if available */}
+                      {item.description && (
+                        <Box>
+                          <Text color={textColorSecondary} fontSize="sm" fontWeight="500" mb={1}>
+                            Description
+                          </Text>
+                          <Text 
+                            color={textColor} 
+                            fontSize="sm" 
+                            noOfLines={2}
+                            lineHeight="1.4"
+                          >
+                            {item.description}
+                          </Text>
+                        </Box>
+                      )}
+
                       <SimpleGrid columns={2} spacing={4}>
                         <Box>
                           <Text color={textColorSecondary} fontSize="sm" fontWeight="500">

@@ -37,7 +37,8 @@ const getBaseUrl = () => {
 
 // Updated fallback IPs based on your current network configuration
 const FALLBACK_IPS = [
-  'http://10.0.0.100:8000',     // Your current WiFi IP (primary)
+  'http://10.0.0.100:8000',     // Your current WiFi IP (primary working)
+  'http://192.168.1.7:8000',    // Previous WiFi IP
   'http://172.21.0.1:8000',     // Your active Docker bridge IP
   'http://172.20.0.1:8000',     // Docker bridge (if hotspot is active)
   'http://172.17.0.1:8000',     // Default Docker bridge
@@ -134,7 +135,7 @@ export class ApiService {
     try {
       console.log('API Service: Starting login with credentials:', { name: credentials.name, surname: credentials.surname });
       
-      const data = await this.tryMultipleHosts<AuthResponse>('/app/login', {
+      const data = await this.tryMultipleHosts<AuthResponse>('/app-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +155,7 @@ export class ApiService {
     try {
       console.log('API Service: Starting registration with credentials:', { name: credentials.name, surname: credentials.surname });
       
-      const data = await this.tryMultipleHosts<any>('/app/register', {
+      const data = await this.tryMultipleHosts<any>('/app-register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +179,7 @@ export class ApiService {
   ): Promise<any> {
     try {
       const data = await this.tryMultipleHosts<any>(
-        `/stock?componentName=${encodeURIComponent(componentName)}&amount=${amount}&absolute=${absolute}`,
+        `/components/${encodeURIComponent(componentName)}/stock?amount=${amount}&absolute=${absolute}&scannedBy=mobile-app`,
         {
           method: 'PUT',
           headers: {
@@ -195,6 +196,25 @@ export class ApiService {
     }
   }
 
+  static async getComponent(componentName: string, token: string): Promise<any> {
+    try {
+      const data = await this.tryMultipleHosts<any>(
+        `/component/${encodeURIComponent(componentName)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      return data;
+    } catch (error) {
+      console.error('API Service: Failed to fetch component:', error);
+      throw error;
+    }
+  }
+
   static async updateStockWithImage(
     imageUri: string,
     amount: number,
@@ -203,24 +223,35 @@ export class ApiService {
   ): Promise<any> {
     try {
       console.log('API Service: Starting stock update with image');
+      console.log('Image URI:', imageUri);
+      console.log('Amount:', amount);
+      console.log('Absolute:', absolute);
       
       // Create FormData for multipart upload
       const formData = new FormData();
       
-      // Add the image file
+      // Add the image file - React Native specific format
+      // The key difference is we need to specify the file properly
       formData.append('image', {
         uri: imageUri,
         type: 'image/jpeg',
         name: 'barcode_image.jpg',
       } as any);
       
+      // Add other parameters as strings
+      formData.append('amount', amount.toString());
+      formData.append('absolute', absolute.toString());
+      formData.append('scannedBy', 'mobile-app');
+
+      console.log('FormData created, making request...');
+
       const data = await this.tryMultipleHosts<any>(
-        `/stock?amount=${amount}&absolute=${absolute}`,
+        `/components/scan-update`,
         {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            // Don't set Content-Type for FormData - let the browser set it with boundary
+            // Don't set Content-Type for FormData - let React Native handle it
           },
           body: formData,
         }

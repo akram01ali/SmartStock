@@ -7,19 +7,9 @@ import {
   Flex,
   Icon,
   Button,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Input,
-  FormControl,
-  FormLabel,
   VStack,
   useToast,
   useDisclosure,
-  HStack,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -28,39 +18,31 @@ import SmoothCard from 'components/card/MotionCard';
 import SmoothMotionBox, { fadeInUp } from 'components/transitions/MotionBox';
 import { MdGroups, MdPrint, MdAdd, MdBuild } from 'react-icons/md';
 import { useSearch } from '../../../contexts/SearchContext';
+import { ComponentDialog } from '../../../components/graph/componentDialog';
+import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
 
 interface Component {
   componentName: string;
   amount: number;
-  measure: 'centimeters' | 'meters' | 'amount';
+  measure: Measures;
   lastScanned: string;
   scannedBy: string;
   durationOfDevelopment: number;
   triggerMinAmount: number;
   supplier: string;
   cost: number;
-  type: 'printer' | 'group' | 'component' | 'assembly';
+  type: TypeOfComponent;
+  description?: string;
+  image?: string;
 }
 
 export default function ComponentsPage() {
   const [groups, setGroups] = useState<Component[]>([]);
   const [printers, setPrinters] = useState<Component[]>([]);
   const [assemblies, setAssemblies] = useState<Component[]>([]);
-  const [formData, setFormData] = useState({
-    componentName: '',
-    amount: 0,
-    measure: 'amount' as 'centimeters' | 'meters' | 'amount',
-    lastScanned: new Date().toISOString(),
-    scannedBy: '',
-    durationOfDevelopment: 0,
-    triggerMinAmount: 0,
-    supplier: '',
-    cost: 0,
-  });
   const [createType, setCreateType] = useState<
     'printer' | 'group' | 'assembly' | null
   >(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -140,54 +122,45 @@ export default function ComponentsPage() {
 
   const handleCreateClick = (type: 'printer' | 'group' | 'assembly') => {
     setCreateType(type);
-    setFormData({
-      componentName: '',
-      amount: 0,
-      measure: 'amount',
-      lastScanned: new Date().toISOString(),
-      scannedBy: '',
-      durationOfDevelopment: 0,
-      triggerMinAmount: 0,
-      supplier: '',
-      cost: 0,
-    });
     onOpen();
   };
 
-  const handleSubmit = async () => {
-    if (!formData.componentName) {
+  const handleComponentSubmit = async (componentData: ComponentCreate) => {
+    if (!createType) {
       toast({
         title: 'Validation Error',
-        description: 'Component name is required',
+        description: 'Component type is required',
         status: 'error',
         duration: 3000,
       });
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      const componentData = {
-        ...formData,
-        type: createType,
+      const typeMapping = {
+        'printer': TypeOfComponent.Printer,
+        'group': TypeOfComponent.Group,
+        'assembly': TypeOfComponent.Assembly
+      };
+
+      const finalComponentData = {
+        ...componentData,
+        type: typeMapping[createType],
       };
 
       if (createType === 'printer') {
-        // For printers, they are their own root component
-        await ApiService.createPrinter(componentData, formData.componentName);
+        await ApiService.createPrinter(finalComponentData, componentData.componentName);
       } else if (createType === 'group') {
-        // For groups, they are their own root component
-        await ApiService.createGroup(componentData, formData.componentName);
+        await ApiService.createGroup(finalComponentData, componentData.componentName);
       } else if (createType === 'assembly') {
-        // For assemblies, they are their own root component
-        await ApiService.createAssembly(componentData, formData.componentName);
+        await ApiService.createAssembly(finalComponentData, componentData.componentName);
       }
 
       toast({
         title: `${
           createType.charAt(0).toUpperCase() + createType.slice(1)
         } Created`,
-        description: `${formData.componentName} has been created successfully`,
+        description: `${componentData.componentName} has been created successfully`,
         status: 'success',
         duration: 3000,
       });
@@ -211,13 +184,33 @@ export default function ComponentsPage() {
         status: 'error',
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  // Create an initial component based on the create type
+  const getInitialComponent = (): ComponentCreate | null => {
+    if (!createType) return null;
+    
+    const typeMapping = {
+      'printer': TypeOfComponent.Printer,
+      'group': TypeOfComponent.Group,
+      'assembly': TypeOfComponent.Assembly
+    };
+    
+    return {
+      componentName: '',
+      amount: 0,
+      measure: Measures.Amount,
+      lastScanned: new Date().toISOString(),
+      scannedBy: '',
+      durationOfDevelopment: 0,
+      triggerMinAmount: 0,
+      supplier: '',
+      cost: 0,
+      type: typeMapping[createType],
+      description: '',
+      image: '',
+    };
   };
 
   const renderComponentSection = (
@@ -225,13 +218,10 @@ export default function ComponentsPage() {
     components: Component[],
     filteredComponents: Component[],
     createType: 'printer' | 'group' | 'assembly',
-    icon: any,
+    IconComponent: any,
     gradientBg: string,
     buttonColor: string,
   ) => {
-    const getSingularForm = (title: string) => {
-      return title.endsWith('s') ? title.slice(0, -1) : title;
-    };
 
     return (
       <SmoothMotionBox key={title} variants={fadeInUp}>
@@ -240,12 +230,12 @@ export default function ComponentsPage() {
             {title} ({components.length})
           </Heading>
           <Button
-            leftIcon={<MdAdd />}
+            leftIcon={<MdAdd style={{ fontSize: '16px' }} />}
             colorScheme={buttonColor}
             size="sm"
             onClick={() => handleCreateClick(createType)}
           >
-            Create {getSingularForm(title)}
+            Create {title}
           </Button>
         </Flex>
 
@@ -289,7 +279,7 @@ export default function ComponentsPage() {
                     mb="16px"
                     backdropFilter="blur(10px)"
                   >
-                    <Icon as={icon} w="32px" h="32px" color="white" />
+                    <IconComponent size="32px" color="white" />
                   </Box>
                   <Text
                     fontSize="lg"
@@ -358,106 +348,13 @@ export default function ComponentsPage() {
         )}
       </VStack>
 
-      {/* Modal for creating components */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            Create New{' '}
-            {createType?.charAt(0).toUpperCase() + createType?.slice(1)}
-          </ModalHeader>
-          <ModalBody>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Component Name</FormLabel>
-                <Input
-                  value={formData.componentName}
-                  onChange={(e) =>
-                    handleInputChange('componentName', e.target.value)
-                  }
-                  placeholder="Enter component name"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Amount</FormLabel>
-                <Input
-                  type="number"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    handleInputChange('amount', parseInt(e.target.value))
-                  }
-                  placeholder="Enter amount"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Supplier</FormLabel>
-                <Input
-                  value={formData.supplier}
-                  onChange={(e) =>
-                    handleInputChange('supplier', e.target.value)
-                  }
-                  placeholder="Enter supplier name"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Cost</FormLabel>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.cost}
-                  onChange={(e) =>
-                    handleInputChange('cost', parseFloat(e.target.value))
-                  }
-                  placeholder="Enter cost"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Minimum Amount Trigger</FormLabel>
-                <Input
-                  type="number"
-                  value={formData.triggerMinAmount}
-                  onChange={(e) =>
-                    handleInputChange(
-                      'triggerMinAmount',
-                      parseInt(e.target.value),
-                    )
-                  }
-                  placeholder="Enter minimum amount"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Scanned By</FormLabel>
-                <Input
-                  value={formData.scannedBy}
-                  onChange={(e) =>
-                    handleInputChange('scannedBy', e.target.value)
-                  }
-                  placeholder="Enter scanner name"
-                />
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="blue"
-              onClick={handleSubmit}
-              isLoading={isSubmitting}
-              loadingText="Creating..."
-            >
-              Create{' '}
-              {createType?.charAt(0).toUpperCase() + createType?.slice(1)}
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <ComponentDialog
+        isOpen={isOpen}
+        onClose={onClose}
+        onSubmit={handleComponentSubmit}
+        component={getInitialComponent()}
+        mode="create"
+      />
     </SmoothMotionBox>
   );
 }

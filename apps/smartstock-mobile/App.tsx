@@ -1,9 +1,16 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginScreen from './screens/LoginScreen';
+import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
+import InventoryScreen from './screens/InventoryScreen';
+import { RootStackParamList } from './types/navigation';
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
@@ -19,8 +26,28 @@ function AppContent() {
     );
   }
 
-  console.log('AppContent: Rendering', isAuthenticated ? 'HomeScreen' : 'LoginScreen');
-  return isAuthenticated ? <HomeScreen /> : <LoginScreen />;
+  return (
+    <NavigationContainer>
+      <Stack.Navigator 
+        initialRouteName={isAuthenticated ? "Home" : "Login"}
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        {isAuthenticated ? (
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Inventory" component={InventoryScreen} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }
 
 export default function App() {

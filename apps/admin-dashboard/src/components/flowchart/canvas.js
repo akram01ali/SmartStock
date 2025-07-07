@@ -147,7 +147,6 @@ export default function Flow({ initialComponent }) {
         await ApiService.deleteRelationship(
           sourceComponent,
           targetComponent,
-          initialComponent,
         );
         setSelectedEdge(null);
 
@@ -212,7 +211,6 @@ export default function Flow({ initialComponent }) {
           await ApiService.deleteRelationship(
             sourceComponent,
             targetComponent,
-            initialComponent,
           );
           setSelectedEdge(null);
           toast({
@@ -322,7 +320,6 @@ export default function Flow({ initialComponent }) {
         await ApiService.deleteRelationship(
           sourceComponent,
           targetComponent,
-          initialComponent,
         );
         setSelectedEdge(null);
         toast({
@@ -615,7 +612,6 @@ export default function Flow({ initialComponent }) {
         await ApiService.getRelationship(
           sourceComponent,
           targetComponent,
-          initialComponent,
         );
         // If we get here, relationship exists - update it
         await ApiService.updateRelationship({

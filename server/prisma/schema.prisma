@@ -34,6 +34,9 @@ model Components {
   supplier              String
   cost                  Float
   type                  TypeOfComponent
+  description           String?
+  image                 String?
+
 }
 
 model ComponentHistory {
@@ -48,10 +51,9 @@ model ComponentHistory {
 model Relationships {
   topComponent        String
   subComponent        String
-  root                String
-  amount              Int
+  amount              Float
 
-  @@unique([topComponent, subComponent, root])
+  @@unique([topComponent, subComponent])
 }
 
 model Users {

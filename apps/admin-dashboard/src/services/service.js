@@ -85,8 +85,9 @@ export class ApiService {
   }
 
   static async getComponent(componentName) {
+    const encodedComponentName = encodeURIComponent(componentName);
     const response = await fetch(
-      `${API_URL}/components?componentName=${componentName}`,
+      `${API_URL}/component/${encodedComponentName}`,
       {
         headers: this.getAuthHeaders(),
       },
@@ -195,6 +196,8 @@ export class ApiService {
           supplier: component.supplier,
           cost: component.cost,
           type: component.type,
+          description: component.description,
+          image: component.image,
         }),
       },
     );
@@ -206,20 +209,16 @@ export class ApiService {
 
     return response.json();
   }
+
   static async deleteComponent(
     componentName,
     deleteOutOfDatabase,
-    root = null,
     parent = null,
   ) {
     const params = new URLSearchParams({
       componentName,
       deleteOutOfDatabase: deleteOutOfDatabase.toString(),
     });
-
-    if (root) {
-      params.append('root', root);
-    }
 
     if (parent) {
       params.append('parent', parent);
@@ -243,45 +242,12 @@ export class ApiService {
     return { success: true };
   }
 
-  // Method to remove component from subassembly (without deleting from database)
-  static async removeComponentFromSubassembly(
-    componentName,
-    root,
-    parent = null,
-  ) {
-    const params = new URLSearchParams({
-      componentName,
-      deleteOutOfDatabase: 'false',
-      root,
-    });
-
-    if (parent) {
-      params.append('parent', parent);
-    }
-
-    const response = await fetch(`${API_URL}/components?${params.toString()}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(
-        error.detail || 'Failed to remove component from subassembly',
-      );
-    }
-
-    return await response.json();
-  }
-
   // Relationships endpoints
-  static async getRelationship(topComponent, subComponent, root) {
+  static async getRelationship(topComponent, subComponent) {
     const response = await fetch(
       `${API_URL}/relationships?topComponent=${encodeURIComponent(
         topComponent,
-      )}&subComponent=${encodeURIComponent(
-        subComponent,
-      )}&root=${encodeURIComponent(root)}`,
+      )}&subComponent=${encodeURIComponent(subComponent)}`,
       {
         headers: this.getAuthHeaders(),
       },
@@ -304,7 +270,8 @@ export class ApiService {
       body: JSON.stringify(relationshipData),
     });
     if (!response.ok) {
-      throw new Error('Failed to create relationship');
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create relationship');
     }
     return await response.json();
   }
@@ -322,20 +289,19 @@ export class ApiService {
     return await response.json();
   }
 
-  static async deleteRelationship(topComponent, subComponent, root) {
+  static async deleteRelationship(topComponent, subComponent) {
     const response = await fetch(
       `${API_URL}/relationships?topComponent=${encodeURIComponent(
         topComponent,
-      )}&subComponent=${encodeURIComponent(
-        subComponent,
-      )}&root=${encodeURIComponent(root)}`,
+      )}&subComponent=${encodeURIComponent(subComponent)}`,
       {
         method: 'DELETE',
         headers: this.getAuthHeaders(),
       },
     );
     if (!response.ok) {
-      throw new Error('Failed to delete relationship');
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete relationship');
     }
     return await response.json();
   }

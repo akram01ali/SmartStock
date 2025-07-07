@@ -21,6 +21,7 @@ import {
 } from './types';
 import { FormField, componentFormFields } from './componentFormfield';
 import { Suggestions } from './Suggestions';
+import { ImageUpload } from './ImageUpload';
 
 function getInitialFormData(): ComponentCreate {
   return {
@@ -34,6 +35,8 @@ function getInitialFormData(): ComponentCreate {
     supplier: '',
     cost: 0,
     type: TypeOfComponent.Component,
+    description: '',
+    image: '',
   };
 }
 
@@ -65,7 +68,7 @@ export function ComponentDialog({
     getInitialFormData(),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [relationshipAmount, setRelationshipAmount] = useState(1);
+  const [relationshipAmount, setRelationshipAmount] = useState(1.0);
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -128,9 +131,46 @@ export function ComponentDialog({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setFormData((prev) => ({ ...prev, componentName: suggestion }));
-    setShowSuggestions(false);
+  const handleSuggestionClick = async (suggestion: string) => {
+    if (mode !== 'create' || !initialComponent) {
+      setFormData((prev) => ({ ...prev, componentName: suggestion }));
+      setShowSuggestions(false);
+      return;
+    }
+
+    // Auto-create the component when suggestion is clicked in create mode
+    try {
+      setIsSubmitting(true);
+      setShowSuggestions(false);
+      
+      const componentData = {
+        ...formData,
+        componentName: suggestion
+      };
+      
+      const relationshipData = { amount: relationshipAmount };
+      
+      await onSubmit(componentData, relationshipData);
+      
+      toast({
+        title: 'Component Created',
+        description: `${suggestion} has been added to ${initialComponent}`,
+        status: 'success',
+        duration: 3000,
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Error creating component from suggestion:', error);
+      toast({
+        title: 'Error Creating Component',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        status: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -238,6 +278,15 @@ export function ComponentDialog({
             {/* Dynamic form fields */}
             {renderFormFields()}
 
+            {/* Image Upload */}
+            <ImageUpload
+              value={formData.image}
+              onChange={(imageUrl) => handleChange('image', imageUrl || '')}
+              textColor={colors.textColor}
+              inputBg={colors.inputBg}
+              borderColor={colors.borderColor}
+            />
+
             {/* Relationship amount field for create mode */}
             {mode === 'create' && initialComponent && (
               <FormField
@@ -246,6 +295,7 @@ export function ComponentDialog({
                 type="number"
                 value={relationshipAmount}
                 onChange={(name, val) => setRelationshipAmount(Number(val))}
+                precision={2}
                 textColor={colors.textColor}
                 inputBg={colors.inputBg}
                 borderColor={colors.borderColor}

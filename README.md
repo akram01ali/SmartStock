@@ -179,6 +179,7 @@ From the `server` directory:
 
 ```bash
 uvicorn main:app --reload
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 - The app will be available at [http://localhost:8000](http://localhost:8000)

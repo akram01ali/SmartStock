@@ -9,8 +9,7 @@ import {
   Button,
   FormControl,
   FormLabel,
-  NumberInput,
-  NumberInputField,
+  Input,
 } from '@chakra-ui/react';
 
 interface RelationshipDialogProps {
@@ -27,7 +26,7 @@ export function RelationshipDialog({
   onClose,
   sourceComponent,
   targetComponent,
-  initialAmount = 1, // Default to 1 for new relationships
+  initialAmount = 1.0, // Default to 1.0 for new relationships
   onSubmit,
 }: RelationshipDialogProps) {
   const [amount, setAmount] = useState(initialAmount);
@@ -52,7 +51,7 @@ export function RelationshipDialog({
     }
   };
 
-  const isEditMode = initialAmount > 1; // Consider it edit mode if initialAmount is greater than 1
+  const isEditMode = initialAmount !== 1.0; // Consider it edit mode if initialAmount is not the default value
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -66,13 +65,17 @@ export function RelationshipDialog({
             <FormLabel>
               Amount from {sourceComponent} to {targetComponent}
             </FormLabel>
-            <NumberInput
+            <Input
+              type="number"
               value={amount}
-              onChange={(_, val) => setAmount(Number(val))}
-              min={1}
-            >
-              <NumberInputField />
-            </NumberInput>
+              onChange={(e) => {
+                const value = parseFloat(e.target.value);
+                setAmount(isNaN(value) ? 0 : value);
+              }}
+              min={0.1}
+              step={0.1}
+              placeholder="Enter amount"
+            />
           </FormControl>
         </ModalBody>
         <ModalFooter>

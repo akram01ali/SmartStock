@@ -326,6 +326,38 @@ export class ApiService {
     }
   }
 
+  static async getAllComponentsLight() {
+    try {
+      const headers = this.getAuthHeaders();
+      console.log('getAllComponentsLight - Fetching lightweight components');
+
+      const response = await fetch(`${API_URL}/all_components_light`, {
+        headers,
+      });
+      const data = await this.handleResponse(response);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching lightweight components:', error);
+      return [];
+    }
+  }
+
+  static async getAllComponentsLightPaginated(page = 1, pageSize = 50) {
+    try {
+      const headers = this.getAuthHeaders();
+      console.log(`getAllComponentsLightPaginated - Fetching page ${page} with ${pageSize} items`);
+
+      const response = await fetch(`${API_URL}/all_components_light_paginated?page=${page}&page_size=${pageSize}`, {
+        headers,
+      });
+      const data = await this.handleResponse(response);
+      return data || { data: [], pagination: {} };
+    } catch (error) {
+      console.error('Error fetching paginated lightweight components:', error);
+      return { data: [], pagination: {} };
+    }
+  }
+
   static async getGraph(topName) {
     try {
       const headers = this.getAuthHeaders();

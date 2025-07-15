@@ -22,7 +22,7 @@ import {
   ListItem,
   HStack,
 } from '@chakra-ui/react';
-import { MdSearch, MdInfo } from 'react-icons/md';
+import { SearchIcon, InfoIcon } from '../common/IconWrapper';
 import { ApiService } from '../../services/service';
 
 interface ComponentData {
@@ -364,7 +364,7 @@ export function ComponentDialog({
                   <HStack spacing={2}>
                     <Text>Component Name</Text>
                     {mode === 'create' && (
-                      <MdSearch color={textColorSecondary} size="16px" />
+                      <SearchIcon size="16px" color={textColorSecondary} />
                     )}
                   </HStack>
                 </FormLabel>
@@ -404,7 +404,7 @@ export function ComponentDialog({
                     >
                       <Box p={2} bg={headerBg} borderBottom="1px solid" borderColor={headerBorderColor}>
                         <HStack spacing={2}>
-                          <MdInfo color="blue" size="16px" />
+                          <InfoIcon size="16px" color="blue" />
                           <Text fontSize="xs" color={useColorModeValue("blue.700", "blue.300")} fontWeight="medium">
                             Click to create component with this name:
                           </Text>
@@ -428,7 +428,7 @@ export function ComponentDialog({
                             }}
                           >
                             <HStack spacing={2}>
-                              <MdSearch color="blue" size="16px" />
+                              <SearchIcon size="16px" color="blue" />
                               <Text fontSize="sm" fontWeight="medium" color={useColorModeValue("blue.600", "blue.300")}>
                                 {result}
                               </Text>

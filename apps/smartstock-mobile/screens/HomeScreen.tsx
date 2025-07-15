@@ -12,15 +12,15 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../contexts/AuthContext";
 import ApiService from "../services/api";
 import { homeScreenStyles as styles } from "../styles/HomeScreenStyles";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
+import type { RootStackParamList } from "../types/navigation";
 
 export default function HomeScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const { user, logout, token } = useAuth();
   const [stockModalVisible, setStockModalVisible] = useState(false);
@@ -37,84 +37,12 @@ export default function HomeScreen() {
 
   const handleInventory = async () => {
     // Simply navigate to the inventory screen
-    navigation.navigate("Inventory" as never);
+    navigation.navigate("Inventory");
   };
 
   const handleScanBarcode = async () => {
-    try {
-      // Request camera permissions
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Camera permission is required to scan barcodes."
-        );
-        return;
-      }
-
-      // Show options for camera or photo library
-      Alert.alert(
-        "Select Image Source",
-        "Choose how to provide the barcode image",
-        [
-          {
-            text: "Camera",
-            onPress: () => takePicture(),
-          },
-          {
-            text: "Photo Library",
-            onPress: () => pickImage(),
-          },
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-        ]
-      );
-    } catch (error) {
-      console.error("Error requesting camera permission:", error);
-      Alert.alert("Error", "Failed to request camera permission");
-    }
-  };
-
-  const takePicture = async () => {
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setStockModalVisible(true);
-        // Store the image URI for later use
-        (global as any).selectedImageUri = result.assets[0].uri;
-      }
-    } catch (error) {
-      console.error("Error taking picture:", error);
-      Alert.alert("Error", "Failed to take picture");
-    }
-  };
-
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setStockModalVisible(true);
-        // Store the image URI for later use
-        (global as any).selectedImageUri = result.assets[0].uri;
-      }
-    } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image");
-    }
+    // Navigate to QR Scanner screen
+    navigation.navigate("QRScanner");
   };
 
   const handleStockUpdate = async () => {

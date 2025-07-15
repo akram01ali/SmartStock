@@ -16,7 +16,7 @@ import {
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
 import { Button, useToast, Box } from '@chakra-ui/react';
-import { MdAdd, MdDelete } from 'react-icons/md';
+import { AddIcon, DeleteIcon } from '../common/IconWrapper';
 import '@xyflow/react/dist/style.css';
 import { ComponentDialog } from './componentDialog';
 import { DeleteConfirmationDialog } from './deleteConfirmationDialog';
@@ -526,7 +526,7 @@ const Flow = () => {
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
               colorScheme="blue"
-              leftIcon={<MdAdd style={{ fontSize: '16px' }} />}
+              leftIcon={<AddIcon size="16px" />}
             >
               Add Node
             </Button>
@@ -534,7 +534,7 @@ const Flow = () => {
               <Button
                 onClick={handleDelete}
                 colorScheme="red"
-                leftIcon={<MdDelete style={{ fontSize: '16px' }} />}
+                leftIcon={<DeleteIcon size="16px" />}
               >
                 Delete {selectedNode ? 'Component' : 'Relationship'}
               </Button>

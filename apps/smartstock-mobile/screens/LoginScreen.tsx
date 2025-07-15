@@ -207,12 +207,6 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Need help?</Text>
-            <TouchableOpacity>
-              <Text style={styles.footerLink}>Contact Support</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

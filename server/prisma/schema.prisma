@@ -37,6 +37,9 @@ model Components {
   description           String?
   image                 String?
 
+  @@index([type])
+  @@index([lastScanned])
+  @@index([amount])
 }
 
 model ComponentHistory {

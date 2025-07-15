@@ -1,6 +1,6 @@
 // chakra imports
 import { Flex, Text, useColorModeValue } from "@chakra-ui/react";
-import { MdUpgrade } from "react-icons/md"; 
+import { UpgradeIcon } from '../common/IconWrapper';
 
 export function ItemContent(props:{info:string}) {
   const textColor = useColorModeValue("navy.700", "white");
@@ -16,7 +16,7 @@ export function ItemContent(props:{info:string}) {
         w={{ base: "60px", md: "70px" }}
         me='14px'
         bg='linear-gradient(135deg, #868CFF 0%, #4318FF 100%)'>
-        <MdUpgrade color='white' size='32px' />
+        <UpgradeIcon size="32px" color="white" />
       </Flex>
       <Flex flexDirection='column'>
         <Text

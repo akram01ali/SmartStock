@@ -11,7 +11,7 @@ import {
   Flex,
   IconButton,
 } from '@chakra-ui/react';
-import { MdUpload, MdDelete, MdImage } from 'react-icons/md';
+import { DeleteIcon, UploadIcon, ImageIcon } from '../common/IconWrapper';
 
 interface ImageUploadProps {
   value?: string;
@@ -120,7 +120,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               />
               <IconButton
                 aria-label="Remove image"
-                icon={<Icon as={MdDelete} />}
+                icon={<DeleteIcon size="sm" />}
                 size="sm"
                 colorScheme="red"
                 position="absolute"
@@ -132,7 +132,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <HStack spacing={2}>
               <Button
                 size="sm"
-                leftIcon={<Icon as={MdUpload} />}
+                leftIcon={<UploadIcon size="sm" />}
                 onClick={handleUploadClick}
                 isLoading={isUploading}
               >
@@ -151,7 +151,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             _hover={{ bg: 'gray.50' }}
             transition="background 0.2s"
           >
-            <Icon as={MdImage} boxSize={8} color="gray.400" mb={2} />
+            <ImageIcon size="32px" color="gray.400" />
             <Text color="gray.500" fontSize="sm" textAlign="center">
               Click to upload an image
             </Text>

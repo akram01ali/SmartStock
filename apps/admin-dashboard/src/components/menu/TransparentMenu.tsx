@@ -12,7 +12,7 @@ import {
 	Text
 } from '@chakra-ui/react';
 // Assets
-import { MdOutlinePerson, MdOutlineCardTravel, MdOutlineLightbulb, MdOutlineSettings } from 'react-icons/md';
+import { PersonOutlineIcon, TravelIcon, LightbulbIcon, SettingsIcon } from '../common/IconWrapper';
 
 export default function Banner(props: { icon: JSX.Element | string; [x: string]: any }) {
 	const { icon, ...rest } = props;
@@ -59,7 +59,7 @@ export default function Banner(props: { icon: JSX.Element | string; [x: string]:
 					}}
 					mb='10px'>
 					<Flex align='center'>
-						<MdOutlinePerson size='16px' style={{ marginRight: '8px' }} />
+						<PersonOutlineIcon size="16px" style={{ marginRight: '8px' }} />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 1
 						</Text>
@@ -79,7 +79,7 @@ export default function Banner(props: { icon: JSX.Element | string; [x: string]:
 					}}
 					mb='10px'>
 					<Flex align='center'>
-						<MdOutlineCardTravel size='16px' style={{ marginRight: '8px' }} />
+						<TravelIcon size="16px" style={{ marginRight: '8px' }} />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 2
 						</Text>
@@ -99,7 +99,7 @@ export default function Banner(props: { icon: JSX.Element | string; [x: string]:
 					}}
 					mb='10px'>
 					<Flex align='center'>
-						<MdOutlineLightbulb size='16px' style={{ marginRight: '8px' }} />
+						<LightbulbIcon size="16px" style={{ marginRight: '8px' }} />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 3
 						</Text>
@@ -118,7 +118,7 @@ export default function Banner(props: { icon: JSX.Element | string; [x: string]:
 						bg: 'transparent'
 					}}>
 					<Flex align='center'>
-						<MdOutlineSettings size='16px' style={{ marginRight: '8px' }} />
+						<SettingsIcon size="16px" style={{ marginRight: '8px' }} />
 						<Text fontSize='sm' fontWeight='400'>
 							Panel 4
 						</Text>

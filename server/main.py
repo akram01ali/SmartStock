@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import FastAPI, APIRouter, Body, Depends, HTTPException, Query, File, UploadFile, Form
+from fastapi import FastAPI, APIRouter, Body, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from models import ComponentCreate
@@ -38,23 +38,21 @@ from controllers.auth.auth import get_current_user
 from controllers.auth.models import User
 from fastapi import Depends, Query
 from typing import List, Optional
-from pyzbar import pyzbar
-from PIL import Image
-import io
 
 # Import the actual functions from controllers
 from controllers.components import (
-    get_printers, get_groups, get_assemblies, get_all_components, get_component, create_component as create_component_impl,
+    get_printers, get_groups, get_assemblies, get_all_components, get_all_components_light, get_all_components_light_paginated, get_component, create_component as create_component_impl,
     update_component, delete_component
 )
 from controllers.relationships import get_relationship, create_relationship, update_relationship, delete_relationship
 from controllers.tree import get_tree
 from controllers.graph import get_graph
 from controllers.auth.auth_routes import login, app_login, register, app_register, get_current_user_info, logout
-from controllers.stockupdate import update_component_stock_logic, scan_and_update_component_logic
+from controllers.stockupdate import update_component_stock_logic
 
 @app.post("/login", response_model=Token)
 async def login_compat(user_data: UserLogin, db: Prisma = Depends(get_db)):
+    from controllers.auth.auth_routes import login
     return await login(user_data, db)
 
 @app.get("/printers", response_model=List[Component])
@@ -84,6 +82,33 @@ async def get_all_components_compat(
     current_user: User = Depends(get_current_user)
 ):
     return await get_all_components(db, current_user)
+
+@app.get("/all_components_light", response_model=List[dict])
+async def get_all_components_light_compat(
+    db: Prisma = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return await get_all_components_light(db, current_user)
+
+@app.get("/all_components_light_paginated", response_model=dict)
+async def get_all_components_light_paginated_compat(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Prisma = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return await get_all_components_light_paginated(page, page_size, db, current_user)
+
+@app.get("/search_components", response_model=dict)
+async def search_components_compat(
+    q: str = Query(..., description="Search query for component name"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Prisma = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    from controllers.components import search_components_light_paginated
+    return await search_components_light_paginated(q, page, page_size, db, current_user)
 
 @app.get("/all", response_model=List[Component])
 async def get_all_compat(
@@ -226,16 +251,16 @@ async def logout_compat():
     return await logout()
 
 @app.post("/components/scan-update", response_model=Component)
-async def scan_and_update_component(
-    image: UploadFile = File(...),
-    amount: float = Form(...),
-    absolute: bool = Form(False),
-    scannedBy: str = Form("mobile-app"),
+async def scan_update_endpoint(
+    component_name: str = Query(...),
+    amount: float = Query(...),
+    absolute: bool = Query(False),
+    scannedBy: str = Query(""),
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return await scan_and_update_component_logic(
-        image=image,
+    return await update_component_stock_logic(
+        component_name=component_name,
         amount=amount,
         absolute=absolute,
         scannedBy=scannedBy,

@@ -24,6 +24,15 @@
         {
           "photosPermission": "Allow SmartStock to access your photos to select images for stock updates."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "networkSecurityConfig": "@xml/network_security_config"
+          }
+        }
       ]
     ],
     "ios": {
@@ -37,11 +46,20 @@
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE"
-      ]
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "package": "com.akramali01.smartstockmobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a9d43eba-53cd-43ad-91e2-64fdeadcc4c9"
+      }
+    },
+    "owner": "akramali01"
   }
 }

@@ -16,10 +16,11 @@ import { useNavigate } from 'react-router-dom';
 import { ApiService } from '../../../services/service';
 import SmoothCard from 'components/card/MotionCard';
 import SmoothMotionBox, { fadeInUp } from 'components/transitions/MotionBox';
-import { MdGroups, MdPrint, MdAdd, MdBuild } from 'react-icons/md';
+import { MdGroups, MdPrint, MdBuild } from 'react-icons/md';
 import { useSearch } from '../../../contexts/SearchContext';
 import { ComponentDialog } from '../../../components/graph/componentDialog';
 import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
+import { AddIcon } from '../../../components/common/IconWrapper';
 
 interface Component {
   componentName: string;
@@ -230,7 +231,7 @@ export default function ComponentsPage() {
             {title} ({components.length})
           </Heading>
           <Button
-            leftIcon={<MdAdd style={{ fontSize: '16px' }} />}
+            leftIcon={<AddIcon size="16px" />}
             colorScheme={buttonColor}
             size="sm"
             onClick={() => handleCreateClick(createType)}

@@ -14,7 +14,7 @@ import {
   Badge,
   Spinner,
 } from '@chakra-ui/react';
-import { MdWarning, MdDelete, MdLinkOff } from 'react-icons/md';
+import { WarningIcon, DeleteIcon, LinkOffIcon } from '../common/IconWrapper';
 import { ApiService } from '../../services/service';
 
 interface DeleteConfirmationDialogProps {
@@ -74,7 +74,7 @@ export function DeleteConfirmationDialog({
       <ModalContent maxH="90vh" overflowY="auto">
         <ModalHeader color="#4318FF">
           <HStack spacing={3}>
-            <MdWarning color="orange" size="24px" />
+            <WarningIcon size="24px" color="orange" />
             <Text>Delete Component</Text>
           </HStack>
         </ModalHeader>
@@ -118,7 +118,7 @@ export function DeleteConfirmationDialog({
                 bg="red.50"
               >
                 <HStack spacing={3} mb={2}>
-                  <MdDelete color="red" size="20px" />
+                  <DeleteIcon size="20px" color="red" />
                   <Text fontWeight="semibold" color="red.700">
                     Delete from Database
                   </Text>
@@ -138,7 +138,7 @@ export function DeleteConfirmationDialog({
                 bg="orange.50"
               >
                 <HStack spacing={3} mb={2}>
-                  <MdLinkOff color="orange" size="20px" />
+                  <LinkOffIcon size="20px" color="orange" />
                   <Text fontWeight="semibold" color="orange.700">
                     Remove from "{parentComponent}" Subassembly
                   </Text>
@@ -159,7 +159,7 @@ export function DeleteConfirmationDialog({
             </Button>
             <Button
               colorScheme="orange"
-              leftIcon={<MdLinkOff style={{ fontSize: '16px' }} />}
+              leftIcon={<LinkOffIcon size="16px" />}
               onClick={handleDeleteFromSubassembly}
               isDisabled={isLoadingPreview}
             >
@@ -167,7 +167,7 @@ export function DeleteConfirmationDialog({
             </Button>
             <Button
               colorScheme="red"
-              leftIcon={<MdDelete style={{ fontSize: '16px' }} />}
+              leftIcon={<DeleteIcon size="16px" />}
               onClick={handleDeleteFromDatabase}
               isDisabled={isLoadingPreview}
             >

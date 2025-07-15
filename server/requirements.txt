@@ -4,8 +4,5 @@ asyncpg
 prisma
 python-jose[cryptography]
 passlib
-opencv-python
-pyzbar
 python-multipart
-Pillow
 requests

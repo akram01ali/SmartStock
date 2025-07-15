@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import {
   Box,
   Heading,
@@ -20,21 +21,20 @@ import {
   StatNumber,
   StatHelpText,
 } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
 import { ApiService } from '../../../services/service';
 import {
-  MdArrowBack,
-  MdDelete,
-  MdEdit,
-  MdInventory,
-  MdAttachMoney,
-  MdPerson,
-  MdAccessTime,
-  MdBusiness,
-  MdWarning,
-} from 'react-icons/md';
+  BackIcon,
+  EditIcon,
+  DeleteIcon,
+  PersonIcon,
+  TimeIcon,
+} from '../../../components/common/IconWrapper';
 import { ComponentDialog } from '../../../components/graph/componentDialog';
-import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
+import {
+  ComponentCreate,
+  Measures,
+  TypeOfComponent,
+} from '../../../components/graph/types';
 
 interface Component {
   componentName: string;
@@ -64,23 +64,31 @@ export default function InventoryComponent({
   onEdit,
   onDelete,
 }: InventoryComponentProps) {
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const textColorSecondary = useColorModeValue('gray.600', 'gray.400');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const textColor = useColorModeValue('gray.700', 'white');
+  const textColorSecondary = useColorModeValue('gray.600', 'gray.400');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const imageBg = useColorModeValue('gray.50', 'gray.700');
+  const fallbackBg = useColorModeValue('gray.100', 'gray.600');
   const toast = useToast();
 
   const isLowStock = component.amount < component.triggerMinAmount;
 
   const getTypeColor = (type: TypeOfComponent) => {
     switch (type) {
-      case TypeOfComponent.Printer: return 'blue';
-      case TypeOfComponent.Group: return 'purple';
-      case TypeOfComponent.Component: return 'green';
-      case TypeOfComponent.Assembly: return 'orange';
-      default: return 'gray';
+      case TypeOfComponent.Printer:
+        return 'blue';
+      case TypeOfComponent.Group:
+        return 'purple';
+      case TypeOfComponent.Component:
+        return 'green';
+      case TypeOfComponent.Assembly:
+        return 'orange';
+      default:
+        return 'gray';
     }
   };
 
@@ -112,7 +120,7 @@ export default function InventoryComponent({
         ...editedComponent,
         componentName: component.componentName,
       };
-      
+
       const updatedComponent = (await ApiService.updateComponent(
         componentData,
       )) as Component;
@@ -138,33 +146,34 @@ export default function InventoryComponent({
   };
 
   return (
-    <Box minH="100vh" bg={bgColor} p={6}>
+    <Box minH="100vh" bg={textColor} p={6}>
       {/* Header */}
       <Flex justify="space-between" align="center" mb={8}>
         <Button
-          leftIcon={<MdArrowBack />}
+          leftIcon={<BackIcon />}
           variant="ghost"
           onClick={onBack}
           size="lg"
-          fontWeight="600"
+          color={textColor}
         >
           Back to Inventory
         </Button>
 
         <HStack spacing={3}>
           <Button
-            leftIcon={<MdEdit />}
+            leftIcon={<EditIcon />}
             colorScheme="blue"
             onClick={onOpen}
             size="md"
           >
-            Edit
+            Edit Component
           </Button>
           <Button
-            leftIcon={<MdDelete />}
+            leftIcon={<DeleteIcon />}
             colorScheme="red"
             onClick={handleDelete}
             size="md"
+            isLoading={isDeleting}
           >
             Delete
           </Button>
@@ -184,17 +193,22 @@ export default function InventoryComponent({
                     {component.componentName}
                   </Heading>
                   <HStack spacing={3}>
-                    <Badge 
-                      colorScheme={getTypeColor(component.type)} 
-                      px={3} 
-                      py={1} 
+                    <Badge
+                      colorScheme={getTypeColor(component.type)}
+                      px={3}
+                      py={1}
                       borderRadius="full"
                       textTransform="capitalize"
                     >
                       {component.type}
                     </Badge>
                     {isLowStock && (
-                      <Badge colorScheme="red" px={3} py={1} borderRadius="full">
+                      <Badge
+                        colorScheme="red"
+                        px={3}
+                        py={1}
+                        borderRadius="full"
+                      >
                         Low Stock
                       </Badge>
                     )}
@@ -202,7 +216,9 @@ export default function InventoryComponent({
                 </VStack>
 
                 <VStack align="end" spacing={1}>
-                  <Text fontSize="sm" color={textColorSecondary}>Current Stock</Text>
+                  <Text fontSize="sm" color={textColorSecondary}>
+                    Current Stock
+                  </Text>
                   <Heading size="lg" color={isLowStock ? 'red.500' : textColor}>
                     {component.amount} {component.measure}
                   </Heading>
@@ -215,30 +231,23 @@ export default function InventoryComponent({
               <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="100%">
                 <Stat>
                   <StatLabel color={textColorSecondary}>
-                    <HStack>
-                      <MdAttachMoney size="16px" />
-                      <Text>Unit Cost</Text>
-                    </HStack>
+                    <Text>Unit Cost</Text>
                   </StatLabel>
                   <StatNumber color={textColor}>€{component.cost}</StatNumber>
                 </Stat>
 
                 <Stat>
                   <StatLabel color={textColorSecondary}>
-                    <HStack>
-                      <MdWarning size="16px" />
-                      <Text>Min. Amount</Text>
-                    </HStack>
+                    <Text>Min. Amount</Text>
                   </StatLabel>
-                  <StatNumber color={textColor}>{component.triggerMinAmount}</StatNumber>
+                  <StatNumber color={textColor}>
+                    {component.triggerMinAmount}
+                  </StatNumber>
                 </Stat>
 
                 <Stat>
                   <StatLabel color={textColorSecondary}>
-                    <HStack>
-                      <MdBusiness size="16px" />
-                      <Text>Supplier</Text>
-                    </HStack>
+                    <Text>Supplier</Text>
                   </StatLabel>
                   <StatNumber fontSize="md" color={textColor} noOfLines={1}>
                     {component.supplier || 'Not specified'}
@@ -247,12 +256,11 @@ export default function InventoryComponent({
 
                 <Stat>
                   <StatLabel color={textColorSecondary}>
-                    <HStack>
-                      <MdAccessTime size="16px" />
-                      <Text>Dev. Time</Text>
-                    </HStack>
+                    <Text>Dev. Time</Text>
                   </StatLabel>
-                  <StatNumber color={textColor}>{component.durationOfDevelopment} days</StatNumber>
+                  <StatNumber color={textColor}>
+                    {component.durationOfDevelopment} hours
+                  </StatNumber>
                 </Stat>
               </SimpleGrid>
 
@@ -261,20 +269,24 @@ export default function InventoryComponent({
               {/* Additional Info */}
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="100%">
                 <HStack>
-                  <MdPerson size="20px" color="gray" />
+                  <PersonIcon size="20px" color="gray" />
                   <VStack align="start" spacing={0}>
-                    <Text fontSize="sm" color={textColorSecondary}>Last Scanned By</Text>
-                    <Text fontWeight="500" color={textColor}>
-                      {component.scannedBy || 'Not specified'}
+                    <Text fontSize="sm" color={textColorSecondary}>
+                      Last Scanned By
+                    </Text>
+                    <Text fontSize="md" fontWeight="bold" color={textColor}>
+                      {component.scannedBy}
                     </Text>
                   </VStack>
                 </HStack>
 
                 <HStack>
-                  <MdAccessTime size="20px" color="gray" />
+                  <TimeIcon size="20px" color="gray" />
                   <VStack align="start" spacing={0}>
-                    <Text fontSize="sm" color={textColorSecondary}>Last Scanned</Text>
-                    <Text fontWeight="500" color={textColor}>
+                    <Text fontSize="sm" color={textColorSecondary}>
+                      Last Scanned
+                    </Text>
+                    <Text fontSize="md" fontWeight="bold" color={textColor}>
                       {new Date(component.lastScanned).toLocaleDateString()}
                     </Text>
                   </VStack>
@@ -289,8 +301,8 @@ export default function InventoryComponent({
                     <Text fontSize="lg" fontWeight="600" color={textColor}>
                       Description
                     </Text>
-                    <Text 
-                      color={textColorSecondary} 
+                    <Text
+                      color={textColorSecondary}
                       lineHeight="1.6"
                       whiteSpace="pre-wrap"
                     >
@@ -317,7 +329,7 @@ export default function InventoryComponent({
                   border="1px solid"
                   borderColor={borderColor}
                   w="100%"
-                  bg={useColorModeValue('gray.50', 'gray.700')}
+                  bg={imageBg}
                 >
                   <Image
                     src={component.image}
@@ -330,9 +342,11 @@ export default function InventoryComponent({
                         h="200px"
                         align="center"
                         justify="center"
-                        bg={useColorModeValue('gray.100', 'gray.600')}
+                        bg={fallbackBg}
                       >
-                        <Text color={textColorSecondary}>Image not available</Text>
+                        <Text color={textColorSecondary}>
+                          Image not available
+                        </Text>
                       </Flex>
                     }
                   />

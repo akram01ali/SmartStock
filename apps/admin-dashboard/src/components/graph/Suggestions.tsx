@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, List, ListItem, HStack, Text } from '@chakra-ui/react';
-import { MdSearch, MdInfo } from 'react-icons/md';
+import { InfoIcon, SearchIcon } from '../common/IconWrapper';
 
 interface SuggestionsProps {
   searchResults: string[];
@@ -41,7 +41,7 @@ export const Suggestions: React.FC<SuggestionsProps> = ({
       borderColor={colors.headerBorderColor}
     >
       <HStack spacing={2}>
-        <MdInfo color="blue" size="16px" />
+        <InfoIcon size="16px" color="blue" />
         <Text fontSize="xs" fontWeight="medium">
           Click to create component with this name:
         </Text>
@@ -63,7 +63,7 @@ export const Suggestions: React.FC<SuggestionsProps> = ({
           onClick={() => onSelect(result)}
         >
           <HStack spacing={2}>
-            <MdSearch color="blue" size="16px" />
+            <SearchIcon size="16px" color="blue" />
             <Text fontSize="sm" fontWeight="medium">
               {result}
             </Text>

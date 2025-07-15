@@ -23,7 +23,7 @@ export interface AuthResponse {
   token_type: string;
 }
 
-// Smart API URL detection for web vs mobile with multiple fallbacks
+// Smart API URL detection for different environments
 const getBaseUrl = () => {
   // Check if we're running in a web environment
   if (typeof window !== 'undefined' && window.location) {
@@ -31,27 +31,23 @@ const getBaseUrl = () => {
     return 'http://localhost:8000';
   }
   
-  // Mobile environment - use your current WiFi IP
-  return 'http://10.0.0.100:8000';
+  // Check if we're in Expo Go (development)
+  if (__DEV__) {
+    console.log('🔧 Development mode detected, using local IP');
+    return 'http://10.0.0.99:8000';
+  }
+  
+  // Production build - you should replace this with your actual server URL
+  // For now, using the same IP but with better error handling
+  console.log('📱 Production mode detected');
+  return 'http://10.0.0.99:8000';
 };
 
-// Updated fallback IPs based on your current network configuration
+// Fallback URLs to try in order
 const FALLBACK_IPS = [
-  'http://10.0.0.100:8000',     // Your current WiFi IP (primary working)
-  'http://192.168.1.7:8000',    // Previous WiFi IP
-  'http://172.21.0.1:8000',     // Your active Docker bridge IP
-  'http://172.20.0.1:8000',     // Docker bridge (if hotspot is active)
-  'http://172.17.0.1:8000',     // Default Docker bridge
-  'http://172.18.0.1:8000',     // Another Docker bridge
-  'http://172.19.0.1:8000',     // Another Docker bridge
-  'http://192.168.137.1:8000',  // Windows hotspot default
-  'http://172.20.10.1:8000',    // iPhone hotspot default  
-  'http://192.168.43.1:8000',   // Android hotspot default
-  'http://10.42.0.1:8000',      // Linux hotspot default
-  'http://192.168.1.1:8000',    // Router default
-  'http://192.168.0.1:8000',    // Another router default
-  'http://192.168.1.100:8000',  // Common home network range
-  'http://192.168.0.100:8000',  // Another common range  
+  'http://10.0.0.99:8000',      // Your current WiFi IP (primary working)
+  'http://192.168.1.99:8000',   // Alternative common router IP
+  'http://192.168.0.99:8000',   // Another common router IP
 ];
 
 export class ApiService {
@@ -61,25 +57,28 @@ export class ApiService {
   private static async fetchWithTimeout(
     url: string, 
     options: RequestInit, 
-    timeoutMs: number = 5000
+    timeoutMs: number = 10000  // Increased timeout for production
   ): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     try {
+      console.log(`🌐 Making request to: ${url}`);
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
+      console.log(`✅ Response received: ${response.status} ${response.statusText}`);
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
+      console.error(`❌ Request failed to ${url}:`, error);
       throw error;
     }
   }
 
-  // Try multiple IPs until one works
+  // Try multiple hosts with better error reporting
   private static async tryMultipleHosts<T>(
     path: string, 
     options: RequestInit
@@ -89,7 +88,7 @@ export class ApiService {
     // Try main URL first
     try {
       console.log('🔄 Trying main URL:', `${this.BASE_URL}${path}`);
-      const response = await this.fetchWithTimeout(`${this.BASE_URL}${path}`, options, 5000);
+      const response = await this.fetchWithTimeout(`${this.BASE_URL}${path}`, options, 10000);
       
       if (response.ok) {
         console.log('✅ Success with main URL:', this.BASE_URL);
@@ -105,11 +104,11 @@ export class ApiService {
       console.log('❌ Main URL failed with error:', errorMsg);
     }
 
-    // Try fallback IPs
+    // Try fallback URLs
     for (const baseUrl of FALLBACK_IPS) {
       try {
         console.log('🔄 Trying fallback URL:', `${baseUrl}${path}`);
-        const response = await this.fetchWithTimeout(`${baseUrl}${path}`, options, 3000);
+        const response = await this.fetchWithTimeout(`${baseUrl}${path}`, options, 5000); // Shorter timeout for fallback
         
         if (response.ok) {
           console.log('✅ Success with fallback URL:', baseUrl);
@@ -123,7 +122,6 @@ export class ApiService {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         errors.push(`${baseUrl}: ${errorMsg}`);
         console.log('❌ Fallback failed:', baseUrl, errorMsg);
-        continue;
       }
     }
     
@@ -215,6 +213,95 @@ export class ApiService {
     }
   }
 
+  static async updateComponent(componentName: string, componentData: any, token: string): Promise<any> {
+    try {
+      console.log('Starting component update for:', componentName);
+      
+      const data = await this.tryMultipleHosts<any>(
+        `/components/${encodeURIComponent(componentName)}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(componentData),
+        }
+      );
+
+      console.log('Component updated successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error updating component:', error);
+      throw error;
+    }
+  }
+
+  static async createComponent(componentData: any, root: string = "", token: string): Promise<any> {
+    try {
+      console.log('Starting component creation:', componentData);
+      
+      const data = await this.tryMultipleHosts<any>(
+        `/components?root=${encodeURIComponent(root)}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(componentData),
+        }
+      );
+
+      console.log('Component created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error creating component:', error);
+      throw error;
+    }
+  }
+
+  static async updateStockWithQRCode(
+    componentName: string,
+    amount: number,
+    absolute: boolean = false,
+    token: string
+  ): Promise<any> {
+    try {
+      console.log('API Service: Starting stock update with QR code scan');
+      console.log('Component Name (from QR):', componentName);
+      console.log('Amount:', amount);
+      console.log('Absolute:', absolute);
+      
+      // Use query parameters approach for the scan-update endpoint
+      const queryParams = new URLSearchParams({
+        component_name: componentName,
+        amount: amount.toString(),
+        absolute: absolute.toString(),
+        scannedBy: 'mobile-qr-scanner'
+      });
+
+      console.log('Making request to scan-update endpoint...');
+
+      const data = await this.tryMultipleHosts<any>(
+        `/components/scan-update?${queryParams.toString()}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      console.log('API Service: Stock update with QR code successful:', data);
+      return data;
+    } catch (error) {
+      console.error('API Service: Stock update with QR code failed:', error);
+      throw error;
+    }
+  }
+
   static async updateStockWithImage(
     imageUri: string,
     amount: number,
@@ -223,7 +310,6 @@ export class ApiService {
   ): Promise<any> {
     try {
       console.log('API Service: Starting stock update with image');
-      console.log('Image URI:', imageUri);
       console.log('Amount:', amount);
       console.log('Absolute:', absolute);
       
@@ -276,6 +362,42 @@ export class ApiService {
       return data;
     } catch (error) {
       console.error('API Service: Failed to fetch components:', error);
+      throw error;
+    }
+  }
+
+  static async getAllComponentsLightPaginated(page: number = 1, pageSize: number = 50, token: string): Promise<{ data: any[], pagination: any }> {
+    try {
+      console.log(`API Service: Fetching paginated components - page ${page}, pageSize ${pageSize}`);
+      
+      const data = await this.tryMultipleHosts<{ data: any[], pagination: any }>(`/all_components_light_paginated?page=${page}&page_size=${pageSize}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      console.log(`API Service: Fetched ${data.data.length} components for page ${page}`);
+      return data;
+    } catch (error) {
+      console.error('API Service: Failed to fetch paginated components:', error);
+      throw error;
+    }
+  }
+
+  static async searchComponents(query: string, page: number = 1, pageSize: number = 50, token: string): Promise<{ data: any[], pagination: any, search_query: string }> {
+    try {
+      console.log(`API Service: Searching components with query "${query}" - page ${page}, pageSize ${pageSize}`);
+      
+      const data = await this.tryMultipleHosts<{ data: any[], pagination: any, search_query: string }>(`/search_components?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      console.log(`API Service: Found ${data.data.length} components matching "${query}" for page ${page}`);
+      return data;
+    } catch (error) {
+      console.error('API Service: Failed to search components:', error);
       throw error;
     }
   }

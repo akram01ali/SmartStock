@@ -1,72 +1,17 @@
 from datetime import datetime
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from prisma import Prisma
 from controllers.auth.models import User
 from models import Component
-from pyzbar import pyzbar
-from PIL import Image
-import io
 
 
-async def scan_and_update_component_logic(
-    image: UploadFile,
-    amount: float,
-    absolute: bool = False,
-    scannedBy: str = "mobile-app",
-    db: Prisma = None,
-    current_user: User = None
-) -> Component:
-    try:
-        # Read the QR code
-        image_data = await image.read()
-        
-        if len(image_data) == 0:
-            raise HTTPException(status_code=400, detail="Image data is empty")
-        
-        # Convert to PIL Image
-        try:
-            pil_image = Image.open(io.BytesIO(image_data))
-        except Exception as pil_error:
-            raise HTTPException(status_code=400, detail=f"Could not process image: {pil_error}")
-        
-        # Decode QR code
-        barcodes = pyzbar.decode(pil_image)
-        
-        if not barcodes:
-            raise HTTPException(
-                status_code=400,
-                detail="No barcode found in the image. Please ensure the barcode/QR code is clearly visible and well-lit."
-            )
-        
-        # Use the first barcode found
-        barcode_data = barcodes[0].data.decode('utf-8')
-        
-        # Use the existing update_component_stock function
-        updated_component = await update_component_stock_logic(
-            component_name=barcode_data,
-            amount=amount,
-            absolute=absolute,
-            scannedBy=scannedBy,
-            db=db,
-            current_user=current_user
-        )
-        
-        return updated_component
-        
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Could not process barcode scan: {str(e)}"
-        )
 
 
 async def update_component_stock_logic(
     component_name: str,
     amount: float,
     absolute: bool = False,
-    scannedBy: str = "manual",
+    scannedBy: str = "",
     db: Prisma = None,
     current_user: User = None
 ) -> Component:

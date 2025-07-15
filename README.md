@@ -206,3 +206,9 @@ If you need help with database migrations, Prisma, or connecting to the DB, see 
 ```bash
 npx prisma migrate dev --name describe_your_changes
 ```
+
+### 6. Importing the data into the database:
+
+```bash
+docker-compose exec -T postgres psql -U postgres -d smartstock < backup.sql
+``

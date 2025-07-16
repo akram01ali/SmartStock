@@ -20,7 +20,7 @@ import { loginScreenStyles as styles } from '../styles/LoginScreenStyles';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [password, setPassword] = useState('');
@@ -40,16 +40,21 @@ export default function RegisterScreen() {
     setErrorMessage('');
 
     try {
-      await ApiService.register({
-        name: name.trim(),
-        surname: surname.trim(),
-        password: password.trim(),
-      });
-      navigation.navigate('Login' as never);
+      await register(name.trim(), surname.trim(), password.trim());
+      Alert.alert(
+        'Success',
+        'Registration successful! Please login with your credentials.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Login' as never)
+          }
+        ]
+      );
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Registration failed:', error);
       setErrorMessage(
-        error instanceof Error ? error.message : 'Login failed. Please try again.'
+        error instanceof Error ? error.message : 'Registration failed. Please try again.'
       );
     } finally {
       setLoading(false);

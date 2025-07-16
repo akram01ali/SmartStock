@@ -1,0 +1,35 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: 
+      - production
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - run: npm install
+
+      # Backend job (only if backend changed)
+      - name: Backend Lint & Test
+        if: ${{ contains(github.event.head_commit.modified, 'server/') || contains(github.event.head_commit.added, 'server/') || contains(github.event.head_commit.removed, 'server/') }}
+        run: |
+          echo Testing for "backend/" not yet implemented
+
+      # Admin Dashboard job (only if changed)
+      - name: Admin Dashboard Lint & Test
+        if: ${{ contains(github.event.head_commit.modified, 'apps/admin-dashboard/') || contains(github.event.head_commit.added, 'apps/admin-dashboard/') || contains(github.event.head_commit.removed, 'apps/admin-dashboard/') }}
+        run: |
+          echo Testing for "admin-dashboard/" not yet implemented
+          
+
+      # Mobile job (only if changed)
+      - name: Mobile Lint & Test
+        if: ${{ contains(github.event.head_commit.modified, 'apps/smartstock-mobile/') || contains(github.event.head_commit.added, 'apps/smartstock-mobile/') || contains(github.event.head_commit.removed, 'apps/smartstock-mobile/') }}
+        run: |
+          echo Testing for "mobile/ " not yet implemented

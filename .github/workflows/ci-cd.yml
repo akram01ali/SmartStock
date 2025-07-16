@@ -14,6 +14,11 @@ jobs:
         with:
           node-version: 20
 
+
+      - name: overall Lint & Test
+        run: |
+          echo Overall testing not yet implemented
+
       # Backend job (only if backend changed)
       - name: Backend Lint & Test
         if: ${{ contains(github.event.head_commit.modified, 'server/') || contains(github.event.head_commit.added, 'server/') || contains(github.event.head_commit.removed, 'server/') }}

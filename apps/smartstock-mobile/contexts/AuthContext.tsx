@@ -10,7 +10,6 @@ interface AuthContextType {
   register: (
     name: string,
     surname: string,
-    email: string,
     password: string
   ) => Promise<void>;
   logout: () => Promise<void>;
@@ -33,7 +32,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ name: string; surname: string } | null>(
+  const [user, setUser] = useState<{ name: string; surname: string; initials: string } | null>(
     null
   );
   const [token, setToken] = useState<string | null>(null);
@@ -64,8 +63,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Skip SecureStore for now and just update state
       console.log("AuthContext: Updating state directly...");
       setToken(response.access_token);
-      // Store user data with correct field mapping
-      setUser({ name: credentials.name, surname: credentials.surname });
+      // Store user data with correct field mapping and generate initials
+      setUser({ 
+        name: credentials.name, 
+        surname: credentials.surname,
+        initials: `${credentials.name[0].toUpperCase()}${credentials.surname[0].toUpperCase()}`
+      });
       setIsAuthenticated(true);
       console.log(
         "AuthContext: Login completed successfully, isAuthenticated should be true"
@@ -79,12 +82,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (
     name: string,
     surname: string,
-    email: string,
     password: string
   ) => {
     try {
       console.log("AuthContext: Starting registration process...");
-      // Note: The server doesn't expect email field for mobile app registration
+      // Create the correct AppUser object for the API
       const credentials: AppUser = {
         name,
         surname,

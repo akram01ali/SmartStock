@@ -4,6 +4,7 @@ echo "🚀 Deploying SmartStock locally with Docker Compose..."
 
 # Get local IP address for network deployment
 LOCAL_IP=$(ip route get 1.1.1.1 | grep -oP 'src \K[0-9.]+')
+export LOCAL_IP
 echo "🌐 Local IP detected: $LOCAL_IP"
 
 # Check if Docker is running

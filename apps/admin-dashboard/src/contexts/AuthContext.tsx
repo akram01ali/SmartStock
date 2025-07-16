@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       
-      const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+      const API_URL = (process.env as any).REACT_APP_API_URL || 'http://localhost:8000';
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {

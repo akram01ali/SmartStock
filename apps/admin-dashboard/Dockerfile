@@ -10,8 +10,8 @@ RUN npm install --force
 COPY . .
 
 # Build the app with dynamic API URL
-ARG VITE_API_URL=http://10.0.0.99:8000
-ENV VITE_API_URL=$VITE_API_URL
+ARG REACT_APP_API_URL=http://10.0.0.99:8000
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 RUN npm run build
 
 # Production stage

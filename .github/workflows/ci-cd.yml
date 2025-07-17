@@ -75,15 +75,6 @@ jobs:
           build-args: |
             VITE_API_URL=${{ vars.RPI_API_URL }}
 
-      # Build and Push Mobile Docker Image (Node.js/Expo)
-      - name: Build and Push Mobile Docker Image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./apps/smartstock-mobile
-          file: ./apps/smartstock-mobile/Dockerfile # Assuming you have this Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_mobile:latest
-
   deploy:
     runs-on: self-hosted
     needs: build

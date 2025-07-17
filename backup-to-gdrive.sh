@@ -5,8 +5,10 @@ DB_USER="postgres"
 DB_PASSWORD="kamehameha"
 DB_HOST="postgres"
 DB_PORT="5432"
-BACKUP_DIR="~/SmartStock/backups"
+BACKUP_DIR=~/SmartStock/backups
 DRIVE_PATH="gdrive:SmartStock-backups"
+
+mkdir -p "$BACKUP_DIR"
 
 COMPRESSED_FILE="$BACKUP_DIR/smartstock_backup.sql.gz"
 BACKUP_FILE="$BACKUP_DIR/smartstock_backup.sql"

@@ -43,7 +43,7 @@ jobs:
 
   # Job 2: Build and Deploy ALL Containers
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest      # On github-hosted runner (faster)
     needs: lint-and-test
 
     steps:
@@ -76,18 +76,19 @@ jobs:
             VITE_API_URL=${{ vars.RPI_API_URL }}
 
   deploy:
-    runs-on: self-hosted
+    runs-on: self-hosted      # On Raspberry Pi
     needs: build
     steps:
       - uses: actions/checkout@v3
-
+      
+      # Pull latest images from Docker Hub
       - name: Pull images
         run: |
           echo Pulling latest images from Docker Hub...
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_admin_dashboard:latest
 
-
+      # Deploy all containers on Raspberry Pi
       - name: Deploy All on Raspberry Pi
         run: |
           echo Starting deployment to Raspberry Pi...
@@ -97,7 +98,9 @@ jobs:
           echo Restarting Containers...
           docker compose down
           docker compose up -d --force-recreate
+          echo Deployment complete!
       
+      # Cleanup old images
       - name: Cleanup Old Images
         run: |
           echo "Cleaning up old Docker images..."

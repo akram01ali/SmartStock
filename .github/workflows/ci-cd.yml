@@ -42,7 +42,7 @@ jobs:
 
 
   # Job 2: Build and Deploy ALL Containers
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     needs: lint-and-test
 
@@ -84,26 +84,33 @@ jobs:
           #push: true
           #tags: your-dockerhub-username/smartstock-mobile:latest
 
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
 
-      # --- Deployment Step (SSH to RPi - full docker-compose up) ---
-      - name: Deploy All to Raspberry Pi
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Pull images
+        run: |
+          echo Pulling latest images from Docker Hub...
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
+
+
+
+      - name: Deploy All on Raspberry Pi
         with:
-          host: ${{ secrets.RPI_HOST }}
-          username: ${{ secrets.RPI_USERNAME }}
-          key: ${{ secrets.RPI_SSH_KEY }}
-          script: |
-            echo ${{ secrets.RPI_HOST }}
-            echo ${{ secrets.RPI_USERNAME }}
-            echo ${{ secrets.RPI_SSH_KEY }}
-            echo Starting full deployment on RPi...
-            cd ~/Smartstock
+        run: |
+          echo Starting deployment to Raspberry Pi...
 
-            echo Pulling latest images from Docker Hub...
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
+          cd ~/Smartstock
 
-            echo Restarting all services...
-            docker-compose down
-            docker compose up -d --force-recreate
+          echo Restarting Containers...
+          docker compose down
+          docker compose up -d --force-recreate
+      
+      - name: Cleanup Old Images
+        run: |
+          echo "Cleaning up old Docker images..."
+          docker image prune -f
+          echo "Cleanup complete!"
 
-            echo Full deployment complete!

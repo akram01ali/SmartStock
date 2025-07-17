@@ -62,7 +62,7 @@ jobs:
           context: ./server
           file: ./server/Dockerfile
           push: true
-          tags: smartstock/smartstock-backend:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/smartstock-backend:latest
           
       # Build and Push Admin Dashboard Docker Image (Node.js)
       #- name: Build and Push Admin Dashboard Docker Image

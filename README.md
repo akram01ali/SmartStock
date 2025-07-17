@@ -211,4 +211,24 @@ npx prisma migrate dev --name describe_your_changes
 
 ```bash
 docker-compose exec -T postgres psql -U postgres -d smartstock < backup.sql
-``
+```
+
+
+### 7. Storing backup of database
+
+To store a backup, execute command:
+```bash
+~/SmartStock/backup-to-gdrive.sh
+```
+
+This will make a backup of the current Postgres database container. This script is executed everyday at 02:00. To change this change the cron file using the command:
+
+```bash
+crontab -e
+```
+Use your favourite editor and change the last line. 
+
+To see the logs of the backup, execute:
+```bash
+cat /var/log/smartstock_backup.log
+```

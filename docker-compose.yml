@@ -21,6 +21,7 @@ services:
 
   # FastAPI Backend
   backend:
+    image: smartstock_backend:latest
     build:
       context: ./server
       dockerfile: Dockerfile

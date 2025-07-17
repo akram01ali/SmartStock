@@ -65,24 +65,24 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
           
       # Build and Push Admin Dashboard Docker Image (Node.js)
-      #- name: Build and Push Admin Dashboard Docker Image
-        #uses: docker/build-push-action@v4
-        #with:
-          #context: ./apps/admin-dashboard
-          #file: ./apps/admin-dashboard/Dockerfile
-          #push: true
-          #tags: your-dockerhub-username/smartstock-admin-dashboard:latest
-          #build-args: |
-          #  VITE_API_URL=${{ vars.RPI_API_URL }}
+      - name: Build and Push Admin Dashboard Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./apps/admin-dashboard
+          file: ./apps/admin-dashboard/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_admin_dashboard:latest
+          build-args: |
+            VITE_API_URL=${{ vars.RPI_API_URL }}
 
       # Build and Push Mobile Docker Image (Node.js/Expo)
-      #- name: Build and Push Mobile Docker Image
-        #uses: docker/build-push-action@v4
-        #with:
-          #context: ./apps/smartstock-mobile
-          #file: ./apps/smartstock-mobile/Dockerfile # Assuming you have this Dockerfile
-          #push: true
-          #tags: your-dockerhub-username/smartstock-mobile:latest
+      - name: Build and Push Mobile Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./apps/smartstock-mobile
+          file: ./apps/smartstock-mobile/Dockerfile # Assuming you have this Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_mobile:latest
 
   deploy:
     runs-on: self-hosted
@@ -94,7 +94,8 @@ jobs:
         run: |
           echo Pulling latest images from Docker Hub...
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
-
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_admin_dashboard:latest
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_mobile:latest
 
 
       - name: Deploy All on Raspberry Pi

@@ -62,7 +62,7 @@ jobs:
           context: ./server
           file: ./server/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/smartstock-backend:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
           
       # Build and Push Admin Dashboard Docker Image (Node.js)
       #- name: Build and Push Admin Dashboard Docker Image
@@ -99,10 +99,11 @@ jobs:
             echo Starting full deployment on RPi...
             cd ~/Smartstock
 
-            echo Pulling all latest images...
-            docker-compose pull
+            echo Pulling latest images from Docker Hub...
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
 
             echo Restarting all services...
-            docker-compose up -d --force-recreate
+            docker-compose down
+            docker compose up -d --force-recreate
 
             echo Full deployment complete!

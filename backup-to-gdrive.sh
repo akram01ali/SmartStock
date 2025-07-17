@@ -3,7 +3,7 @@
 DB_NAME="smartstock"
 DB_USER="postgres"
 DB_PASSWORD="kamehameha"
-DB_HOST="postgres"
+DB_HOST="localhost"
 DB_PORT="5432"
 BACKUP_DIR=~/SmartStock/backups
 DRIVE_PATH="gdrive:SmartStock-backups"

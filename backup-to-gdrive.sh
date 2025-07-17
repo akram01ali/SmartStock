@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 DB_NAME="smartstock"
 DB_USER="postgres"
@@ -25,7 +26,7 @@ if [ $? -eq 0 ]; then
     
     # Overwrite existing backup on Google Drive
     echo "Uploading to Google Drive..."
-    rclone copy "$COMPRESSED_FILE" "$DRIVE_PATH" --progress
+    rclone copy "$COMPRESSED_FILE" "$DRIVE_PATH" --progress --verbose --log-file rclone_debug.log
     
     if [ $? -eq 0 ]; then
         echo "Backup uploaded successfully (existing file overwritten)"

@@ -86,7 +86,6 @@ jobs:
           echo Pulling latest images from Docker Hub...
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_backend:latest
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_admin_dashboard:latest
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/smartstock_mobile:latest
 
 
       - name: Deploy All on Raspberry Pi

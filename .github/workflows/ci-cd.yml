@@ -98,7 +98,6 @@ jobs:
 
 
       - name: Deploy All on Raspberry Pi
-        with:
         run: |
           echo Starting deployment to Raspberry Pi...
 

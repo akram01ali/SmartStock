@@ -93,13 +93,16 @@ jobs:
           username: ${{ secrets.RPI_USERNAME }}
           key: ${{ secrets.RPI_SSH_KEY }}
           script: |
-            echo "Starting full deployment on RPi..."
-            cd ~/smartstock
+            echo ${{ secrets.RPI_HOST }}
+            echo ${{ secrets.RPI_USERNAME }}
+            echo ${{ secrets.RPI_SSH_KEY }}
+            echo Starting full deployment on RPi...
+            cd ~/Smartstock
 
-            echo "Pulling all latest images..."
+            echo Pulling all latest images...
             docker-compose pull
 
-            echo "Restarting all services..."
+            echo Restarting all services...
             docker-compose up -d --force-recreate
 
-            echo "Full deployment complete!"
+            echo Full deployment complete!

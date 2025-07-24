@@ -96,11 +96,16 @@ function SignIn() {
       return;
     }
 
-    const success = await login(username, password);
-    if (success) {
-      navigate('/admin/default');
-    } else {
-      setError('Invalid username or password');
+    try {
+      const success = await login(username, password);
+      if (success) {
+        navigate('/admin/default');
+      } else {
+        setError('Invalid username or password');
+      }
+    } catch (error) {
+      // Handle any unexpected errors during login
+      setError(error instanceof Error ? error.message : 'Login failed. Please try again.');
     }
   };
 

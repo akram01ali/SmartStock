@@ -41,8 +41,9 @@ from typing import List, Optional
 
 # Import the actual functions from controllers
 from controllers.components import (
-    get_printers, get_groups, get_assemblies, get_all_components, get_all_components_light, get_all_components_light_paginated, get_component, create_component as create_component_impl,
-    update_component, delete_component
+    get_printers, get_groups, get_assemblies, get_all_components, get_all_components_light_paginated, get_component, create_component as create_component_impl,
+    update_component, delete_component, get_all_components_with_images_paginated, get_components_statistics,
+    get_printers_groups_assemblies
 )
 from controllers.relationships import get_relationship, create_relationship, update_relationship, delete_relationship
 from controllers.tree import get_tree
@@ -54,6 +55,13 @@ from controllers.stockupdate import update_component_stock_logic
 async def login_compat(user_data: UserLogin, db: Prisma = Depends(get_db)):
     from controllers.auth.auth_routes import login
     return await login(user_data, db)
+
+@app.get("/printers-groups-assemblies", response_model=List[Component])
+async def get_printers_groups_assemblies_compat(
+    db: Prisma = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return await get_printers_groups_assemblies(db, current_user)
 
 @app.get("/printers", response_model=List[Component])
 async def get_printers_compat(
@@ -83,13 +91,6 @@ async def get_all_components_compat(
 ):
     return await get_all_components(db, current_user)
 
-@app.get("/all_components_light", response_model=List[dict])
-async def get_all_components_light_compat(
-    db: Prisma = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
-):
-    return await get_all_components_light(db, current_user)
-
 @app.get("/all_components_light_paginated", response_model=dict)
 async def get_all_components_light_paginated_compat(
     page: int = Query(1, ge=1),
@@ -104,11 +105,35 @@ async def search_components_compat(
     q: str = Query(..., description="Search query for component name"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
+    include_images: bool = Query(True, description="Include image field in response"),
+    type_filter: Optional[str] = Query(None, description="Filter by component type"),
     db: Prisma = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
     from controllers.components import search_components_light_paginated
-    return await search_components_light_paginated(q, page, page_size, db, current_user)
+    return await search_components_light_paginated(q, page, page_size, include_images, type_filter, db, current_user)
+
+@app.get("/components/with-images-paginated", response_model=dict)
+async def get_all_components_with_images_paginated_compat(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=50),
+    include_empty_images: bool = Query(False),
+    image_format: str = Query("url"),
+    type_filter: Optional[str] = Query(None, description="Filter by component type"),
+    db: Prisma = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return await get_all_components_with_images_paginated(page, page_size, include_empty_images, image_format, type_filter, db, current_user)
+
+@app.get("/components/statistics", response_model=dict)
+async def get_components_statistics_compat(
+    q: Optional[str] = Query(None, description="Search query for component name"),
+    type_filter: Optional[str] = Query(None, description="Filter by component type"),
+    include_empty_images: bool = Query(True, description="Include components without images"),
+    db: Prisma = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return await get_components_statistics(q, type_filter, include_empty_images, db, current_user)
 
 @app.get("/all", response_model=List[Component])
 async def get_all_compat(
@@ -285,6 +310,21 @@ async def update_component_stock(
         db=db,
         current_user=current_user
     )
+
+@app.get("/components/low-stock", response_model=dict)
+async def get_low_stock_components(
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return await get_low_stock_components(db, current_user)
+
+@app.get("/low-stock", response_model=List[Component])
+async def get_low_stock_components_compat(
+    db: Prisma = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    from controllers.components import get_low_stock_components
+    return await get_low_stock_components(db, current_user)
 
 if __name__ == "__main__":
     import uvicorn

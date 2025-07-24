@@ -25,22 +25,8 @@ export interface AuthResponse {
 
 // Smart API URL detection for different environments
 const getBaseUrl = () => {
-  // Check if we're running in a web environment
-  if (typeof window !== 'undefined' && window.location) {
-    // Web environment - use localhost
-    return 'http://localhost:8000';
-  }
-  
-  // Check if we're in Expo Go (development)
-  if (__DEV__) {
-    console.log('🔧 Development mode detected, using local IP');
-    return 'http://10.0.0.99:8000';
-  }
-  
-  // Production build - you should replace this with your actual server URL
-  // For now, using the same IP but with better error handling
-  console.log('📱 Production mode detected');
-  return 'http://10.0.0.99:8000';
+  return "http://10.0.0.104:8000"
+
 };
 
 // Fallback URLs to try in order

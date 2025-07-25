@@ -72,7 +72,7 @@ async def _get_component_delivery_duration(component_name: str, db: Prisma) -> f
         if not component:
             raise RecordNotFoundError(f"Component '{component_name}' not found")
         
-        return component.delivery_time
+        return component.delivery_time or 0.0
     
     except RecordNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -144,5 +144,63 @@ async def get_component_total_duration(
         raise HTTPException(
             status_code=400,
             detail=f"Could not retrieve component tree: {str(e)}"
+        )
+
+
+# Compatibility function for main.py direct endpoint
+async def get_component_total_cost_detailed(
+    topName: str,
+    hourly_rate: float,
+    db: Prisma,
+    current_user
+):
+    """
+    Get detailed cost analytics for a component including material and labor breakdown
+    """
+    try:
+        tree = await get_tree(topName=topName, db=db, current_user=current_user)
+        
+        total_material_cost = 0.0
+        total_labor_cost = 0.0
+        total_development_time = 0.0
+        
+        async def dfs_post_order_cost(node):
+            nonlocal total_material_cost, total_labor_cost, total_development_time
+            
+            # Depth-first traversal
+            children_cost = 0.0
+            for child in node["children"]:
+                child_cost = await dfs_post_order_cost(child)
+                children_cost += child_cost * child["amount"]
+            
+            # Process current node after children
+            material_cost = await _get_component_cost(node["name"], db)
+            development_time = await _get_component_duration(node["name"], db)
+            labor_cost = development_time * hourly_rate
+            
+            # Add to totals
+            total_material_cost += material_cost
+            total_labor_cost += labor_cost
+            total_development_time += development_time
+
+            return children_cost + material_cost + labor_cost
+
+        total_calculated_cost = await dfs_post_order_cost(tree["tree"])
+        
+        return {
+            "total_cost": total_calculated_cost,
+            "material_cost": total_material_cost,
+            "labor_cost": total_labor_cost,
+            "total_development_time": total_development_time,
+            "hourly_rate": hourly_rate,
+            "component_name": topName
+        }
+
+    except RecordNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not calculate component cost: {str(e)}"
         )
 

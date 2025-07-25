@@ -335,8 +335,8 @@ async def get_component_total_cost_compat(
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    from controllers.analytics import get_component_total_cost
-    return await get_component_total_cost(topName, hourly_rate, db, current_user)
+    from controllers.analytics import get_component_total_cost_detailed
+    return await get_component_total_cost_detailed(topName, hourly_rate, db, current_user)
 
 
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Heading,
@@ -19,6 +19,11 @@ import {
   Stat,
   StatLabel,
   StatNumber,
+  FormControl,
+  FormLabel,
+  FormErrorMessage,
+  FormHelperText,
+  Input,
 } from '@chakra-ui/react';
 
 import { ApiService } from '../../../services/service';
@@ -79,6 +84,10 @@ export default function InventoryComponent({
 }: InventoryComponentProps) {
   // State
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hourlyRateInput, setHourlyRateInput] = useState('18.5');
+  const [hourlyRateError, setHourlyRateError] = useState<string | null>(null);
+  const [isCalculatingCost, setIsCalculatingCost] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
 
   // Hooks
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -92,9 +101,15 @@ export default function InventoryComponent({
   const borderColor = useColorModeValue('gray.200', 'whiteAlpha.300');
   const imageBg = useColorModeValue('gray.50', 'gray.700');
   const fallbackBg = useColorModeValue('gray.100', 'gray.600');
+  const inputBg = useColorModeValue('gray.100', 'gray.800');
+  const analyticsBg = useColorModeValue('blue.50', 'blue.900');
+  const analyticsBorderColor = useColorModeValue('blue.200', 'blue.600');
+  const analyticsTextColor = useColorModeValue('blue.700', 'blue.200');
+  const totalCostColor = useColorModeValue('blue.600', 'blue.300');
 
   // Computed values
   const isLowStock = component.amount < component.triggerMinAmount;
+  const hourlyRate = parseFloat(hourlyRateInput) || 0;
 
   // Utility functions
   const getTypeColor = useCallback((type: TypeOfComponent) => {
@@ -163,6 +178,68 @@ export default function InventoryComponent({
       showErrorToast(error, 'Error updating component');
     }
   }, [component.componentName, onEdit, onClose, showToast, showErrorToast]);
+
+  const handleHourlyRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setHourlyRateInput(value);
+    setHourlyRateError(null);
+  };
+
+  const handleHourlyRateBlur = () => {
+    if (!hourlyRateInput) {
+      setHourlyRateError('Hourly rate is required.');
+    } else if (isNaN(parseFloat(hourlyRateInput))) {
+      setHourlyRateError('Please enter a valid number.');
+    } else if (parseFloat(hourlyRateInput) <= 0) {
+      setHourlyRateError('Hourly rate must be positive.');
+    }
+  };
+
+  const handleCalculateCost = useCallback(async () => {
+    if (!hourlyRateInput) {
+      setHourlyRateError('Hourly rate is required.');
+      return;
+    }
+
+    if (isNaN(parseFloat(hourlyRateInput))) {
+      setHourlyRateError('Please enter a valid number.');
+      return;
+    }
+
+    if (parseFloat(hourlyRateInput) <= 0) {
+      setHourlyRateError('Hourly rate must be positive.');
+      return;
+    }
+
+    setIsCalculatingCost(true);
+    try {
+      const data = await ApiService.getComponentTotalCost(component.componentName, hourlyRate);
+      setAnalyticsData(data);
+      showToast('Cost Calculated Successfully', 'Total cost and development time calculated.', 'success');
+    } catch (error) {
+      showErrorToast(error, 'Error calculating cost');
+    } finally {
+      setIsCalculatingCost(false);
+    }
+  }, [hourlyRateInput, component.componentName, hourlyRate, showToast, showErrorToast]);
+
+  // Auto-calculate cost on component mount with default hourly rate
+  useEffect(() => {
+    const calculateInitialCost = async () => {
+      setIsCalculatingCost(true);
+      try {
+        const data = await ApiService.getComponentTotalCost(component.componentName, 18.5);
+        setAnalyticsData(data);
+      } catch (error) {
+        console.error('Error calculating initial cost:', error);
+        // Don't show error toast on initial load, just log it
+      } finally {
+        setIsCalculatingCost(false);
+      }
+    };
+
+    calculateInitialCost();
+  }, [component.componentName]);
 
   // Render helpers
   const renderStatCard = (label: string, value: string | number, unit?: string) => (
@@ -316,6 +393,136 @@ export default function InventoryComponent({
                   </VStack>
                 </>
               )}
+              <Divider borderColor={borderColor} />
+
+              {/* Analytics */}
+              <VStack spacing={4} align="stretch">
+                <Text fontSize="lg" fontWeight="600" color={textColor}>
+                  Cost Analytics
+                </Text>
+                
+                <FormControl isInvalid={Boolean(hourlyRateError)}>
+                  <FormLabel color={textColor} fontSize="sm" fontWeight="500">
+                    Hourly Rate (EUR)
+                  </FormLabel>
+                  <HStack spacing={3}>
+                    <Input
+                      type="text"
+                      value={hourlyRateInput}
+                      onChange={handleHourlyRateChange}
+                      onBlur={handleHourlyRateBlur}
+                      placeholder="18.5"
+                      bg={inputBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      size="sm"
+                      maxW="120px"
+                      _placeholder={{ color: textColorSecondary }}
+                    />
+                    <Button
+                      onClick={handleCalculateCost}
+                      colorScheme="blue"
+                      size="sm"
+                      isLoading={isCalculatingCost}
+                      loadingText="Calculating..."
+                      isDisabled={!hourlyRate || Boolean(hourlyRateError)}
+                    >
+                      Recalculate
+                    </Button>
+                  </HStack>
+                  {hourlyRateError && (
+                    <FormErrorMessage fontSize="xs">{hourlyRateError}</FormErrorMessage>
+                  )}
+                  <FormHelperText fontSize="xs" color={textColorSecondary}>
+                    Default rate is €18.5/hr. Change the rate and click "Recalculate" to update the cost analysis.
+                  </FormHelperText>
+                </FormControl>
+
+                {(analyticsData || isCalculatingCost) && (
+                  <Box
+                    p={4}
+                    bg={analyticsBg}
+                    borderRadius="lg"
+                    border="1px solid"
+                    borderColor={analyticsBorderColor}
+                  >
+                    <VStack spacing={3} align="stretch">
+                      <HStack justify="space-between">
+                        <Text fontSize="md" fontWeight="600" color={analyticsTextColor}>
+                          Cost Analysis Results
+                        </Text>
+                        {isCalculatingCost && (
+                          <Text fontSize="xs" color={textColorSecondary}>
+                            Calculating...
+                          </Text>
+                        )}
+                      </HStack>
+                      
+                      {isCalculatingCost ? (
+                        <Flex justify="center" align="center" minH="100px">
+                          <Text color={textColorSecondary}>
+                            Calculating cost breakdown...
+                          </Text>
+                        </Flex>
+                      ) : analyticsData ? (
+                        <>
+                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                            <VStack spacing={1} align="start">
+                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
+                                MATERIAL COST
+                              </Text>
+                              <Text fontSize="lg" fontWeight="700" color={textColor}>
+                                €{analyticsData.material_cost?.toFixed(2) || '0.00'}
+                              </Text>
+                            </VStack>
+                            
+                            <VStack spacing={1} align="start">
+                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
+                                LABOR COST
+                              </Text>
+                              <Text fontSize="lg" fontWeight="700" color={textColor}>
+                                €{analyticsData.labor_cost?.toFixed(2) || '0.00'}
+                              </Text>
+                            </VStack>
+                            
+                            <VStack spacing={1} align="start">
+                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
+                                TOTAL COST
+                              </Text>
+                              <Text fontSize="xl" fontWeight="800" color={totalCostColor}>
+                                €{analyticsData.total_cost?.toFixed(2) || '0.00'}
+                              </Text>
+                            </VStack>
+                            
+                            <VStack spacing={1} align="start">
+                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
+                                HOURLY RATE USED
+                              </Text>
+                              <Text fontSize="lg" fontWeight="700" color={textColor}>
+                                €{analyticsData.hourly_rate?.toFixed(2) || '0.00'}/hr
+                              </Text>
+                            </VStack>
+                          </SimpleGrid>
+                          
+                          {analyticsData.total_development_time && (
+                            <VStack spacing={1} align="start">
+                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
+                                TOTAL DEVELOPMENT TIME
+                              </Text>
+                              <Text fontSize="md" fontWeight="600" color={textColor}>
+                                {analyticsData.total_development_time} days
+                              </Text>
+                            </VStack>
+                          )}
+                        </>
+                      ) : null}
+                    </VStack>
+                  </Box>
+                )}
+              </VStack>
+
+              <Divider borderColor={borderColor} />
+
             </VStack>
           </CardBody>
         </Card>

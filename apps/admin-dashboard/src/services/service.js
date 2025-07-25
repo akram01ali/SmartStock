@@ -604,4 +604,29 @@ export class ApiService {
       };
     }
   }
+
+  /**
+   * Get component total cost analytics
+   * @param {string} topName - The top component name to analyze
+   * @param {number} hourlyRate - Hourly rate for cost calculation in EUR (default: 18.5)
+   * @returns {Promise<Object>} Analytics data including total cost
+   */
+  static async getComponentTotalCost(topName, hourlyRate = 18.5) {
+    try {
+      const headers = this.getAuthHeaders();
+      const url = new URL(`${API_URL}/analytics`);
+      url.searchParams.append('topName', topName);
+      url.searchParams.append('hourly_rate', hourlyRate.toString());
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers,
+      });
+
+      return await this.handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching component total cost analytics:', error);
+      throw error;
+    }
+  }
 }

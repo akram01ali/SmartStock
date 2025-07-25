@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FormControl,
   FormLabel,
@@ -8,9 +8,24 @@ import {
   Select,
   Text,
   Textarea,
+  FormErrorMessage,
 } from '@chakra-ui/react';
 
 import { FormFieldProps, Measures, TypeOfComponent } from './types';
+
+// Helper function to safely parse float values
+const parseFloatSafe = (value: string): number => {
+  if (!value || value.trim() === '') return 0;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+// Helper function to validate float input
+const isValidFloatInput = (value: string): boolean => {
+  if (!value || value.trim() === '') return true; // Empty is valid (will default to 0)
+  const parsed = parseFloat(value);
+  return !isNaN(parsed) && isFinite(parsed);
+};
 
 export const FormField: React.FC<FormFieldProps> = ({
   label,
@@ -28,8 +43,40 @@ export const FormField: React.FC<FormFieldProps> = ({
   optionColor,
   isReadOnly = false,
 }) => {
+  const [localError, setLocalError] = useState<string>('');
+  
+  // Handle floating point fields
+  const isFloatField = type === 'float' || (type === 'number' && ['amount', 'triggerMinAmount', 'cost', 'durationOfDevelopment'].includes(name));
+
+  const handleFloatChange = (inputValue: string) => {
+    setLocalError('');
+    
+    // Allow empty input
+    if (inputValue === '') {
+      onChange(name, '');
+      return;
+    }
+    
+    // Validate the input
+    if (!isValidFloatInput(inputValue)) {
+      setLocalError('Please enter a valid number');
+      onChange(name, inputValue); // Still update to show the invalid input
+      return;
+    }
+    
+    onChange(name, inputValue);
+  };
+
+  const handleFloatBlur = (inputValue: string) => {
+    // On blur, convert to number and back to ensure clean format
+    const numValue = parseFloatSafe(inputValue);
+    const cleanedValue = numValue === 0 ? '0' : numValue.toString();
+    onChange(name, cleanedValue);
+    setLocalError('');
+  };
+
   return (
-    <FormControl>
+    <FormControl isInvalid={!!localError}>
       <FormLabel color={textColor}>{label}</FormLabel>
       {type === 'text' && (
         <Input
@@ -55,7 +102,20 @@ export const FormField: React.FC<FormFieldProps> = ({
           minH="100px"
         />
       )}
-      {type === 'number' && (
+      {(type === 'number' || type === 'float') && isFloatField && (
+        <Input
+          value={value}
+          onChange={(e) => handleFloatChange(e.target.value)}
+          onBlur={(e) => handleFloatBlur(e.target.value)}
+          placeholder={placeholder || '0'}
+          bg={inputBg}
+          borderColor={borderColor}
+          color={textColor}
+          isReadOnly={isReadOnly}
+          type="text"
+        />
+      )}
+      {(type === 'number' || type === 'float') && !isFloatField && (
         <NumberInput
           value={value}
           onChange={(_, val) => onChange(name, val)}
@@ -89,6 +149,7 @@ export const FormField: React.FC<FormFieldProps> = ({
           ))}
         </Select>
       )}
+      {localError && <FormErrorMessage>{localError}</FormErrorMessage>}
     </FormControl>
   );
 };
@@ -97,7 +158,8 @@ export const componentFormFields = [
   {
     id: 'amount',
     label: 'Amount',
-    type: 'number',
+    type: 'float',
+    placeholder: '0',
   },
   {
     id: 'measure',
@@ -112,7 +174,8 @@ export const componentFormFields = [
   {
     id: 'triggerMinAmount',
     label: 'Trigger Min Amount',
-    type: 'number',
+    type: 'float',
+    placeholder: '0',
   },
   {
     id: 'supplier',
@@ -128,13 +191,15 @@ export const componentFormFields = [
   {
     id: 'cost',
     label: 'Cost',
-    type: 'number',
+    type: 'float',
     precision: 2,
+    placeholder: '0.00',
   },
   {
     id: 'durationOfDevelopment',
     label: 'Development Duration (days)',
-    type: 'number',
+    type: 'float',
+    placeholder: '0',
   },
   {
     id: 'type',

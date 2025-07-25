@@ -26,17 +26,36 @@ import { ImageUpload } from './ImageUpload';
 function getInitialFormData(): ComponentCreate {
   return {
     componentName: '',
-    amount: 0,
+    amount: '0',
     measure: Measures.Amount,
     lastScanned: new Date().toISOString(),
     scannedBy: '',
-    durationOfDevelopment: 0,
-    triggerMinAmount: 0,
+    durationOfDevelopment: '0',
+    triggerMinAmount: '0',
     supplier: '',
-    cost: 0,
+    cost: '0',
     type: TypeOfComponent.Component,
     description: '',
     image: '',
+  };
+}
+
+// Helper function to safely parse float values for submission
+function parseFloatSafe(value: string | number): number {
+  if (typeof value === 'number') return value;
+  if (!value || value.toString().trim() === '') return 0;
+  const parsed = parseFloat(value.toString());
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+// Helper function to prepare form data for submission
+function prepareFormDataForSubmission(formData: ComponentCreate): ComponentCreate {
+  return {
+    ...formData,
+    amount: parseFloatSafe(formData.amount),
+    triggerMinAmount: parseFloatSafe(formData.triggerMinAmount),
+    cost: parseFloatSafe(formData.cost),
+    durationOfDevelopment: parseFloatSafe(formData.durationOfDevelopment),
   };
 }
 
@@ -92,10 +111,17 @@ export function ComponentDialog({
   const loadAllComponents = async () => {
     try {
       setIsSearching(true);
-      const components = await ApiService.getAllComponents();
+      const components = await ApiService.getAllComponents() as any[];
       setAllComponents(components.map((comp: any) => comp.componentName || comp.name));
     } catch (error) {
       console.error('Error loading components for suggestions:', error);
+      toast({
+        title: 'Warning',
+        description: 'Could not load component suggestions',
+        status: 'warning',
+        duration: 3000,
+      });
+      setAllComponents([]); // Set empty array as fallback
     } finally {
       setIsSearching(false);
     }
@@ -107,6 +133,10 @@ export function ComponentDialog({
       if (component && mode === 'edit') {
         setFormData({
           ...component,
+          amount: component.amount?.toString() || '0',
+          triggerMinAmount: component.triggerMinAmount?.toString() || '0',
+          cost: component.cost?.toString() || '0',
+          durationOfDevelopment: component.durationOfDevelopment?.toString() || '0',
           lastScanned: component.lastScanned || new Date().toISOString(),
         });
       } else if (mode === 'create') {
@@ -143,10 +173,10 @@ export function ComponentDialog({
       setIsSubmitting(true);
       setShowSuggestions(false);
       
-      const componentData = {
+      const componentData = prepareFormDataForSubmission({
         ...formData,
         componentName: suggestion
-      };
+      });
       
       const relationshipData = { amount: relationshipAmount };
       
@@ -177,7 +207,7 @@ export function ComponentDialog({
     try {
       setIsSubmitting(true);
       
-      // Basic validation
+      // Enhanced validation with better error messages
       if (!formData.componentName.trim()) {
         toast({
           title: 'Validation Error',
@@ -188,10 +218,33 @@ export function ComponentDialog({
         return;
       }
 
-      if (formData.amount < 0) {
+      const amount = parseFloatSafe(formData.amount);
+      if (amount < 0) {
         toast({
           title: 'Validation Error',
           description: 'Amount cannot be negative',
+          status: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
+      const cost = parseFloatSafe(formData.cost);
+      if (cost < 0) {
+        toast({
+          title: 'Validation Error',
+          description: 'Cost cannot be negative',
+          status: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
+      const triggerMin = parseFloatSafe(formData.triggerMinAmount);
+      if (triggerMin < 0) {
+        toast({
+          title: 'Validation Error',
+          description: 'Trigger minimum amount cannot be negative',
           status: 'error',
           duration: 3000,
         });
@@ -203,13 +256,13 @@ export function ComponentDialog({
         { amount: relationshipAmount } : 
         undefined;
 
-      await onSubmit(formData, relationshipData);
+      await onSubmit(prepareFormDataForSubmission(formData), relationshipData);
       onClose();
     } catch (error) {
       console.error('Error submitting component:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save component. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to save component. Please try again.',
         status: 'error',
         duration: 5000,
       });

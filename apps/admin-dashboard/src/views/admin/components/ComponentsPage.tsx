@@ -1,3 +1,4 @@
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Heading,
@@ -5,23 +6,23 @@ import {
   Text,
   useColorModeValue,
   Flex,
-  Icon,
   Button,
   VStack,
   useToast,
   useDisclosure,
 } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MdGroups, MdPrint, MdBuild } from 'react-icons/md';
+
 import { ApiService } from '../../../services/service';
 import SmoothCard from 'components/card/MotionCard';
 import SmoothMotionBox, { fadeInUp } from 'components/transitions/MotionBox';
-import { MdGroups, MdPrint, MdBuild } from 'react-icons/md';
 import { useSearch } from '../../../contexts/SearchContext';
 import { ComponentDialog } from '../../../components/graph/componentDialog';
 import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
 import { AddIcon } from '../../../components/common/IconWrapper';
 
+// Types
 interface Component {
   componentName: string;
   amount: number;
@@ -37,166 +38,176 @@ interface Component {
   image?: string;
 }
 
+type CreateType = 'printer' | 'group' | 'assembly';
+
+// Constants
+const TOAST_DURATION = 3000;
+
+const COMPONENT_SECTIONS = [
+  {
+    type: 'printer' as CreateType,
+    title: 'Printers',
+    icon: MdPrint,
+    gradient: 'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)',
+    colorScheme: 'blue',
+    componentType: TypeOfComponent.Printer,
+  },
+  {
+    type: 'group' as CreateType,
+    title: 'Groups',
+    icon: MdGroups,
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    colorScheme: 'purple',
+    componentType: TypeOfComponent.Group,
+  },
+  {
+    type: 'assembly' as CreateType,
+    title: 'Assemblies',
+    icon: MdBuild,
+    gradient: 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)',
+    colorScheme: 'green',
+    componentType: TypeOfComponent.Assembly,
+  },
+] as const;
+
+const CREATE_API_MAP = {
+  printer: ApiService.createPrinter,
+  group: ApiService.createGroup,
+  assembly: ApiService.createAssembly,
+} as const;
+
+type SectionConfig = typeof COMPONENT_SECTIONS[number];
+
 export default function ComponentsPage() {
-  const [groups, setGroups] = useState<Component[]>([]);
-  const [printers, setPrinters] = useState<Component[]>([]);
-  const [assemblies, setAssemblies] = useState<Component[]>([]);
-  const [createType, setCreateType] = useState<
-    'printer' | 'group' | 'assembly' | null
-  >(null);
+  // State
+  const [components, setComponents] = useState<Component[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [createType, setCreateType] = useState<CreateType | null>(null);
+
+  // Hooks
   const navigate = useNavigate();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { searchQuery, setSearchQuery } = useSearch();
 
-  // Chakra Color Mode
+  // Color mode values
   const textColor = useColorModeValue('secondaryGray.900', 'white');
   const textColorSecondary = useColorModeValue('secondaryGray.600', 'white');
   const cardShadow = useColorModeValue(
     '0px 18px 40px rgba(112, 144, 176, 0.12)',
     'unset',
   );
-  const iconBg = useColorModeValue('secondaryGray.300', 'navy.900');
 
-  useEffect(() => {
-    const fetchComponents = async () => {
-      try {
-        console.log('Fetching components...');
-        const [groupsData, printersData, assembliesData] = await Promise.all([
-          ApiService.getGroups(),
-          ApiService.getPrinters(),
-          ApiService.getAssemblies(),
-        ]);
-        console.log('Groups:', groupsData);
-        console.log('Printers:', printersData);
-        console.log('Assemblies:', assembliesData);
-        setGroups(groupsData);
-        setPrinters(printersData);
-        setAssemblies(assembliesData);
-      } catch (error) {
-        console.error('Error fetching components:', error);
+  // Utility functions
+  const showToast = useCallback((title: string, description: string, status: 'success' | 'error') => {
+    toast({
+      title,
+      description,
+      status,
+      duration: TOAST_DURATION,
+    });
+  }, [toast]);
+
+  const showErrorToast = useCallback((error: unknown, title: string) => {
+    const description = error instanceof Error ? error.message : 'Failed to complete operation';
+    showToast(title, description, 'error');
+  }, [showToast]);
+
+  // Memoized filtered components by type
+  const componentsByType = useMemo(() => {
+    const filterComponents = (type: TypeOfComponent) => {
+      let filtered = components.filter(component => component.type === type);
+      
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(component =>
+          component.componentName.toLowerCase().includes(query) ||
+          component.supplier.toLowerCase().includes(query) ||
+          component.type.toLowerCase().includes(query)
+        );
       }
+      
+      return filtered;
     };
 
-    fetchComponents();
-  }, []);
-
-  // Clear search query when leaving the components page
-  useEffect(() => {
-    return () => {
-      setSearchQuery('');
+    return {
+      printers: filterComponents(TypeOfComponent.Printer),
+      groups: filterComponents(TypeOfComponent.Group),
+      assemblies: filterComponents(TypeOfComponent.Assembly),
     };
-  }, [setSearchQuery]);
+  }, [components, searchQuery]);
 
-  // Filter components based on search query
-  const filterComponents = (components: Component[]) => {
-    if (!searchQuery) return components;
+  const totalResults = useMemo(() => {
+    return componentsByType.printers.length + componentsByType.groups.length + componentsByType.assemblies.length;
+  }, [componentsByType]);
 
-    const query = searchQuery.toLowerCase();
-    return components.filter(
-      (component) =>
-        component.componentName.toLowerCase().includes(query) ||
-        component.supplier.toLowerCase().includes(query) ||
-        component.type.toLowerCase().includes(query),
-    );
-  };
+  const totalComponents = components.length;
 
-  const filteredGroups = filterComponents(groups);
-  const filteredPrinters = filterComponents(printers);
-  const filteredAssemblies = filterComponents(assemblies);
+  // API functions
+  const fetchAllComponents = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching printers, groups, and assemblies...');
+      const components = await ApiService.getPrintersGroupsAssemblies() as Component[];
+      console.log('Components loaded:', components);
+      setComponents(components || []);
+    } catch (error) {
+      console.error('Error fetching components:', error);
+      showErrorToast(error, 'Error fetching components');
+    } finally {
+      setLoading(false);
+    }
+  }, [showErrorToast]);
 
-  const getTotalResults = () => {
-    return (
-      filteredGroups.length +
-      filteredPrinters.length +
-      filteredAssemblies.length
-    );
-  };
+  // Event handlers
+  const handleCardClick = useCallback((componentName: string) => {
+    navigate(`/admin/graph/${componentName}`);
+  }, [navigate]);
 
-  const getTotalComponents = () => {
-    return groups.length + printers.length + assemblies.length;
-  };
-
-  const handleCardClick = (initialComponent: string) => {
-    navigate(`/admin/graph/${initialComponent}`);
-  };
-
-  const handleCreateClick = (type: 'printer' | 'group' | 'assembly') => {
+  const handleCreateClick = useCallback((type: CreateType) => {
     setCreateType(type);
     onOpen();
-  };
+  }, [onOpen]);
 
-  const handleComponentSubmit = async (componentData: ComponentCreate) => {
+  const handleComponentSubmit = useCallback(async (componentData: ComponentCreate) => {
     if (!createType) {
-      toast({
-        title: 'Validation Error',
-        description: 'Component type is required',
-        status: 'error',
-        duration: 3000,
-      });
+      showToast('Validation Error', 'Component type is required', 'error');
       return;
     }
 
     try {
-      const typeMapping = {
-        'printer': TypeOfComponent.Printer,
-        'group': TypeOfComponent.Group,
-        'assembly': TypeOfComponent.Assembly
-      };
+      const section = COMPONENT_SECTIONS.find(s => s.type === createType);
+      if (!section) {
+        throw new Error('Invalid component type');
+      }
 
       const finalComponentData = {
         ...componentData,
-        type: typeMapping[createType],
+        type: section.componentType,
       };
 
-      if (createType === 'printer') {
-        await ApiService.createPrinter(finalComponentData, componentData.componentName);
-      } else if (createType === 'group') {
-        await ApiService.createGroup(finalComponentData, componentData.componentName);
-      } else if (createType === 'assembly') {
-        await ApiService.createAssembly(finalComponentData, componentData.componentName);
-      }
+      const createFunction = CREATE_API_MAP[createType];
+      await createFunction(finalComponentData, componentData.componentName);
 
-      toast({
-        title: `${
-          createType.charAt(0).toUpperCase() + createType.slice(1)
-        } Created`,
-        description: `${componentData.componentName} has been created successfully`,
-        status: 'success',
-        duration: 3000,
-      });
+      showToast(
+        `${section.title.slice(0, -1)} Created`,
+        `${componentData.componentName} has been created successfully`,
+        'success'
+      );
 
-      // Refresh the data
-      const [groupsData, printersData, assembliesData] = await Promise.all([
-        ApiService.getGroups(),
-        ApiService.getPrinters(),
-        ApiService.getAssemblies(),
-      ]);
-      setGroups(groupsData);
-      setPrinters(printersData);
-      setAssemblies(assembliesData);
-
+      // Refresh data
+      await fetchAllComponents();
       onClose();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Failed to create component',
-        status: 'error',
-        duration: 5000,
-      });
+      showErrorToast(error, 'Error creating component');
     }
-  };
+  }, [createType, showToast, showErrorToast, fetchAllComponents, onClose]);
 
-  // Create an initial component based on the create type
-  const getInitialComponent = (): ComponentCreate | null => {
+  const getInitialComponent = useCallback((): ComponentCreate | null => {
     if (!createType) return null;
     
-    const typeMapping = {
-      'printer': TypeOfComponent.Printer,
-      'group': TypeOfComponent.Group,
-      'assembly': TypeOfComponent.Assembly
-    };
+    const section = COMPONENT_SECTIONS.find(s => s.type === createType);
+    if (!section) return null;
     
     return {
       componentName: '',
@@ -208,96 +219,100 @@ export default function ComponentsPage() {
       triggerMinAmount: 0,
       supplier: '',
       cost: 0,
-      type: typeMapping[createType],
+      type: section.componentType,
       description: '',
       image: '',
     };
-  };
+  }, [createType]);
 
-  const renderComponentSection = (
-    title: string,
-    components: Component[],
-    filteredComponents: Component[],
-    createType: 'printer' | 'group' | 'assembly',
-    IconComponent: any,
-    gradientBg: string,
-    buttonColor: string,
-  ) => {
+  // Render helpers
+  const renderComponentCard = useCallback((component: Component, index: number, gradient: string) => (
+    <SmoothCard
+      key={component.componentName}
+      onClick={() => handleCardClick(component.componentName)}
+      cursor="pointer"
+      p="20px"
+      boxShadow={cardShadow}
+      bg={gradient}
+      color="white"
+      borderRadius="20px"
+      position="relative"
+      overflow="hidden"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        transition: { delay: index * 0.1, duration: 0.3 },
+      }}
+      _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
+      transition="all 0.2s"
+    >
+      <Flex direction="column" align="center" justify="center" minH="120px">
+        <Text fontSize="lg" fontWeight="700" textAlign="center" lineHeight="1.2">
+          {component.componentName}
+        </Text>
+      </Flex>
+    </SmoothCard>
+  ), [handleCardClick, cardShadow]);
+
+  const renderComponentSection = useCallback((section: SectionConfig) => {
+    const sectionComponents = componentsByType[section.type === 'printer' ? 'printers' : 
+                                              section.type === 'group' ? 'groups' : 'assemblies'];
+    const allSectionComponents = components.filter(c => c.type === section.componentType);
 
     return (
-      <SmoothMotionBox key={title} variants={fadeInUp}>
+      <SmoothMotionBox key={section.title} variants={fadeInUp}>
         <Flex justify="space-between" align="center" mb={4}>
           <Heading size="md" color={textColor}>
-            {title} ({components.length})
+            {section.title} ({allSectionComponents.length})
           </Heading>
           <Button
             leftIcon={<AddIcon size="16px" />}
-            colorScheme={buttonColor}
+            colorScheme={section.colorScheme}
             size="sm"
-            onClick={() => handleCreateClick(createType)}
+            onClick={() => handleCreateClick(section.type)}
           >
-            Create {title}
+            Create {section.title.slice(0, -1)}
           </Button>
         </Flex>
 
-        {filteredComponents.length === 0 && searchQuery ? (
+        {sectionComponents.length === 0 && searchQuery ? (
           <SmoothCard textAlign="center" py={10} borderRadius="lg" bg="gray.50">
             <Text fontSize="lg" color="gray.500">
-              No {title.toLowerCase()} found matching "{searchQuery}"
+              No {section.title.toLowerCase()} found matching "{searchQuery}"
             </Text>
           </SmoothCard>
         ) : (
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
-            {filteredComponents.map((component, index) => (
-              <SmoothCard
-                key={component.componentName}
-                onClick={() => handleCardClick(component.componentName)}
-                cursor="pointer"
-                p="20px"
-                boxShadow={cardShadow}
-                bg={gradientBg}
-                color="white"
-                borderRadius="20px"
-                position="relative"
-                overflow="hidden"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  transition: { delay: index * 0.1, duration: 0.3 },
-                }}
-              >
-                <Flex
-                  direction="column"
-                  align="center"
-                  justify="center"
-                  minH="120px"
-                >
-                  <Box
-                    bg="rgba(255, 255, 255, 0.2)"
-                    borderRadius="16px"
-                    p="12px"
-                    mb="16px"
-                    backdropFilter="blur(10px)"
-                  >
-                    <IconComponent size="32px" color="white" />
-                  </Box>
-                  <Text
-                    fontSize="lg"
-                    fontWeight="700"
-                    textAlign="center"
-                    lineHeight="1.2"
-                  >
-                    {component.componentName}
-                  </Text>
-                </Flex>
-              </SmoothCard>
-            ))}
+            {sectionComponents.map((component, index) => 
+              renderComponentCard(component, index, section.gradient)
+            )}
           </SimpleGrid>
         )}
       </SmoothMotionBox>
     );
-  };
+  }, [componentsByType, components, textColor, searchQuery, handleCreateClick, renderComponentCard]);
+
+  // Effects
+  useEffect(() => {
+    fetchAllComponents();
+  }, [fetchAllComponents]);
+
+  useEffect(() => {
+    return () => setSearchQuery('');
+  }, [setSearchQuery]);
+
+  if (loading) {
+    return (
+      <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
+        <Flex justify="center" align="center" minH="200px">
+          <Text fontSize="lg" color={textColorSecondary}>
+            Loading Components...
+          </Text>
+        </Flex>
+      </SmoothMotionBox>
+    );
+  }
 
   return (
     <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
@@ -310,43 +325,14 @@ export default function ComponentsPage() {
             </Heading>
             {searchQuery && (
               <Text color={textColorSecondary} fontSize="sm">
-                Showing {getTotalResults()} of {getTotalComponents()} components
-                {searchQuery && ` matching "${searchQuery}"`}
+                Showing {totalResults} of {totalComponents} components matching "{searchQuery}"
               </Text>
             )}
           </VStack>
         </Flex>
 
         {/* Render component sections */}
-        {renderComponentSection(
-          'Printers',
-          printers,
-          filteredPrinters,
-          'printer',
-          MdPrint,
-          'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)',
-          'blue',
-        )}
-
-        {renderComponentSection(
-          'Groups',
-          groups,
-          filteredGroups,
-          'group',
-          MdGroups,
-          'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          'purple',
-        )}
-
-        {renderComponentSection(
-          'Assemblies',
-          assemblies,
-          filteredAssemblies,
-          'assembly',
-          MdBuild,
-          'linear-gradient(135deg, #48BB78 0%, #38A169 100%)',
-          'green',
-        )}
+        {COMPONENT_SECTIONS.map(renderComponentSection)}
       </VStack>
 
       <ComponentDialog

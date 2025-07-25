@@ -139,7 +139,7 @@ export function ComponentDialog({
         try {
           console.log('Starting to fetch all components...');
           setIsSearching(true);
-          const data = await ApiService.getAllComponents();
+          const data = await ApiService.getAllComponents() as any[];
           console.log('Received data from getAllComponents:', data);
           
           const componentNames = (data || []).map((component: any) => 

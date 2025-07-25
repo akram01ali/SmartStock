@@ -28,7 +28,7 @@ services:
     container_name: smartstock_backend
     environment:
       DATABASE_URL: postgresql://postgres:kamehameha@postgres:5432/smartstock
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_SECRET: e1481df13e2137a385970ff3e924a18cbfca4f9c3575f3458b780ceadc66864d
       CORS_ORIGINS: '["http://localhost", "http://localhost:3000", "http://127.0.0.1", "http://127.0.0.1:3000", "http://10.0.0.*", "http://192.168.*.*", "http://172.*.*.*"]'
     ports:
       - "0.0.0.0:8000:8000"
@@ -52,7 +52,7 @@ services:
       context: ./apps/admin-dashboard
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://${LOCAL_IP:-10.0.0.99}:8000
+        REACT_APP_API_URL: http://10.0.0.99:8000
     container_name: smartstock_admin
     ports:
       - "0.0.0.0:3000:3000"

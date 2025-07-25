@@ -210,20 +210,23 @@ const Flow = () => {
   // Graph loading and updates
   const loadGraph = async () => {
     try {
-      const graphData = await ApiService.getGraph(initialComponent);
+      setIsLoading(true);
+      const graphData = await ApiService.getGraph(initialComponent) as { nodes: any[], edges: any[] };
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         getLayoutedElements(graphData.nodes, graphData.edges, 'TB');
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
     } catch (error) {
-      const apiError = error as ApiError;
       console.error('Error loading graph:', error);
       toast({
         title: 'Error loading graph',
-        description: apiError.message,
+        description: error instanceof Error ? error.message : 'Failed to load component graph. Please try again.',
         status: 'error',
         duration: 5000,
       });
+      // Set empty state on error
+      setNodes([]);
+      setEdges([]);
     } finally {
       setIsLoading(false);
     }
@@ -272,11 +275,10 @@ const Flow = () => {
           currentAmount: 1.0,
         });
       } catch (error) {
-        const apiError = error as ApiError;
         console.error('Error handling connection:', error);
         toast({
           title: 'Error creating relationship',
-          description: apiError.message,
+          description: error instanceof Error ? error.message : 'Failed to create relationship',
           status: 'error',
           duration: 5000,
         });
@@ -302,18 +304,16 @@ const Flow = () => {
         setSelectedComponent(componentData);
         setIsDialogOpen(true);
       } catch (error) {
-        const apiError = error as ApiError;
-
         console.error('Error fetching component details:', error);
         toast({
           title: 'Error fetching component',
-          description: apiError.message,
+          description: error instanceof Error ? error.message : 'Failed to load component details',
           status: 'error',
           duration: 3000,
         });
       }
     },
-    [],
+    [toast],
   );
 
   const handleEdgeDoubleClick = useCallback(
@@ -330,18 +330,16 @@ const Flow = () => {
           currentAmount: currentAmount,
         });
       } catch (error) {
-        const apiError = error as ApiError;
-
         console.error('Error handling edge double click:', error);
         toast({
           title: 'Error opening relationship editor',
-          description: apiError.message,
+          description: error instanceof Error ? error.message : 'Failed to open relationship editor',
           status: 'error',
           duration: 3000,
         });
       }
     },
-    [],
+    [toast],
   );
 
   // CRUD Operations
@@ -361,11 +359,10 @@ const Flow = () => {
         duration: 4000,
       });
     } catch (error) {
-      const apiError = error as ApiError;
-
+      console.error('Error creating component:', error);
       toast({
         title: 'Error creating component',
-        description: apiError.message,
+        description: error instanceof Error ? error.message : 'Failed to create component',
         status: 'error',
         duration: 5000,
       });
@@ -383,11 +380,10 @@ const Flow = () => {
         duration: 4000,
       });
     } catch (error) {
-      const apiError = error as ApiError;
-
+      console.error('Error updating component:', error);
       toast({
         title: 'Error updating component',
-        description: apiError.message,
+        description: error instanceof Error ? error.message : 'Failed to update component',
         status: 'error',
         duration: 5000,
       });
@@ -412,11 +408,10 @@ const Flow = () => {
           duration: 3000,
         });
       } catch (error) {
-        const apiError = error as ApiError;
-
+        console.error('Error deleting relationship:', error);
         toast({
           title: 'Error deleting relationship',
-          description: apiError.message,
+          description: error instanceof Error ? error.message : 'Failed to delete relationship',
           status: 'error',
           duration: 5000,
         });
@@ -446,11 +441,10 @@ const Flow = () => {
         duration: 4000,
       });
     } catch (error) {
-      const apiError = error as ApiError;
-
+      console.error('Error deleting component:', error);
       toast({
         title: `Error ${fromDatabase ? 'deleting' : 'removing'} component`,
-        description: apiError.message,
+        description: error instanceof Error ? error.message : 'Failed to delete component',
         status: 'error',
         duration: 5000,
       });
@@ -478,11 +472,10 @@ const Flow = () => {
         duration: 3000,
       });
     } catch (error) {
-      const apiError = error as ApiError;
-
+      console.error('Error creating relationship:', error);
       toast({
         title: 'Error creating relationship',
-        description: apiError.message,
+        description: error instanceof Error ? error.message : 'Failed to create relationship',
         status: 'error',
         duration: 5000,
       });

@@ -7,8 +7,6 @@ import {
   ModalBody,
   ModalFooter,
   Input,
-  NumberInput,
-  NumberInputField,
   Select,
   Button,
   FormControl,
@@ -21,9 +19,60 @@ import {
   List,
   ListItem,
   HStack,
+  FormErrorMessage,
 } from '@chakra-ui/react';
 import { SearchIcon, InfoIcon } from '../common/IconWrapper';
 import { ApiService } from '../../services/service';
+
+// Helper function to safely parse float values with comprehensive validation
+const parseFloatSafe = (value: string): { value: number; error: string | null } => {
+  if (!value || value.trim() === '') {
+    return { value: 0, error: null };
+  }
+  
+  const trimmed = value.trim();
+  
+  // Check for invalid characters (allow numbers, decimals, negative signs)
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(trimmed)) {
+    return { value: 0, error: 'Please enter a valid number' };
+  }
+  
+  const parsed = parseFloat(trimmed);
+  
+  if (isNaN(parsed)) {
+    return { value: 0, error: 'Please enter a valid number' };
+  }
+  
+  if (!isFinite(parsed)) {
+    return { value: 0, error: 'Number is too large' };
+  }
+  
+  // Check for reasonable bounds
+  if (parsed < -1000000 || parsed > 1000000) {
+    return { value: 0, error: 'Number must be between -1,000,000 and 1,000,000' };
+  }
+  
+  return { value: parsed, error: null };
+};
+
+// Helper function to validate float input during typing
+const isValidFloatInput = (value: string): boolean => {
+  if (!value || value.trim() === '') return true;
+  const trimmed = value.trim();
+  return /^-?(\d*\.?\d*|\.\d*)$/.test(trimmed);
+};
+
+// Helper function to format display value
+const formatDisplayValue = (value: string, precision?: number): string => {
+  const parseResult = parseFloatSafe(value);
+  if (parseResult.error || value === '') return value;
+  
+  if (precision !== undefined) {
+    return parseResult.value.toFixed(precision);
+  }
+  
+  return parseResult.value.toString();
+};
 
 interface ComponentData {
   componentName: string;
@@ -49,6 +98,94 @@ interface ComponentDialogProps {
     relationshipData?: { amount: number },
   ) => Promise<void>;
 }
+
+// Reusable FloatInput component with validation
+interface FloatInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  placeholder?: string;
+  precision?: number;
+  bg: string;
+  borderColor: string;
+  color: string;
+  textColorSecondary: string;
+  isReadOnly?: boolean;
+}
+
+const FloatInput: React.FC<FloatInputProps> = ({
+  value,
+  onChange,
+  placeholder = "0",
+  precision = 2,
+  bg,
+  borderColor,
+  color,
+  textColorSecondary,
+  isReadOnly = false,
+}) => {
+  const [localValue, setLocalValue] = useState(value.toString());
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalValue(formatDisplayValue(value.toString(), precision));
+  }, [value, precision]);
+
+  const handleChange = (inputValue: string) => {
+    setLocalValue(inputValue);
+    setError(null);
+    
+    if (inputValue === '') {
+      onChange(0);
+      return;
+    }
+    
+    if (!isValidFloatInput(inputValue)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    
+    const parseResult = parseFloatSafe(inputValue);
+    if (parseResult.error) {
+      setError(parseResult.error);
+      return;
+    }
+    
+    onChange(parseResult.value);
+  };
+
+  const handleBlur = () => {
+    const parseResult = parseFloatSafe(localValue);
+    if (parseResult.error) {
+      setError(parseResult.error);
+      setLocalValue('0');
+      onChange(0);
+      return;
+    }
+    
+    const formattedValue = formatDisplayValue(localValue, precision);
+    setLocalValue(formattedValue);
+    onChange(parseResult.value);
+    setError(null);
+  };
+
+  return (
+    <FormControl isInvalid={!!error}>
+      <Input
+        value={localValue}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        bg={bg}
+        borderColor={borderColor}
+        color={color}
+        _placeholder={{ color: textColorSecondary }}
+        isReadOnly={isReadOnly}
+        type="text"
+      />
+      {error && <FormErrorMessage>{error}</FormErrorMessage>}
+    </FormControl>
+  );
+};
 
 export function ComponentDialog({
   isOpen,
@@ -139,7 +276,7 @@ export function ComponentDialog({
         try {
           console.log('Starting to fetch all components...');
           setIsSearching(true);
-          const data = await ApiService.getAllComponents();
+          const data = await ApiService.getAllComponents() as any[];
           console.log('Received data from getAllComponents:', data);
           
           const componentNames = (data || []).map((component: any) => 
@@ -452,16 +589,15 @@ export function ComponentDialog({
 
               <FormControl>
                 <FormLabel color={textColor}>Amount</FormLabel>
-                <NumberInput
+                <FloatInput
                   value={formData.amount}
-                  onChange={(_, val) => handleChange('amount', val)}
-                >
-                  <NumberInputField 
-                    bg={inputBg}
-                    borderColor={borderColor}
-                    color={textColor}
-                  />
-                </NumberInput>
+                  onChange={(value) => handleChange('amount', value)}
+                  placeholder="Enter amount"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  textColorSecondary={textColorSecondary}
+                />
               </FormControl>
 
               <FormControl>
@@ -482,31 +618,29 @@ export function ComponentDialog({
               {mode === 'create' && initialComponent && (
                 <FormControl>
                   <FormLabel color={textColor}>Initial Amount in {initialComponent}</FormLabel>
-                  <NumberInput
+                  <FloatInput
                     value={relationshipAmount}
-                    onChange={(_, val) => setRelationshipAmount(Number(val))}
-                  >
-                    <NumberInputField 
-                      bg={inputBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                    />
-                  </NumberInput>
+                    onChange={(value) => setRelationshipAmount(value)}
+                    placeholder="Enter initial amount"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    color={textColor}
+                    textColorSecondary={textColorSecondary}
+                  />
                 </FormControl>
               )}
 
               <FormControl>
                 <FormLabel color={textColor}>Trigger Min Amount</FormLabel>
-                <NumberInput
+                <FloatInput
                   value={formData.triggerMinAmount}
-                  onChange={(_, val) => handleChange('triggerMinAmount', val)}
-                >
-                  <NumberInputField 
-                    bg={inputBg}
-                    borderColor={borderColor}
-                    color={textColor}
-                  />
-                </NumberInput>
+                  onChange={(value) => handleChange('triggerMinAmount', value)}
+                  placeholder="Enter trigger min amount"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  textColorSecondary={textColorSecondary}
+                />
               </FormControl>
 
               <FormControl>
@@ -536,33 +670,28 @@ export function ComponentDialog({
 
               <FormControl>
                 <FormLabel color={textColor}>Cost</FormLabel>
-                <NumberInput
+                <FloatInput
                   value={formData.cost}
-                  onChange={(_, val) => handleChange('cost', val)}
-                  precision={2}
-                >
-                  <NumberInputField 
-                    bg={inputBg}
-                    borderColor={borderColor}
-                    color={textColor}
-                  />
-                </NumberInput>
+                  onChange={(value) => handleChange('cost', value)}
+                  placeholder="Enter cost"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  textColorSecondary={textColorSecondary}
+                />
               </FormControl>
 
               <FormControl>
                 <FormLabel color={textColor}>Development Duration (days)</FormLabel>
-                <NumberInput
+                <FloatInput
                   value={formData.durationOfDevelopment}
-                  onChange={(_, val) =>
-                    handleChange('durationOfDevelopment', val)
-                  }
-                >
-                  <NumberInputField 
-                    bg={inputBg}
-                    borderColor={borderColor}
-                    color={textColor}
-                  />
-                </NumberInput>
+                  onChange={(value) => handleChange('durationOfDevelopment', value)}
+                  placeholder="Enter development duration"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  textColorSecondary={textColorSecondary}
+                />
               </FormControl>
 
               <FormControl>

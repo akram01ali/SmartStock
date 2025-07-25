@@ -1,11 +1,26 @@
 #!/bin/bash
 
 echo "🚀 Deploying SmartStock locally with Docker Compose..."
+echo "🌐 Using static IP: 10.0.0.99"
 
-# Get local IP address for network deployment
-LOCAL_IP=$(ip route get 1.1.1.1 | grep -oP 'src \K[0-9.]+')
-export LOCAL_IP
-echo "🌐 Local IP detected: $LOCAL_IP"
+# Generate new JWT secret for security
+echo "🔐 Generating secure JWT secret..."
+JWT_SECRET=$(openssl rand -hex 32)
+echo "✅ JWT secret generated: ${JWT_SECRET:0:16}..."
+
+# Update server .env file
+echo "📝 Updating server/.env with new JWT secret..."
+if [ -f "server/.env" ]; then
+    sed -i "s/^JWT_SECRET=.*/JWT_SECRET=\"$JWT_SECRET\"/" server/.env
+else
+    echo "JWT_SECRET=\"$JWT_SECRET\"" >> server/.env
+fi
+
+# Update docker-compose.yml with new JWT secret
+echo "📝 Updating docker-compose.yml with new JWT secret..."
+sed -i "s/JWT_SECRET: .*/JWT_SECRET: $JWT_SECRET/" docker-compose.yml
+
+echo "✅ JWT secret updated in configuration files"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -67,26 +82,34 @@ else
 fi
 
 echo ""
-echo "🎉 SmartStock is now running!"
+echo "🎉 SmartStock is now deployed!"
+echo ""
+echo "🔐 Security:"
+echo "   ✅ New JWT secret generated and configured"
+echo "   🔑 Secret: ${JWT_SECRET:0:16}... (truncated for security)"
 echo ""
 echo "📱 Access your applications:"
-echo "   Admin Dashboard: http://$LOCAL_IP (or http://$LOCAL_IP:3000)"
-echo "   API Backend: http://$LOCAL_IP:8000"
-echo "   API Health: http://$LOCAL_IP:8000/health"
+echo "   Admin Dashboard: http://10.0.0.99 (or http://10.0.0.99:3000)"
+echo "   API Backend: http://10.0.0.99:8000"
+echo "   API Health: http://10.0.0.99:8000/health"
+echo ""
+echo "🌐 Custom Domain Access (if DNS configured):"
+echo "   Admin Dashboard: http://admin.iacs.com"
+echo "   API Backend: http://admin.iacs.com:8000"
 echo ""
 echo "📋 Useful commands:"
 echo "   View logs: docker-compose logs -f"
 echo "   Stop all: docker-compose down"
 echo "   Restart: docker-compose restart"
 echo ""
-echo "📱 For mobile app:"
-echo "   Update apps/smartstock-mobile/services/api.ts"
-echo "   Set API_BASE_URL to 'http://$LOCAL_IP:8000'"
+echo "📱 Mobile App Configuration:"
+echo "   ✅ Already configured for http://10.0.0.99:8000"
+echo "   No changes needed in mobile app settings"
 echo ""
 echo "🌐 Network Access:"
 echo "   Other devices on your network can access:"
-echo "   - Admin Dashboard: http://$LOCAL_IP"
-echo "   - API: http://$LOCAL_IP:8000"
+echo "   - Admin Dashboard: http://10.0.0.99"
+echo "   - API: http://10.0.0.99:8000"
 echo ""
 
 # Show container status

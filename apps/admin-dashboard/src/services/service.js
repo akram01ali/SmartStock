@@ -9,19 +9,27 @@ export class ApiService {
     };
   }
 
+  /**
+   * Helper method to handle response errors consistently
+   * @param {Response} response - The fetch response
+   * @returns {Promise<Object>} The response JSON
+   * @throws {Error} If response is not ok
+   */
   static async handleResponse(response) {
     if (!response.ok) {
       if (response.status === 401) {
-        // Token expired or invalid, clear auth data and redirect to login
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('authUser');
-        window.location.href = '/login';
         throw new Error('Authentication required');
       }
-      throw new Error((await response.text()) || response.statusText);
+      
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Request failed: ${response.status} ${response.statusText}`);
+      } catch (parseError) {
+        // If we can't parse the error response, throw a generic error
+        throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+      }
     }
-    const data = await response.json();
-    return data;
+    return await response.json();
   }
 
   // Components endpoints
@@ -67,6 +75,22 @@ export class ApiService {
       return data || [];
     } catch (error) {
       console.error('Error fetching assemblies:', error);
+      return [];
+    }
+  }
+
+  static async getPrintersGroupsAssemblies() {
+    try {
+      const headers = this.getAuthHeaders();
+      console.log('getPrintersGroupsAssemblies - Fetching optimized component types...');
+
+      const response = await fetch(`${API_URL}/printers-groups-assemblies`, {
+        headers,
+      });
+      const data = await this.handleResponse(response);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching printers, groups, and assemblies:', error);
       return [];
     }
   }
@@ -326,22 +350,6 @@ export class ApiService {
     }
   }
 
-  static async getAllComponentsLight() {
-    try {
-      const headers = this.getAuthHeaders();
-      console.log('getAllComponentsLight - Fetching lightweight components');
-
-      const response = await fetch(`${API_URL}/all_components_light`, {
-        headers,
-      });
-      const data = await this.handleResponse(response);
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching lightweight components:', error);
-      return [];
-    }
-  }
-
   static async getAllComponentsLightPaginated(page = 1, pageSize = 50) {
     try {
       const headers = this.getAuthHeaders();
@@ -355,6 +363,72 @@ export class ApiService {
     } catch (error) {
       console.error('Error fetching paginated lightweight components:', error);
       return { data: [], pagination: {} };
+    }
+  }
+
+  static async getAllComponentsWithImagesPaginated(page = 1, pageSize = 25, includeEmptyImages = false, imageFormat = 'url', typeFilter = null) {
+    try {
+      const headers = this.getAuthHeaders();
+      console.log(`getAllComponentsWithImagesPaginated - Fetching page ${page} with ${pageSize} items`);
+
+      let url = `${API_URL}/components/with-images-paginated?page=${page}&page_size=${pageSize}&include_empty_images=${includeEmptyImages}&image_format=${imageFormat}`;
+      if (typeFilter && typeFilter !== 'all') {
+        url += `&type_filter=${encodeURIComponent(typeFilter)}`;
+      }
+
+      const response = await fetch(url, {
+        headers,
+      });
+      const data = await this.handleResponse(response);
+      return data || { data: [], pagination: {} };
+    } catch (error) {
+      console.error('Error fetching paginated components with images:', error);
+      return { data: [], pagination: {} };
+    }
+  }
+
+  static async searchComponents(query, page = 1, pageSize = 50, includeImages = true, typeFilter = null) {
+    try {
+      const headers = this.getAuthHeaders();
+      console.log(`searchComponents - Searching for "${query}" on page ${page}`);
+
+      let url = `${API_URL}/search_components?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}&include_images=${includeImages}`;
+      if (typeFilter && typeFilter !== 'all') {
+        url += `&type_filter=${encodeURIComponent(typeFilter)}`;
+      }
+
+      const response = await fetch(url, {
+        headers,
+      });
+      const data = await this.handleResponse(response);
+      return data || { data: [], pagination: {} };
+    } catch (error) {
+      console.error('Error searching components:', error);
+      return { data: [], pagination: {} };
+    }
+  }
+
+  static async getComponentsStatistics(searchQuery = null, typeFilter = null, includeEmptyImages = true) {
+    try {
+      const headers = this.getAuthHeaders();
+      console.log('getComponentsStatistics - Fetching component statistics');
+
+      let url = `${API_URL}/components/statistics?include_empty_images=${includeEmptyImages}`;
+      if (searchQuery) {
+        url += `&q=${encodeURIComponent(searchQuery)}`;
+      }
+      if (typeFilter && typeFilter !== 'all') {
+        url += `&type_filter=${encodeURIComponent(typeFilter)}`;
+      }
+
+      const response = await fetch(url, {
+        headers,
+      });
+      const data = await this.handleResponse(response);
+      return data || { total_count: 0, low_stock_count: 0, total_value: 0 };
+    } catch (error) {
+      console.error('Error fetching component statistics:', error);
+      return { total_count: 0, low_stock_count: 0, total_value: 0 };
     }
   }
 
@@ -372,6 +446,26 @@ export class ApiService {
       return data || [];
     } catch (error) {
       console.error('Error fetching all components:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get components that are below their minimum stock level
+   * @returns {Promise<Array>} Array of low stock components
+   */
+  static async getLowStockComponents() {
+    try {
+      const headers = this.getAuthHeaders();
+      console.log('getLowStockComponents - Fetching low stock components...');
+
+      const response = await fetch(`${API_URL}/low-stock`, {
+        headers,
+      });
+      const data = await this.handleResponse(response);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching low stock components:', error);
       return [];
     }
   }
@@ -508,6 +602,31 @@ export class ApiService {
         impact: 'unknown',
         message: 'Could not analyze deletion impact',
       };
+    }
+  }
+
+  /**
+   * Get component total cost analytics
+   * @param {string} topName - The top component name to analyze
+   * @param {number} hourlyRate - Hourly rate for cost calculation in EUR (default: 18.5)
+   * @returns {Promise<Object>} Analytics data including total cost
+   */
+  static async getComponentTotalCost(topName, hourlyRate = 18.5) {
+    try {
+      const headers = this.getAuthHeaders();
+      const url = new URL(`${API_URL}/analytics`);
+      url.searchParams.append('topName', topName);
+      url.searchParams.append('hourly_rate', hourlyRate.toString());
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers,
+      });
+
+      return await this.handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching component total cost analytics:', error);
+      throw error;
     }
   }
 }

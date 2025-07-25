@@ -1,16 +1,69 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FormControl,
   FormLabel,
   Input,
-  NumberInput,
-  NumberInputField,
   Select,
   Text,
   Textarea,
+  FormErrorMessage,
 } from '@chakra-ui/react';
 
 import { FormFieldProps, Measures, TypeOfComponent } from './types';
+
+// Helper function to safely parse float values with comprehensive validation
+const parseFloatSafe = (value: string): { value: number; error: string | null } => {
+  if (!value || value.trim() === '') {
+    return { value: 0, error: null };
+  }
+  
+  const trimmed = value.trim();
+  
+  // Check for invalid characters (allow numbers, decimals, negative signs)
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(trimmed)) {
+    return { value: 0, error: 'Please enter a valid number' };
+  }
+  
+  const parsed = parseFloat(trimmed);
+  
+  if (isNaN(parsed)) {
+    return { value: 0, error: 'Please enter a valid number' };
+  }
+  
+  if (!isFinite(parsed)) {
+    return { value: 0, error: 'Number is too large' };
+  }
+  
+  // Check for reasonable bounds
+  if (parsed < -1000000 || parsed > 1000000) {
+    return { value: 0, error: 'Number must be between -1,000,000 and 1,000,000' };
+  }
+  
+  return { value: parsed, error: null };
+};
+
+// Helper function to validate float input during typing
+const isValidFloatInput = (value: string): boolean => {
+  if (!value || value.trim() === '') return true; // Empty is valid (will default to 0)
+  
+  const trimmed = value.trim();
+  
+  // Allow partial input during typing: numbers, decimal point, negative sign
+  // This regex allows: -123, 123., .123, -, . (partial inputs)
+  return /^-?(\d*\.?\d*|\.\d*)$/.test(trimmed);
+};
+
+// Helper function to format display value
+const formatDisplayValue = (value: string, precision?: number): string => {
+  const parseResult = parseFloatSafe(value);
+  if (parseResult.error || value === '') return value;
+  
+  if (precision !== undefined) {
+    return parseResult.value.toFixed(precision);
+  }
+  
+  return parseResult.value.toString();
+};
 
 export const FormField: React.FC<FormFieldProps> = ({
   label,
@@ -28,8 +81,47 @@ export const FormField: React.FC<FormFieldProps> = ({
   optionColor,
   isReadOnly = false,
 }) => {
+  const [localError, setLocalError] = useState<string>('');
+  
+  // Handle floating point fields
+  const isFloatField = type === 'float' || (type === 'number' && ['amount', 'triggerMinAmount', 'cost', 'durationOfDevelopment'].includes(name));
+
+  const handleFloatChange = (inputValue: string) => {
+    setLocalError('');
+    
+    // Allow empty input
+    if (inputValue === '') {
+      onChange(name, '');
+      return;
+    }
+    
+    // Validate the input during typing
+    if (!isValidFloatInput(inputValue)) {
+      setLocalError('Please enter a valid number');
+      onChange(name, inputValue); // Still update to show the invalid input
+      return;
+    }
+    
+    onChange(name, inputValue);
+  };
+
+  const handleFloatBlur = (inputValue: string) => {
+    // On blur, validate and format the value
+    const parseResult = parseFloatSafe(inputValue);
+    
+    if (parseResult.error) {
+      setLocalError(parseResult.error);
+      return;
+    }
+    
+    // Format the value based on precision
+    const cleanedValue = formatDisplayValue(inputValue, precision);
+    onChange(name, cleanedValue);
+    setLocalError('');
+  };
+
   return (
-    <FormControl>
+    <FormControl isInvalid={!!localError}>
       <FormLabel color={textColor}>{label}</FormLabel>
       {type === 'text' && (
         <Input
@@ -55,19 +147,18 @@ export const FormField: React.FC<FormFieldProps> = ({
           minH="100px"
         />
       )}
-      {type === 'number' && (
-        <NumberInput
+      {(type === 'number' || type === 'float') && isFloatField && (
+        <Input
           value={value}
-          onChange={(_, val) => onChange(name, val)}
-          precision={precision}
+          onChange={(e) => handleFloatChange(e.target.value)}
+          onBlur={(e) => handleFloatBlur(e.target.value)}
+          placeholder={placeholder || '0'}
+          bg={inputBg}
+          borderColor={borderColor}
+          color={textColor}
           isReadOnly={isReadOnly}
-        >
-          <NumberInputField
-            bg={inputBg}
-            borderColor={borderColor}
-            color={textColor}
-          />
-        </NumberInput>
+          type="text"
+        />
       )}
       {type === 'select' && options && (
         <Select
@@ -89,6 +180,7 @@ export const FormField: React.FC<FormFieldProps> = ({
           ))}
         </Select>
       )}
+      {localError && <FormErrorMessage>{localError}</FormErrorMessage>}
     </FormControl>
   );
 };
@@ -97,7 +189,8 @@ export const componentFormFields = [
   {
     id: 'amount',
     label: 'Amount',
-    type: 'number',
+    type: 'float',
+    placeholder: '0',
   },
   {
     id: 'measure',
@@ -112,7 +205,8 @@ export const componentFormFields = [
   {
     id: 'triggerMinAmount',
     label: 'Trigger Min Amount',
-    type: 'number',
+    type: 'float',
+    placeholder: '0',
   },
   {
     id: 'supplier',
@@ -128,13 +222,15 @@ export const componentFormFields = [
   {
     id: 'cost',
     label: 'Cost',
-    type: 'number',
+    type: 'float',
     precision: 2,
+    placeholder: '0.00',
   },
   {
     id: 'durationOfDevelopment',
     label: 'Development Duration (days)',
-    type: 'number',
+    type: 'float',
+    placeholder: '0',
   },
   {
     id: 'type',

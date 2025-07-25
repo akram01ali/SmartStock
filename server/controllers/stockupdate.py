@@ -17,6 +17,10 @@ async def update_component_stock_logic(
 ) -> Component:
 
     try:
+        # Validate input
+        if not component_name or not component_name.strip():
+            raise HTTPException(status_code=400, detail="Component name cannot be empty")
+        
         component = await db.components.find_unique(
             where={"componentName": component_name}
         )
@@ -30,9 +34,18 @@ async def update_component_stock_logic(
         # Calculate the current amount
         new_amount = amount if absolute else component.amount + amount
 
-        # Error handling should still be implemented here:
+        # Validate new amount
         if new_amount < 0:
-            new_amount = 0
+            if absolute:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Cannot set negative stock amount: {new_amount}"
+                )
+            else:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Insufficient stock. Current: {component.amount}, Requested change: {amount}"
+                )
 
         # Update the current amount for the component
         updated_component = await db.components.update(
@@ -60,14 +73,17 @@ async def update_component_stock_logic(
                     }
                 )
 
+                if not subcomp_data:
+                    continue
+
                 # Calculate the new amount for the component
                 current_amount = subcomp_data.amount
                 relationship_amount = subcomp.amount
-                new_amount = current_amount - relationship_amount*amount
+                new_subcomp_amount = current_amount - relationship_amount*amount
 
-                # Error Handling should be implemented in the if-statement below:
-                if new_amount<0:
-                    pass
+                # Warn but don't fail if subcomponent goes negative
+                if new_subcomp_amount < 0:
+                    new_subcomp_amount = 0
 
                 # Update the amount for each subcomponent
                 await db.components.update(
@@ -75,7 +91,7 @@ async def update_component_stock_logic(
                         "componentName": subcomp.subComponent
                     },
                     data={
-                        "amount": new_amount
+                        "amount": new_subcomp_amount
                     }
                 )
 

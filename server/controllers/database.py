@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 from prisma import Client
+from fastapi import HTTPException
 
 # Add the prisma directory to Python path
 prisma_path = Path(__file__).parent / "prisma"
@@ -10,17 +11,24 @@ sys.path.insert(0, str(prisma_path))
 prisma = Client()
 
 async def get_db():
-    """Database dependency for FastAPI"""
-    if not prisma.is_connected():
-        await prisma.connect()
-    return prisma
+    try:
+        if not prisma.is_connected():
+            await prisma.connect()
+        return prisma
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="Database connection failed")
 
 async def connect_db():
-    """Connect to database on startup"""
-    await prisma.connect()
-    print("Connected to Components database")
+    try:
+        await prisma.connect()
+        print("✅ Database connected successfully")
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        raise
 
 async def disconnect_db():
-    """Disconnect from database on shutdown"""
-    await prisma.disconnect()
-    print("Disconnected from database")
+    try:
+        await prisma.disconnect()
+        print("✅ Database disconnected successfully")
+    except Exception as e:
+        print(f"❌ Database disconnection failed: {e}")

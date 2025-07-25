@@ -61,13 +61,13 @@ export enum TypeOfComponent {
 
 export interface ComponentCreate {
   componentName: string;
-  amount: number;
+  amount: string | number;
   measure: Measures;
   scannedBy: string;
-  durationOfDevelopment: number;
-  triggerMinAmount: number;
+  durationOfDevelopment: string | number;
+  triggerMinAmount: string | number;
   supplier: string;
-  cost: number;
+  cost: string | number;
   type: TypeOfComponent;
   lastScanned: string;
   description?: string;
@@ -75,13 +75,13 @@ export interface ComponentCreate {
 }
 
 export interface ComponentUpdate {
-  amount?: number;
+  amount?: string | number;
   measure?: Measures;
   scannedBy?: string;
-  durationOfDevelopment?: number;
-  triggerMinAmount?: number;
+  durationOfDevelopment?: string | number;
+  triggerMinAmount?: string | number;
   supplier?: string;
-  cost?: number;
+  cost?: string | number;
   type?: TypeOfComponent;
   description?: string;
   image?: string;
@@ -104,7 +104,7 @@ export interface FormFieldProps {
   name: string;
   value: any;
   onChange: (name: string, value: any) => void;
-  type: 'text' | 'number' | 'select' | 'textarea';
+  type: 'text' | 'number' | 'select' | 'textarea' | 'float';
   options?: { value: string; label: string }[];
   placeholder?: string;
   precision?: number;

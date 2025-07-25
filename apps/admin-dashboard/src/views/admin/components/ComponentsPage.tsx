@@ -71,9 +71,9 @@ const COMPONENT_SECTIONS = [
 ] as const;
 
 const CREATE_API_MAP = {
-  printer: ApiService.createPrinter,
-  group: ApiService.createGroup,
-  assembly: ApiService.createAssembly,
+  printer: (data: ComponentCreate, root: string) => ApiService.createPrinter(data, root),
+  group: (data: ComponentCreate, root: string) => ApiService.createGroup(data, root),
+  assembly: (data: ComponentCreate, root: string) => ApiService.createAssembly(data, root),
 } as const;
 
 type SectionConfig = typeof COMPONENT_SECTIONS[number];

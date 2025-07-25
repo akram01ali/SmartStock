@@ -72,7 +72,7 @@ async def _get_component_delivery_duration(component_name: str, db: Prisma) -> f
         if not component:
             raise RecordNotFoundError(f"Component '{component_name}' not found")
         
-        return component.delivery_time
+        return component.deliveryTime
     
     except RecordNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

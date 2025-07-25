@@ -29,14 +29,14 @@ model Components {
   measure               Measures
   lastScanned           DateTime @default(now())
   scannedBy             String
-  durationOfDevelopment Int
+  durationOfDevelopment Float
   triggerMinAmount      Float
   supplier              String
   cost                  Float
   type                  TypeOfComponent
   description           String?
   image                 String?
-  delivery_time         Int?
+  delivery_time         Float?
   
   @@index([type])
   @@index([lastScanned])

@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "smartstock-mobile",
+    "name": "SmartStock",
     "slug": "smartstock-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/iacs.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/iacs.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -40,7 +40,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/iacs.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -53,7 +53,7 @@
       "package": "com.akramali01.smartstockmobile"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/iacs.png"
     },
     "extra": {
       "eas": {

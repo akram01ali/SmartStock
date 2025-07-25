@@ -24,8 +24,14 @@ export interface AuthResponse {
 }
 
 const getBaseUrl = () => {
-  return process.env.API_BASE_URL;
+  return process.env.API_BASE_URL || "http://10.0.0.99:8000";
 };
+
+const FALLBACK_IPS = [
+  'http://10.0.0.104:8000',
+  'http://192.168.1.99:8000',
+  'http://192.168.0.99:8000',
+];
 
 export class ApiService {
   private static readonly BASE_URL = getBaseUrl();

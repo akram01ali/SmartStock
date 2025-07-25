@@ -17,15 +17,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
 
-  console.log(
-    "AppContent: isAuthenticated =",
-    isAuthenticated,
-    "loading =",
-    loading
-  );
-
   if (loading) {
-    console.log("AppContent: Rendering loading screen");
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4318FF" />

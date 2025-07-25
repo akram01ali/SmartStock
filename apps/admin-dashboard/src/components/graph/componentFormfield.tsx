@@ -3,8 +3,6 @@ import {
   FormControl,
   FormLabel,
   Input,
-  NumberInput,
-  NumberInputField,
   Select,
   Text,
   Textarea,
@@ -13,18 +11,58 @@ import {
 
 import { FormFieldProps, Measures, TypeOfComponent } from './types';
 
-// Helper function to safely parse float values
-const parseFloatSafe = (value: string): number => {
-  if (!value || value.trim() === '') return 0;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? 0 : parsed;
+// Helper function to safely parse float values with comprehensive validation
+const parseFloatSafe = (value: string): { value: number; error: string | null } => {
+  if (!value || value.trim() === '') {
+    return { value: 0, error: null };
+  }
+  
+  const trimmed = value.trim();
+  
+  // Check for invalid characters (allow numbers, decimals, negative signs)
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(trimmed)) {
+    return { value: 0, error: 'Please enter a valid number' };
+  }
+  
+  const parsed = parseFloat(trimmed);
+  
+  if (isNaN(parsed)) {
+    return { value: 0, error: 'Please enter a valid number' };
+  }
+  
+  if (!isFinite(parsed)) {
+    return { value: 0, error: 'Number is too large' };
+  }
+  
+  // Check for reasonable bounds
+  if (parsed < -1000000 || parsed > 1000000) {
+    return { value: 0, error: 'Number must be between -1,000,000 and 1,000,000' };
+  }
+  
+  return { value: parsed, error: null };
 };
 
-// Helper function to validate float input
+// Helper function to validate float input during typing
 const isValidFloatInput = (value: string): boolean => {
   if (!value || value.trim() === '') return true; // Empty is valid (will default to 0)
-  const parsed = parseFloat(value);
-  return !isNaN(parsed) && isFinite(parsed);
+  
+  const trimmed = value.trim();
+  
+  // Allow partial input during typing: numbers, decimal point, negative sign
+  // This regex allows: -123, 123., .123, -, . (partial inputs)
+  return /^-?(\d*\.?\d*|\.\d*)$/.test(trimmed);
+};
+
+// Helper function to format display value
+const formatDisplayValue = (value: string, precision?: number): string => {
+  const parseResult = parseFloatSafe(value);
+  if (parseResult.error || value === '') return value;
+  
+  if (precision !== undefined) {
+    return parseResult.value.toFixed(precision);
+  }
+  
+  return parseResult.value.toString();
 };
 
 export const FormField: React.FC<FormFieldProps> = ({
@@ -57,7 +95,7 @@ export const FormField: React.FC<FormFieldProps> = ({
       return;
     }
     
-    // Validate the input
+    // Validate the input during typing
     if (!isValidFloatInput(inputValue)) {
       setLocalError('Please enter a valid number');
       onChange(name, inputValue); // Still update to show the invalid input
@@ -68,9 +106,16 @@ export const FormField: React.FC<FormFieldProps> = ({
   };
 
   const handleFloatBlur = (inputValue: string) => {
-    // On blur, convert to number and back to ensure clean format
-    const numValue = parseFloatSafe(inputValue);
-    const cleanedValue = numValue === 0 ? '0' : numValue.toString();
+    // On blur, validate and format the value
+    const parseResult = parseFloatSafe(inputValue);
+    
+    if (parseResult.error) {
+      setLocalError(parseResult.error);
+      return;
+    }
+    
+    // Format the value based on precision
+    const cleanedValue = formatDisplayValue(inputValue, precision);
     onChange(name, cleanedValue);
     setLocalError('');
   };
@@ -114,20 +159,6 @@ export const FormField: React.FC<FormFieldProps> = ({
           isReadOnly={isReadOnly}
           type="text"
         />
-      )}
-      {(type === 'number' || type === 'float') && !isFloatField && (
-        <NumberInput
-          value={value}
-          onChange={(_, val) => onChange(name, val)}
-          precision={precision}
-          isReadOnly={isReadOnly}
-        >
-          <NumberInputField
-            bg={inputBg}
-            borderColor={borderColor}
-            color={textColor}
-          />
-        </NumberInput>
       )}
       {type === 'select' && options && (
         <Select

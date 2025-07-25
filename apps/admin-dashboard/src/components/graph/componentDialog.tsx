@@ -340,22 +340,7 @@ export function ComponentDialog({
               borderColor={colors.borderColor}
             />
 
-            {/* Relationship amount field for create mode */}
-            {mode === 'create' && initialComponent && (
-              <FormField
-                label={`Initial Amount in ${initialComponent}`}
-                name="relationshipAmount"
-                type="number"
-                value={relationshipAmount}
-                onChange={(name, val) => setRelationshipAmount(Number(val))}
-                precision={2}
-                textColor={colors.textColor}
-                inputBg={colors.inputBg}
-                borderColor={colors.borderColor}
-                optionBg={colors.inputBg}
-                optionColor={colors.textColor}
-              />
-            )}
+
           </VStack>
         </ModalBody>
 

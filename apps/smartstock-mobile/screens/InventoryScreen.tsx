@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -21,22 +21,10 @@ import type { NavigationProp } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
 import { ApiService } from "../services/api";
 import { inventoryScreenStyles as styles } from "../styles/InventoryScreenStyles";
-import type { RootStackParamList } from "../types/navigation";
-
-interface Component {
-  componentName: string;
-  amount: number;
-  measure: string;
-  supplier: string;
-  cost: number;
-  type: string;
-  description?: string;
-  image?: string;
-  lastScanned: string;
-  scannedBy: string;
-  durationofDevelopment: number;
-  triggerMinAmount: number;
-}
+import type { RootStackParamList, Component } from "../types/navigation";
+import { getStockStatus, getStockStatusColor } from "../utils/stockUtils";
+import { convertImageToBase64, showImagePickerAlert, openCamera, openImagePicker } from "../utils/imageUtils";
+import { notify, actionNotify, validateNotify } from "../utils/notifications";
 
 interface NewComponent {
   componentName: string;
@@ -51,9 +39,55 @@ interface NewComponent {
   triggerMinAmount: number;
 }
 
+// Utility Functions
+const validateComponentForm = (component: NewComponent): string | null => {
+  if (!component.componentName?.trim()) {
+    return "Component name is required";
+  }
+  if (component.amount < 0) {
+    return "Amount cannot be negative";
+  }
+  if (component.cost < 0) {
+    return "Cost cannot be negative";
+  }
+  return null;
+};
+
+const resetComponentForm = (defaultScannedBy: string = 'mobile-app'): NewComponent => ({
+  componentName: '',
+  amount: 0,
+  measure: 'amount',
+  supplier: '',
+  cost: 0,
+  type: 'component',
+  description: '',
+  scannedBy: defaultScannedBy,
+  durationOfDevelopment: 0,
+  triggerMinAmount: 0,
+});
+
+// Custom Hook for Debounced Search
+const useDebounce = function<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 export default function InventoryScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { user, token } = useAuth();
+
+  // State
   const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -68,59 +102,37 @@ export default function InventoryScreen() {
   const [searchCurrentPage, setSearchCurrentPage] = useState(1);
   const [hasMoreData, setHasMoreData] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [newComponent, setNewComponent] = useState<NewComponent>({
-    componentName: '',
-    amount: 0,
-    measure: 'amount',
-    supplier: '',
-    cost: 0,
-    type: 'component',
-    description: '',
-    scannedBy: user?.name || 'mobile-app',
-    durationOfDevelopment: 0,
-    triggerMinAmount: 0,
-  });
+  const [newComponent, setNewComponent] = useState<NewComponent>(
+    resetComponentForm(user?.name || 'mobile-app')
+  );
 
-  // Get the appropriate data source and counts
+  // Debounced search
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  // Computed values
   const displayComponents = searchQuery ? searchResults : components;
   const displayTotalCount = searchQuery 
     ? (searchPagination?.total_count || 0) 
     : totalCount;
 
-  // Debounce search to avoid too many API calls
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-
+  // Effects
   useEffect(() => {
     fetchComponents();
   }, []);
 
-  // Handle search with debouncing
   useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    if (searchQuery.trim()) {
-      const timeout = setTimeout(() => {
-        performSearch(searchQuery, 1, true);
-      }, 500); // 500ms delay for debouncing
-      setSearchTimeout(timeout);
+    if (debouncedSearchQuery.trim()) {
+      performSearch(debouncedSearchQuery, 1, true);
     } else {
-      // Clear search results when query is empty
       setSearchResults([]);
       setSearchPagination(null);
       setSearchCurrentPage(1);
       setIsSearching(false);
     }
+  }, [debouncedSearchQuery]);
 
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-    };
-  }, [searchQuery]);
-
-  const fetchComponents = async (page: number = 1, reset: boolean = true) => {
+  // API Functions
+  const fetchComponents = useCallback(async (page: number = 1, reset: boolean = true) => {
     try {
       if (page === 1) {
         setLoading(true);
@@ -143,18 +155,14 @@ export default function InventoryScreen() {
       }
     } catch (error) {
       console.error("Error fetching components:", error);
-      Alert.alert(
-        "Error",
-        "Failed to load inventory. Please check your connection and try again.",
-        [{ text: "OK" }]
-      );
+      actionNotify.loadFailed();
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [token]);
 
-  const performSearch = async (query: string, page: number = 1, reset: boolean = true) => {
+  const performSearch = useCallback(async (query: string, page: number = 1, reset: boolean = true) => {
     if (!token || !query.trim()) return;
 
     try {
@@ -177,179 +185,97 @@ export default function InventoryScreen() {
       setSearchCurrentPage(page);
     } catch (error) {
       console.error("Error searching components:", error);
-      Alert.alert(
-        "Error",
-        "Failed to search components. Please try again.",
-        [{ text: "OK" }]
-      );
+      notify.error("Search failed. Please try again.");
     } finally {
       setLoading(false);
       setLoadingMore(false);
       setIsSearching(false);
     }
-  };
+  }, [token]);
 
-  const handleLoadMore = () => {
-    if (loadingMore) return;
-
-    if (searchQuery.trim()) {
-      // Load more search results
-      if (searchPagination?.has_next && token) {
-        performSearch(searchQuery, searchCurrentPage + 1, false);
-      }
-    } else {
-      // Load more regular components
-      if (hasMoreData && token) {
-        fetchComponents(currentPage + 1, false);
-      }
-    }
-  };
-
-  const handleRefresh = () => {
-    if (searchQuery.trim()) {
-      // Refresh search results
-      setSearchCurrentPage(1);
-      performSearch(searchQuery, 1, true);
-    } else {
-      // Refresh regular components
-      setCurrentPage(1);
-      setHasMoreData(true);
-      fetchComponents(1, true);
-    }
-  };
-
-  const handleBack = () => {
+  // Event Handlers
+  const handleBack = useCallback(() => {
     navigation.goBack();
-  };
+  }, [navigation]);
 
-  const handleComponentPress = (component: Component) => {
-    // Navigate to ComponentScreen with the component data
+  const handleComponentPress = useCallback((component: Component) => {
     navigation.navigate('Components', { 
       component: component,
       editMode: false 
     });
-  };
+  }, [navigation]);
 
-  const getStockStatus = (amount: number) => {
-    if (amount > 0) return "positive";
-    if (amount === 0) return "zero";
-    return "negative";
-  };
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore) return;
 
-  const getStockColor = (amount: number) => {
-    if (amount > 0) return styles.stockPositive;
-    if (amount === 0) return styles.stockZero;
-    return styles.stockNegative;
-  };
+    if (searchQuery.trim()) {
+      if (searchPagination?.has_next && token) {
+        performSearch(searchQuery, searchCurrentPage + 1, false);
+      }
+    } else {
+      if (hasMoreData && token) {
+        fetchComponents(currentPage + 1, false);
+      }
+    }
+  }, [searchQuery, searchPagination, searchCurrentPage, hasMoreData, currentPage, token, loadingMore, performSearch, fetchComponents]);
 
-  const clearSearch = () => {
+  const handleRefresh = useCallback(() => {
+    if (searchQuery.trim()) {
+      setSearchCurrentPage(1);
+      performSearch(searchQuery, 1, true);
+    } else {
+      setCurrentPage(1);
+      setHasMoreData(true);
+      fetchComponents(1, true);
+    }
+  }, [searchQuery, performSearch, fetchComponents]);
+
+  const clearSearch = useCallback(() => {
     setSearchQuery("");
-    setSearchResults([]);
-    setSearchPagination(null);
-    setSearchCurrentPage(1);
-    setIsSearching(false);
-  };
+  }, []);
 
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-  };
-
-  const handleCreateComponent = () => {
+  const handleCreateComponent = useCallback(() => {
     setCreateModalVisible(true);
-  };
+  }, []);
 
-  const handleImagePicker = () => {
-    Alert.alert(
-      "Select Image",
-      "Choose how you'd like to add an image:",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Take Photo",
-          onPress: () => openCamera(),
-        },
-        {
-          text: "Choose from Gallery",
-          onPress: () => openImagePicker(),
-        },
-      ]
+  const handleImagePicker = useCallback(() => {
+    showImagePickerAlert(
+      async () => {
+        const image = await openCamera();
+        if (image) setSelectedImage(image);
+      },
+      async () => {
+        const image = await openImagePicker();
+        if (image) setSelectedImage(image);
+      }
     );
-  };
+  }, []);
 
-  const openCamera = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'Camera permission is required to take photos.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setSelectedImage(result.assets[0]);
-    }
-  };
-
-  const openImagePicker = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setSelectedImage(result.assets[0]);
-    }
-  };
-
-  const resetCreateForm = () => {
-    setNewComponent({
-      componentName: '',
-      amount: 0,
-      measure: 'amount',
-      supplier: '',
-      cost: 0,
-      type: 'component',
-      description: '',
-      scannedBy: user?.name || 'mobile-app',
-      durationOfDevelopment: 0,
-      triggerMinAmount: 0,
-    });
+  const resetCreateForm = useCallback(() => {
+    setNewComponent(resetComponentForm(user?.name || 'mobile-app'));
     setSelectedImage(null);
-  };
+  }, [user?.name]);
 
-  const saveNewComponent = async () => {
+  const handleCreateModalClose = useCallback(() => {
+    setCreateModalVisible(false);
+    resetCreateForm();
+  }, [resetCreateForm]);
+
+  const saveNewComponent = useCallback(async () => {
     if (!token) return;
     
-    // Basic validation
-    if (!newComponent.componentName.trim()) {
-      Alert.alert("Error", "Component name is required.");
+    // Validation
+    const validationError = validateComponentForm(newComponent);
+    if (validationError) {
+      notify.error(validationError);
       return;
     }
 
     try {
       setCreateLoading(true);
       
-      // Create component data object matching ComponentCreate model
-      const componentData: {
-        componentName: string;
-        amount: number;
-        measure: string;
-        scannedBy: string;
-        durationOfDevelopment: number;
-        triggerMinAmount: number;
-        supplier: string;
-        cost: number;
-        type: string;
-        description?: string;
-        image?: string;
-      } = {
+      // Create component data object
+      const componentData: any = {
         componentName: newComponent.componentName.trim(),
         amount: newComponent.amount,
         measure: newComponent.measure,
@@ -365,149 +291,125 @@ export default function InventoryScreen() {
       // Add image as base64 if selected
       if (selectedImage) {
         try {
-          // Read the image file and convert to base64
-          const response = await fetch(selectedImage.uri);
-          const blob = await response.blob();
-          const reader = new FileReader();
-          
-          const base64Promise = new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          
-          const base64String = await base64Promise;
-          componentData.image = base64String;
+          const base64String = await convertImageToBase64(selectedImage.uri);
+          if (base64String) {
+            componentData.image = base64String;
+          }
         } catch (imageError) {
           console.error("Error processing image:", imageError);
-          Alert.alert(
-            "Warning",
-            "Could not process the selected image, but the component will be created without it.",
-            [{ text: "OK" }]
-          );
+          notify.info("Image could not be processed, but component will be created without it.");
         }
       }
       
-      const createdComponent = await ApiService.createComponent(componentData, "", token);
+      await ApiService.createComponent(componentData, "", token);
       
       // Refresh the components list
       handleRefresh();
       
-      Alert.alert(
-        "Success",
-        "Component created successfully!",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setCreateModalVisible(false);
-              resetCreateForm();
-            },
-          },
-        ]
-      );
+      actionNotify.created("Component", handleCreateModalClose);
     } catch (error) {
       console.error("Error creating component:", error);
-      Alert.alert(
-        "Error",
-        "Failed to create component. Please try again.",
-        [{ text: "OK" }]
-      );
+      actionNotify.createFailed("component");
     } finally {
       setCreateLoading(false);
     }
-  };
+  }, [token, newComponent, selectedImage, handleRefresh, handleCreateModalClose]);
 
-  const renderComponentCard = ({ item }: { item: Component }) => (
-    <TouchableOpacity
-      style={styles.componentCard}
-      onPress={() => handleComponentPress(item)}
-      activeOpacity={0.7}
-    >
-      {/* Card Header with Component Name and Stock */}
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleContainer}>
-          <Text
-            style={styles.cardTitle}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
-            {item.componentName}
-          </Text>
-        </View>
-        <View style={styles.stockContainer}>
-          <Text
-            style={[styles.stockText, getStockColor(item.amount)]}
-          >
-            {item.amount} {item.measure}
-          </Text>
-        </View>
-      </View>
+  // Component rendering
+  const renderComponentCard = useCallback(({ item }: { item: Component }) => {
+    const stockStatus = getStockStatus(item.amount, item.triggerMinAmount);
+    const stockColor = getStockStatusColor(stockStatus);
 
-      {/* Card Details */}
-      <View style={styles.cardDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Type:</Text>
-          <Text
-            style={styles.detailValue}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {item.type}
-          </Text>
+    return (
+      <TouchableOpacity
+        style={styles.componentCard}
+        onPress={() => handleComponentPress(item)}
+        activeOpacity={0.7}
+      >
+        {/* Card Header with Component Name and Stock */}
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleContainer}>
+            <Text
+              style={styles.cardTitle}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {item.componentName}
+            </Text>
+          </View>
+          <View style={styles.stockContainer}>
+            <Text style={[styles.stockText, stockColor]}>
+              {item.amount} {item.measure}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Supplier:</Text>
-          <Text
-            style={styles.detailValue}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {item.supplier}
-          </Text>
+        {/* Card Details */}
+        <View style={styles.cardDetails}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Type:</Text>
+            <Text
+              style={styles.detailValue}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.type}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Supplier:</Text>
+            <Text
+              style={styles.detailValue}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.supplier}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Cost:</Text>
+            <Text style={styles.costValue}>
+              €{item.cost.toFixed(2)}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Cost:</Text>
-          <Text style={styles.costValue}>
-          €{item.cost.toFixed(2)}
-          </Text>
+        {/* Image Preview */}
+        {item.image && (
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: item.image }}
+              style={styles.componentImage}
+              resizeMode="cover"
+            />
+          </View>
+        )}
+
+        {/* Description Preview */}
+        {item.description && (
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.descriptionLabel}>Description:</Text>
+            <Text
+              style={styles.descriptionText}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {item.description}
+            </Text>
+          </View>
+        )}
+
+        {/* Click Indicator */}
+        <View style={styles.clickIndicator}>
+          <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
         </View>
-      </View>
+      </TouchableOpacity>
+    );
+  }, [handleComponentPress]);
 
-      {/* Image Preview */}
-      {item.image && (
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: item.image }}
-            style={styles.componentImage}
-            resizeMode="cover"
-          />
-        </View>
-      )}
-
-      {/* Description Preview */}
-      {item.description && (
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.descriptionLabel}>Description:</Text>
-          <Text
-            style={styles.descriptionText}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
-            {item.description}
-          </Text>
-        </View>
-      )}
-
-      {/* Click Indicator */}
-      <View style={styles.clickIndicator}>
-        <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
-      </View>
-    </TouchableOpacity>
-  );
-
+  // Loading state
   if (loading && !searchQuery) {
     return (
       <SafeAreaView style={styles.container}>
@@ -547,7 +449,9 @@ export default function InventoryScreen() {
             style={styles.searchInput}
             placeholder="Search by component name..."
             value={searchQuery}
-            onChangeText={handleSearchChange}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+            autoCapitalize="none"
           />
           {searchQuery ? (
             <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
@@ -563,6 +467,7 @@ export default function InventoryScreen() {
         )}
       </View>
 
+      {/* Create Button */}
       <TouchableOpacity style={styles.createButton} onPress={handleCreateComponent}>
         <Text style={styles.createButtonText}>+ Create Component</Text>
       </TouchableOpacity>
@@ -606,27 +511,18 @@ export default function InventoryScreen() {
         animationType="slide"
         transparent={true}
         visible={createModalVisible}
-        onRequestClose={() => {
-          setCreateModalVisible(false);
-          resetCreateForm();
-        }}
+        onRequestClose={handleCreateModalClose}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create New Component</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => {
-                  setCreateModalVisible(false);
-                  resetCreateForm();
-                }}
-              >
+              <TouchableOpacity style={styles.closeButton} onPress={handleCreateModalClose}>
                 <Text style={styles.closeButtonText}>×</Text>
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalForm}>
+            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
               {/* Component Name */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Component Name *</Text>
@@ -767,13 +663,7 @@ export default function InventoryScreen() {
 
             {/* Modal Actions */}
             <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => {
-                  setCreateModalVisible(false);
-                  resetCreateForm();
-                }}
-              >
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCreateModalClose}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity

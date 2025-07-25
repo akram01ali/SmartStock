@@ -1,65 +1,48 @@
-import React, { useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import ApiService from '../services/api';
 import { loginScreenStyles as styles } from '../styles/LoginScreenStyles';
+import { useAuthForm } from '../hooks/useAuthForm';
+import { AuthHeader } from '../components/AuthHeader';
+import { AuthFormInput } from '../components/AuthFormInput';
+import { AuthButton } from '../components/AuthButton';
+import { ErrorMessage } from '../components/ErrorMessage';
+import { CheckboxField } from '../components/CheckboxField';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { login } = useAuth();
-  const [name, setName] = useState('');
-  const [surname, setSurname] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const {
+    formData,
+    loading,
+    errorMessage,
+    rememberMe,
+    setLoading,
+    setErrorMessage,
+    setRememberMe,
+    updateField,
+    validateForm,
+  } = useAuthForm();
 
-  const testConnection = async () => {
-    setTestingConnection(true);
-    setErrorMessage('');
-    try {
-      const result = await ApiService.testConnectivity();
-      console.log('Connection test result:', result);
-      // You could show a success message here if needed
-    } catch (error) {
-      console.error('Connection test failed:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Connection test failed');
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  const handleLogin = async () => {
-    if (!name.trim() || !surname.trim() || !password.trim()) {
-      setErrorMessage('Please fill in all fields');
-      return;
-    }
+  const handleLogin = useCallback(async () => {
+    if (!validateForm()) return;
 
     setLoading(true);
     setErrorMessage('');
 
     try {
       await login({
-        name: name.trim(),
-        surname: surname.trim(),
-        password: password.trim(),
+        name: formData.name.trim(),
+        surname: formData.surname.trim(),
+        password: formData.password.trim(),
       });
-      console.log('Login successful, should navigate to Home');
     } catch (error) {
       console.error('Login failed:', error);
       setErrorMessage(
@@ -68,15 +51,15 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData, validateForm, setLoading, setErrorMessage, login]);
 
-  const handleRegister = () => {
+  const handleRegister = useCallback(() => {
     navigation.navigate('Register' as never);
-  };
+  }, [navigation]);
 
-  const clearError = () => {
-    setErrorMessage('');
-  };
+  const toggleRememberMe = useCallback(() => {
+    setRememberMe(prev => !prev);
+  }, [setRememberMe]);
 
   return (
     <KeyboardAvoidingView
@@ -90,123 +73,69 @@ export default function LoginScreen() {
       >
         <View style={styles.contentContainer}>
           <View style={styles.content}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../assets/iacs.png')} 
-                style={styles.iacsLogo}
-                resizeMode="contain"
-              />
-            </View>
-            
-            <Text style={styles.title}>Welcome to SmartStock</Text>
-            <Text style={styles.subtitle}>Please sign in to continue</Text>
+            <AuthHeader
+              title="Welcome to SmartStock"
+              subtitle="Please sign in to continue"
+              styles={styles}
+            />
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color="#666"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="First Name"
-                placeholderTextColor="#999"
-                value={name}
-                onChangeText={(text) => {
-                  setName(text);
-                  clearError();
-                }}
-                autoCapitalize="words"
-                autoCorrect={false}
-                editable={!loading}
-              />
-            </View>
+            <AuthFormInput
+              icon="person-outline"
+              placeholder="First Name"
+              value={formData.name}
+              onChangeText={(text) => updateField('name', text)}
+              autoCapitalize="words"
+              editable={!loading}
+              styles={styles}
+            />
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color="#666"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Last Name"
-                placeholderTextColor="#999"
-                value={surname}
-                onChangeText={(text) => {
-                  setSurname(text);
-                  clearError();
-                }}
-                autoCapitalize="words"
-                autoCorrect={false}
-                editable={!loading}
-              />
-            </View>
+            <AuthFormInput
+              icon="person-outline"
+              placeholder="Last Name"
+              value={formData.surname}
+              onChangeText={(text) => updateField('surname', text)}
+              autoCapitalize="words"
+              editable={!loading}
+              styles={styles}
+            />
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color="#666"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#999"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  clearError();
-                }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
-            </View>
+            <AuthFormInput
+              icon="lock-closed-outline"
+              placeholder="Password"
+              value={formData.password}
+              onChangeText={(text) => updateField('password', text)}
+              secureTextEntry
+              editable={!loading}
+              styles={styles}
+            />
 
-            {errorMessage && (
-              <Text style={styles.errorMessage}>{errorMessage}</Text>
-            )}
+            <ErrorMessage message={errorMessage} styles={styles} />
 
-            <TouchableOpacity
-              style={styles.rememberContainer}
-              onPress={() => setRememberMe(!rememberMe)}
-            >
-              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                {rememberMe && (
-                  <Ionicons name="checkmark" size={16} color="white" />
-                )}
-              </View>
-              <Text style={styles.rememberText}>Remember me</Text>
-            </TouchableOpacity>
+            <CheckboxField
+              label="Remember me"
+              value={rememberMe}
+              onToggle={toggleRememberMe}
+              styles={styles}
+            />
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              <AuthButton
+                title="Sign In"
                 onPress={handleLogin}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.loginButtonText}>Sign In</Text>
-                )}
-              </TouchableOpacity>
+                loading={loading}
+                variant="primary"
+                styles={styles}
+              />
 
-              <TouchableOpacity
-                style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+              <AuthButton
+                title="Register"
                 onPress={handleRegister}
                 disabled={loading}
-              >
-                <Text style={styles.registerButtonText}>Register</Text>
-              </TouchableOpacity>
+                variant="secondary"
+                styles={styles}
+              />
             </View>
           </View>
-
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -232,3 +232,9 @@ To see the logs of the backup, execute:
 ```bash
 cat /var/log/smartstock_backup.log
 ```
+
+
+
+### 8. Measures
+- The field `deliveryTime` is in days
+- The field `durationOfDevelopment` is in hours

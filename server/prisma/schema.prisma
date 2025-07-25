@@ -36,7 +36,7 @@ model Components {
   type                  TypeOfComponent
   description           String?
   image                 String?
-  delivery_time         Float?
+  deliverTime           Float?
   
   @@index([type])
   @@index([lastScanned])

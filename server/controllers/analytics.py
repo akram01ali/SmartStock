@@ -6,10 +6,9 @@ from prisma.errors import RecordNotFoundError
 from .auth.auth import get_current_user
 from .auth.models import User
 from .database import get_db
-from models import Component, ComponentCreate, ComponentUpdate, ComponentTree, TreeNode, GraphData, Node, NodeData, Edge
+from models import Component, ComponentCreate, ComponentUpdate, ComponentTree, TreeNode, GraphData, Node, NodeData, Edge, ReservationRequest
 
 from controllers.tree import get_tree
-
 
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -145,4 +144,38 @@ async def get_component_total_duration(
             status_code=400,
             detail=f"Could not retrieve component tree: {str(e)}"
         )
+
+
+@router.post("/make-reservation", response_model=dict)
+async def make_reservation(
+    reservation: ReservationRequest = Body(...),
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        # Validation
+        found_component = await db.components.find_first(
+            where={"componentName": reservation.topName}
+        )
+        if not (reservation.topName or reservation.topName.strip()):
+            raise HTTPException(status_code=400, detail="Component name for reservation is required")
+        if not found_component:
+            raise HTTPException(status_code=404, detail=f"Component '{reservation.topName}' not found")
+        if reservation.amount < 0:
+            raise HTTPException(status_code=400, detail="Amount must be a positive number")
+
+        # Create reservation
+        reservation_data = {
+            "componentName": reservation.topName,
+            "amount": reservation.amount,
+            "priority": reservation.priority,
+        }
+
+        return {"message": "Reservation created successfully"}
+
+    except HTTPException as http_exception:
+        raise http_exception
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error occurred: {str(e)}")
 

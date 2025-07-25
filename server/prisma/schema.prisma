@@ -73,3 +73,11 @@ model AppUser {
 
   @@unique([name, surname])
 }
+
+model Reservations {
+  reservationId       String      @id @default(uuid())
+  componentName       String
+  amount              Float       @default(1.0)
+  priority            Int
+  timeStamp           DateTime    @default(now())
+}

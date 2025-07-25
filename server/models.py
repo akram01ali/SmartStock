@@ -141,4 +141,8 @@ class CreateAppUser(BaseModel):
 
     class Config:
         from_attributes = True
-    
+
+class ReservationRequest(BaseModel):
+    topName: str
+    amount: float = 1.0
+    priority: Optional[int] = None

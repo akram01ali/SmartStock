@@ -9,7 +9,7 @@ from config import (
     CORS_METHODS, CORS_HEADERS, HOST, PORT
 )
 from controllers.database import connect_db, disconnect_db
-from controllers import components, relationships, tree, graph
+from controllers import components, relationships, tree, graph, analytics
 from controllers.auth import auth_routes
 
 app = FastAPI(title=APP_TITLE, version=APP_VERSION)
@@ -29,6 +29,7 @@ app.include_router(components.router)
 app.include_router(relationships.router)
 app.include_router(tree.router)
 app.include_router(graph.router)
+app.include_router(analytics.router)
 
 # Add direct compatibility routes for frontend
 from models import UserLogin, Token, Component, RelationshipCreate, Relationship, ComponentUpdate, UserCreate, CreateAppUser, ReturnUser, RelationshipRequest
@@ -325,6 +326,19 @@ async def get_low_stock_components_compat(
 ):
     from controllers.components import get_low_stock_components
     return await get_low_stock_components(db, current_user)
+
+
+@app.get("/analytics", response_model=dict)
+async def get_component_total_cost_compat(
+    topName: str = Query(...),
+    hourly_rate: float = Query(18.5, description="Hourly rate for cost calculation in EUR"),
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from controllers.analytics import get_component_total_cost
+    return await get_component_total_cost(topName, hourly_rate, db, current_user)
+
+
 
 if __name__ == "__main__":
     import uvicorn

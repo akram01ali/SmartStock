@@ -25,17 +25,7 @@ import { AddIcon } from '../../../components/common/IconWrapper';
 // Types
 interface Component {
   componentName: string;
-  amount: number;
-  measure: Measures;
-  lastScanned: string;
-  scannedBy: string;
-  durationOfDevelopment: number;
-  triggerMinAmount: number;
-  supplier: string;
-  cost: number;
   type: TypeOfComponent;
-  description?: string;
-  image?: string;
 }
 
 type CreateType = 'printer' | 'group' | 'assembly';
@@ -121,9 +111,7 @@ export default function ComponentsPage() {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(component =>
-          component.componentName.toLowerCase().includes(query) ||
-          component.supplier.toLowerCase().includes(query) ||
-          component.type.toLowerCase().includes(query)
+          component.componentName.toLowerCase().includes(query)
         );
       }
       

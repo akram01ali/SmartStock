@@ -8,7 +8,7 @@ from prisma.errors import RecordNotFoundError
 from .auth.auth import get_current_user
 from .auth.models import User
 from .database import get_db
-from models import Component, ComponentCreate, ComponentUpdate, ComponentTree, TreeNode, GraphData, Node, NodeData, Edge
+from models import Component, ComponentCreate, ComponentUpdate, ComponentTree, TreeNode, GraphData, Node, NodeData, Edge, ComponentName
 
 router = APIRouter(prefix="/components", tags=["components"])
 
@@ -45,14 +45,14 @@ async def get_assemblies(
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to fetch assemblies")
 
-@router.get("/printers-groups-assemblies", response_model=List[Component])
+@router.get("/printers-groups-assemblies", response_model=List[ComponentName])
 async def get_printers_groups_assemblies(
     db: Prisma = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
     """
-    Optimized endpoint to get only printers, groups, and assemblies in a single query.
-    This is much faster than getting all components or making 3 separate calls.
+    Optimized endpoint to get only component names for printers, groups, and assemblies.
+    This is much faster than returning full component data.
     """
     try:
         components = await db.components.find_many(
@@ -63,6 +63,7 @@ async def get_printers_groups_assemblies(
                     {"type": TypeOfComponent.assembly}
                 ]
             },
+            select={"componentName": True, "type": True},
             order=[{"componentName": "asc"}]
         )
         return components or []

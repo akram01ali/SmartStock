@@ -79,7 +79,7 @@ interface Statistics {
 }
 
 // Constants
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 const TOAST_DURATION = 3000;
 
 const TYPE_GRADIENTS = {

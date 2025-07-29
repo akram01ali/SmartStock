@@ -52,9 +52,10 @@ async def get_printers_groups_assemblies(
 ):
     """
     Optimized endpoint to get only component names for printers, groups, and assemblies.
-    This is much faster than returning full component data.
+    The ComponentName response model will filter out unnecessary fields.
     """
     try:
+        print("🔍 Fetching printers, groups, and assemblies...")
         components = await db.components.find_many(
             where={
                 "OR": [
@@ -63,12 +64,17 @@ async def get_printers_groups_assemblies(
                     {"type": TypeOfComponent.assembly}
                 ]
             },
-            select={"componentName": True, "type": True},
             order=[{"componentName": "asc"}]
         )
+        print(f"✅ Found {len(components) if components else 0} components")
+        if components and len(components) > 0:
+            print(f"📝 First component name: {components[0].componentName}, type: {components[0].type}")
+        
+        # The ComponentName response model will automatically filter to only componentName and type
         return components or []
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to fetch components")
+        print(f"❌ Error in get_printers_groups_assemblies: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch components: {str(e)}")
 
 @router.get("/all", response_model=List[Component])
 async def get_all_components(

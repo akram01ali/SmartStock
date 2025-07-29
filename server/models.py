@@ -59,6 +59,10 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
+class ComponentName(BaseModel):
+    componentName: str
+    type: TypeOfComponent
+
 class ComponentCreate(BaseModel):
     componentName: str
     amount: float

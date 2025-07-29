@@ -8,7 +8,7 @@ from prisma.errors import RecordNotFoundError
 from .auth.auth import get_current_user
 from .auth.models import User
 from .database import get_db
-from models import Component, ComponentCreate, ComponentUpdate, ComponentTree, TreeNode, GraphData, Node, NodeData, Edge, ComponentName
+from models import Component, ComponentCreate, ComponentUpdate, ComponentTree, TreeNode, GraphData, Node, NodeData, Edge, ComponentName, ComponentNameOnly
 
 router = APIRouter(prefix="/components", tags=["components"])
 
@@ -76,16 +76,27 @@ async def get_printers_groups_assemblies(
         print(f"❌ Error in get_printers_groups_assemblies: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch components: {str(e)}")
 
-@router.get("/all", response_model=List[Component])
+@router.get("/all", response_model=List[ComponentNameOnly])
 async def get_all_components(
     db: Prisma = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Get all component names only for better performance.
+    Returns only componentName field.
+    """
     try:
-        components = await db.components.find_many()
+        print("🔍 Fetching all component names...")
+        components = await db.components.find_many(
+            order=[{"componentName": "asc"}]
+        )
+        print(f"✅ Found {len(components) if components else 0} components")
+        
+        # The ComponentNameOnly response model will automatically filter to only componentName
         return components or []
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to fetch all components")
+        print(f"❌ Error in get_all_components: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch all components: {str(e)}")
 
 @router.get("/all-light-paginated", response_model=dict)
 async def get_all_components_light_paginated(

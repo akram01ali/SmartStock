@@ -32,7 +32,7 @@ app.include_router(graph.router)
 app.include_router(analytics.router)
 
 # Add direct compatibility routes for frontend
-from models import UserLogin, Token, Component, RelationshipCreate, Relationship, ComponentUpdate, UserCreate, CreateAppUser, ReturnUser, RelationshipRequest, ComponentName
+from models import UserLogin, Token, Component, RelationshipCreate, Relationship, ComponentUpdate, UserCreate, CreateAppUser, ReturnUser, RelationshipRequest, ComponentName, ComponentNameOnly
 from prisma import Prisma
 from controllers.database import get_db
 from controllers.auth.auth import get_current_user
@@ -85,7 +85,7 @@ async def get_assemblies_compat(
 ):
     return await get_assemblies(db, current_user)
 
-@app.get("/all_components", response_model=List[Component])
+@app.get("/all_components", response_model=List[ComponentNameOnly])
 async def get_all_components_compat(
     db: Prisma = Depends(get_db), 
     current_user: User = Depends(get_current_user)
@@ -136,7 +136,7 @@ async def get_components_statistics_compat(
 ):
     return await get_components_statistics(q, type_filter, include_empty_images, db, current_user)
 
-@app.get("/all", response_model=List[Component])
+@app.get("/all", response_model=List[ComponentNameOnly])
 async def get_all_compat(
     db: Prisma = Depends(get_db), 
     current_user: User = Depends(get_current_user)

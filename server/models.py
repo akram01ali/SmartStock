@@ -63,6 +63,9 @@ class ComponentName(BaseModel):
     componentName: str
     type: TypeOfComponent
 
+class ComponentNameOnly(BaseModel):
+    componentName: str
+
 class ComponentCreate(BaseModel):
     componentName: str
     amount: float

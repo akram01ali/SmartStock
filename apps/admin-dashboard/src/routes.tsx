@@ -11,6 +11,7 @@ import {
   MdAutoGraph,
   MdDashboard,
   MdInventory,
+  MdAnalytics,
 } from 'react-icons/md';
 
 // Admin Imports
@@ -23,6 +24,7 @@ import ComponentsPage from 'views/admin/components/ComponentsPage';
 import Graph from 'views/admin/graph/graph';
 import InventoryPage from 'views/admin/inventory/InventoryPage';
 import GraphDagre from 'views/admin/graphDagre/index';
+import ForecastingPage from 'views/admin/forecasting/ForecastingPage';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -51,7 +53,6 @@ const routes = [
     ),
     component: <ComponentsPage />,
   },
-
   {
     name: 'Inventory',
     layout: '/admin',
@@ -65,6 +66,20 @@ const routes = [
       />
     ),
     component: <InventoryPage />,
+  },
+  {
+    name: 'Forecasting',
+    layout: '/admin',
+    path: '/forecasting',
+    icon: (
+      <Icon
+        as={MdAnalytics as any}
+        width="20px"
+        height="20px"
+        color="inherit"
+      />
+    ),
+    component: <ForecastingPage />,
   },
 ];
 

@@ -20,7 +20,14 @@ enum TypeOfComponent {
   group
   assembly
   component
+}
 
+enum ReservationStatus {
+  pending
+  confirmed
+  in_progress
+  completed
+  cancelled
 }
 
 model Components {
@@ -72,4 +79,48 @@ model AppUser {
   password    String
 
   @@unique([name, surname])
+}
+
+model Reservations {
+  id                String
+  isRoot            Boolean @default(false)
+  level             Int @default(0)
+  title             String
+  componentName     String
+  quantity          Float
+  priority          Int
+  requestedBy       String
+  neededByDate      DateTime?
+  status            ReservationStatus @default(pending)
+  createdAt         DateTime @default(now())
+  
+  @@id([id, componentName])
+  @@index([priority, neededByDate])
+  @@index([componentName, status])
+  @@index([isRoot])
+  @@index([level])
+}
+
+model ReservationAllocations {
+  reservationId     String
+  componentName     String
+  allocatedQuantity Float
+  shortfallQuantity Float @default(0)
+  allocationOrder   Int
+  
+  @@id([reservationId, componentName])
+  @@index([componentName, allocationOrder])
+  @@index([shortfallQuantity])
+}
+
+model PurchaseRequirements {
+  id               String @id @default(cuid())
+  componentName    String
+  requiredQuantity Float
+  neededByDate     DateTime
+  status           String @default("pending")
+  createdAt        DateTime @default(now())
+  
+  @@index([componentName, status])
+  @@index([neededByDate])
 }

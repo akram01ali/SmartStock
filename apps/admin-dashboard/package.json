@@ -23,6 +23,7 @@
     "@xyflow/react": "^12.8.1",
     "apexcharts": "3.50.0",
     "framer-motion": "^11.3.7",
+    "fuse.js": "^7.1.0",
     "npm-force-resolutions": "^0.0.10",
     "react": "19.0.0",
     "react-apexcharts": "1.4.1",

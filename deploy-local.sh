@@ -29,7 +29,7 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Check if Docker Compose is available
-if ! command -v docker-compose &> /dev/null; then
+if ! docker compose version &> /dev/null; then
     echo "❌ Docker Compose not found. Please install Docker Compose."
     exit 1
 fi
@@ -38,7 +38,7 @@ echo "✅ Docker is running"
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose down
+docker compose down
 
 # Remove existing volumes to ensure fresh database
 echo "🗑️ Removing existing database volumes..."
@@ -46,7 +46,7 @@ docker volume rm smartstock_postgres_data 2>/dev/null || true
 
 # Build and start all services
 echo "🔨 Building and starting SmartStock services..."
-docker-compose up --build -d
+docker compose up --build -d
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to start..."
@@ -54,7 +54,7 @@ sleep 15
 
 # Check service health
 echo "🔍 Checking service status..."
-docker-compose ps
+docker compose ps
 
 # Wait for database to be ready
 echo "⏳ Waiting for database initialization..."
@@ -62,8 +62,8 @@ sleep 10
 
 # Run database migrations
 echo "🗄️ Running database migrations..."
-docker-compose exec backend prisma db push
-docker-compose exec backend prisma generate
+docker compose exec backend prisma db push
+docker compose exec backend prisma generate
 
 # Load latest backup data
 echo "📥 Loading latest backup data..."
@@ -71,7 +71,7 @@ LATEST_BACKUP=$(ls -t smartstock_backup_*.sql 2>/dev/null | head -1)
 if [ -n "$LATEST_BACKUP" ]; then
     echo "🔄 Found latest backup: $LATEST_BACKUP"
     echo "📤 Importing backup data..."
-    docker-compose exec -T postgres psql -U postgres -d smartstock < "$LATEST_BACKUP"
+    docker compose exec -T postgres psql -U postgres -d smartstock < "$LATEST_BACKUP"
     if [ $? -eq 0 ]; then
         echo "✅ Backup data loaded successfully!"
     else
@@ -98,9 +98,9 @@ echo "   Admin Dashboard: http://admin.iacs.com"
 echo "   API Backend: http://admin.iacs.com:8000"
 echo ""
 echo "📋 Useful commands:"
-echo "   View logs: docker-compose logs -f"
-echo "   Stop all: docker-compose down"
-echo "   Restart: docker-compose restart"
+echo "   View logs: docker compose logs -f"
+echo "   Stop all: docker compose down"
+echo "   Restart: docker compose restart"
 echo ""
 echo "📱 Mobile App Configuration:"
 echo "   ✅ Already configured for http://10.0.0.99:8000"
@@ -114,4 +114,3 @@ echo ""
 
 # Show container status
 echo "📊 Container Status:"
-docker-compose ps 

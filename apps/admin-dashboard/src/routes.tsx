@@ -31,20 +31,6 @@ import SignInCentered from 'views/auth/signIn';
 
 const routes = [
   {
-    name: 'Main Dashboard',
-    layout: '/admin',
-    path: '/default',
-    icon: (
-      <Icon
-        as={MdDashboard as any}
-        width="20px"
-        height="20px"
-        color="inherit"
-      />
-    ),
-    component: <MainDashboard />,
-  },
-  {
     name: 'Components',
     layout: '/admin',
     path: '/components',
@@ -85,6 +71,12 @@ const routes = [
 
 // Hidden routes (not shown in sidebar but accessible via navigation)
 export const hiddenRoutes = [
+  {
+    name: 'Main Dashboard',
+    layout: '/admin',
+    path: '/default',
+    component: <MainDashboard />,
+  },
   {
     name: 'Graph View',
     layout: '/admin',

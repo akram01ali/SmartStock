@@ -99,7 +99,7 @@ function SignIn() {
     try {
       const success = await login(username, password);
       if (success) {
-        navigate('/admin/default');
+        navigate('/admin/components');
       } else {
         setError('Invalid username or password');
       }

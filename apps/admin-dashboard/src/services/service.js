@@ -1,6 +1,13 @@
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 export class ApiService {
+  // Store reference to auth error handler
+  static authErrorHandler = null;
+
+  static setAuthErrorHandler(handler) {
+    this.authErrorHandler = handler;
+  }
+
   static getAuthHeaders() {
     const token = localStorage.getItem('authToken');
     return {
@@ -17,17 +24,28 @@ export class ApiService {
    */
   static async handleResponse(response) {
     if (!response.ok) {
+      const error = new Error();
+      error.status = response.status;
+      
       if (response.status === 401) {
-        throw new Error('Authentication required');
+        error.message = 'Authentication required';
+        // Call the centralized auth error handler if available
+        if (this.authErrorHandler) {
+          this.authErrorHandler(error);
+          return; // Don't throw, let the handler manage the flow
+        }
+        throw error;
       }
       
       try {
         const errorData = await response.json();
-        throw new Error(errorData.detail || `Request failed: ${response.status} ${response.statusText}`);
+        error.message = errorData.detail || `Request failed: ${response.status} ${response.statusText}`;
       } catch (parseError) {
         // If we can't parse the error response, throw a generic error
-        throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+        error.message = `Request failed: ${response.status} ${response.statusText}`;
       }
+      
+      throw error;
     }
     return await response.json();
   }

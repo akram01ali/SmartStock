@@ -41,7 +41,6 @@ export default function LoginScreen() {
       await login({
         name: formData.name.trim(),
         surname: formData.surname.trim(),
-        password: formData.password.trim(),
       });
     } catch (error) {
       console.error('Login failed:', error);
@@ -95,16 +94,6 @@ export default function LoginScreen() {
               value={formData.surname}
               onChangeText={(text) => updateField('surname', text)}
               autoCapitalize="words"
-              editable={!loading}
-              styles={styles}
-            />
-
-            <AuthFormInput
-              icon="lock-closed-outline"
-              placeholder="Password"
-              value={formData.password}
-              onChangeText={(text) => updateField('password', text)}
-              secureTextEntry
               editable={!loading}
               styles={styles}
             />

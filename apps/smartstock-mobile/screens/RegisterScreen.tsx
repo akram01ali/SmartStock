@@ -38,8 +38,7 @@ export default function RegisterScreen() {
     try {
       await register(
         formData.name.trim(),
-        formData.surname.trim(),
-        formData.password.trim()
+        formData.surname.trim()
       );
       
       Alert.alert(
@@ -96,16 +95,6 @@ export default function RegisterScreen() {
               value={formData.surname}
               onChangeText={(text) => updateField('surname', text)}
               autoCapitalize="words"
-              editable={!loading}
-              styles={styles}
-            />
-
-            <AuthFormInput
-              icon="lock-closed-outline"
-              placeholder="Password"
-              value={formData.password}
-              onChangeText={(text) => updateField('password', text)}
-              secureTextEntry
               editable={!loading}
               styles={styles}
             />

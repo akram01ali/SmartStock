@@ -132,7 +132,7 @@ export default function Dashboard(props: { [x: string]: any }) {
                   {getHiddenRoutes(hiddenRoutes)}
                   <Route
                     path="/"
-                    element={<Navigate to="/admin/default" replace />}
+                    element={<Navigate to="/admin/components" replace />}
                   />
                 </Routes>
               </Box>

@@ -10,6 +10,7 @@ import {
 } from '@chakra-ui/react';
 
 import { FormFieldProps, Measures, TypeOfComponent } from './types';
+import TimeInput from '../fields/TimeInput';
 
 // Helper function to safely parse float values with comprehensive validation
 const parseFloatSafe = (value: string): { value: number; error: string | null } => {
@@ -160,6 +161,19 @@ export const FormField: React.FC<FormFieldProps> = ({
           type="text"
         />
       )}
+      {type === 'time' && (
+        <TimeInput
+          value={value}
+          onChange={(timeValue) => onChange(name, timeValue)}
+          placeholder={placeholder || '00:00'}
+          bg={inputBg}
+          borderColor={borderColor}
+          color={textColor}
+          textColorSecondary={textColor}
+          isReadOnly={isReadOnly}
+          label=""
+        />
+      )}
       {type === 'select' && options && (
         <Select
           value={value}
@@ -228,9 +242,9 @@ export const componentFormFields = [
   },
   {
     id: 'durationOfDevelopment',
-    label: 'Development Duration (days)',
-    type: 'float',
-    placeholder: '0',
+    label: 'Production Time',
+    type: 'time',
+    placeholder: '00:00',
   },
   {
     id: 'type',

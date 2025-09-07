@@ -36,13 +36,13 @@ async def login(user_data: UserLogin, db: Prisma = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/app-login", response_model=Token)
-async def app_login(name: str, surname: str, password: str, db: Prisma = Depends(get_db)):
+async def app_login(name: str, surname: str, db: Prisma = Depends(get_db)):
     """Authenticate mobile app user and return access token"""
-    user = await authenticate_app_user(name, surname, password, db)
+    user = await authenticate_app_user(name, surname, db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect credentials",
+            detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -97,9 +97,6 @@ async def app_register(user_data: CreateAppUser, db: Prisma = Depends(get_db)):
             
         if not user_data.surname or not user_data.surname.strip():
             raise HTTPException(status_code=400, detail="Surname cannot be empty")
-            
-        if not user_data.password or len(user_data.password) < 3:
-            raise HTTPException(status_code=400, detail="Password must be at least 3 characters")
         
         # Check if user already exists
         existing_user = await db.appuser.find_first(
@@ -114,14 +111,13 @@ async def app_register(user_data: CreateAppUser, db: Prisma = Depends(get_db)):
         # Generate initials
         initials = f"{user_data.name[0].upper()}{user_data.surname[0].upper()}"
         
-        # Hash password and create user
-        hashed_password = get_password_hash(user_data.password)
+        # Create user without password (use empty string as placeholder for existing schema)
         new_user = await db.appuser.create(
             data={
                 "name": user_data.name,
                 "surname": user_data.surname,
                 "initials": initials,
-                "password": hashed_password
+                "password": ""  # Empty password since we don't use it for authentication
             }
         )
         

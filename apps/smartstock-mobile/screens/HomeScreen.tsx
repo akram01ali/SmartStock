@@ -22,12 +22,6 @@ import { notify, validateNotify } from "../utils/notifications";
 
 const QUICK_ACTIONS = [
   {
-    id: 'inventory',
-    icon: "list-outline" as const,
-    title: "View Inventory",
-    route: "Inventory" as keyof RootStackParamList,
-  },
-  {
     id: 'scanner',
     icon: "camera-outline" as const, 
     title: "Scan Barcode",
@@ -278,9 +272,6 @@ export default function HomeScreen() {
   }, [logout]);
 
   const handleQuickAction = useCallback((route: keyof RootStackParamList) => {
-    if (route === "Components") {
-      return;
-    }
     navigation.navigate(route as any);
   }, [navigation]);
 

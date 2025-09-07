@@ -51,11 +51,11 @@ async def authenticate_user(username: str, password: str, db: Prisma):
         return False
     return user
 
-async def authenticate_app_user(name: str, surname: str, password: str, db: Prisma):
-    """Authenticate app user credentials"""
+async def authenticate_app_user(name: str, surname: str, db: Prisma):
+    """Authenticate app user credentials (name + surname only)"""
     try:
         user = await db.appuser.find_first(where={"name": name, "surname": surname})
-        if not user or not verify_password(password, user.password):
+        if not user:
             return False
         return user
     except:

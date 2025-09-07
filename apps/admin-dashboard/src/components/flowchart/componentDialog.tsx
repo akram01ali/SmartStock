@@ -23,6 +23,7 @@ import {
 } from '@chakra-ui/react';
 import { SearchIcon, InfoIcon } from '../common/IconWrapper';
 import { ApiService } from '../../services/service';
+import TimeInput from '../fields/TimeInput';
 
 // Helper function to safely parse float values with comprehensive validation
 const parseFloatSafe = (value: string): { value: number; error: string | null } => {
@@ -681,18 +682,16 @@ export function ComponentDialog({
                 />
               </FormControl>
 
-              <FormControl>
-                <FormLabel color={textColor}>Development Duration (days)</FormLabel>
-                <FloatInput
-                  value={formData.durationOfDevelopment}
-                  onChange={(value) => handleChange('durationOfDevelopment', value)}
-                  placeholder="Enter development duration"
-                  bg={inputBg}
-                  borderColor={borderColor}
-                  color={textColor}
-                  textColorSecondary={textColorSecondary}
-                />
-              </FormControl>
+              <TimeInput
+                value={formData.durationOfDevelopment}
+                onChange={(value) => handleChange('durationOfDevelopment', value)}
+                placeholder="00:00"
+                bg={inputBg}
+                borderColor={borderColor}
+                color={textColor}
+                textColorSecondary={textColorSecondary}
+                label="Production Time"
+              />
 
               <FormControl>
                 <FormLabel color={textColor}>Type</FormLabel>

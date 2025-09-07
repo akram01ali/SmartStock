@@ -104,7 +104,7 @@ export interface FormFieldProps {
   name: string;
   value: any;
   onChange: (name: string, value: any) => void;
-  type: 'text' | 'number' | 'select' | 'textarea' | 'float';
+  type: 'text' | 'number' | 'select' | 'textarea' | 'float' | 'time';
   options?: { value: string; label: string }[];
   placeholder?: string;
   precision?: number;

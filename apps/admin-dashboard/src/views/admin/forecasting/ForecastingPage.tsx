@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -25,6 +25,12 @@ import {
   Icon,
   Flex,
   useColorModeValue,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from '@chakra-ui/react';
 import { MdAdd, MdRefresh, MdSearch } from 'react-icons/md';
 import { ForecastingService } from '../../../services/forecastingService';
@@ -58,6 +64,7 @@ const ForecastingPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string>('');
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
+  const [reservationToDelete, setReservationToDelete] = useState<string | null>(null);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { 
@@ -65,7 +72,13 @@ const ForecastingPage: React.FC = () => {
     onOpen: onDetailsOpen, 
     onClose: onDetailsClose 
   } = useDisclosure();
+  const { 
+    isOpen: isDeleteOpen, 
+    onOpen: onDeleteOpen, 
+    onClose: onDeleteClose 
+  } = useDisclosure();
   const toast = useToast();
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   // Color mode values (consistent with other pages)
   const textColor = useColorModeValue('secondaryGray.900', 'white');
@@ -168,6 +181,39 @@ const ForecastingPage: React.FC = () => {
   const handleViewBreakdown = async (reservationId: string) => {
     setSelectedReservationId(reservationId);
     onDetailsOpen();
+  };
+
+  const handleDeleteReservation = (reservationId: string) => {
+    setReservationToDelete(reservationId);
+    onDeleteOpen();
+  };
+
+  const confirmDeleteReservation = async () => {
+    if (!reservationToDelete) return;
+
+    try {
+      await ForecastingService.deleteReservation(reservationToDelete);
+      toast({
+        title: 'Success',
+        description: 'Reservation deleted successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      loadReservations();
+      loadPurchaseRequirements();
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete reservation',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      onDeleteClose();
+      setReservationToDelete(null);
+    }
   };
 
   const handleProcessAllocations = async () => {
@@ -339,6 +385,7 @@ const ForecastingPage: React.FC = () => {
                           <ReservationCard
                             reservation={reservation}
                             onViewBreakdown={handleViewBreakdown}
+                            onDelete={handleDeleteReservation}
                           />
                         </SmoothMotionBox>
                       ))}
@@ -408,6 +455,35 @@ const ForecastingPage: React.FC = () => {
         onClose={onDetailsClose}
         reservationId={selectedReservationId}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+        leastDestructiveRef={cancelRef}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Reservation
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to delete this reservation? This action cannot be undone and will also delete all associated child reservations and allocations.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onDeleteClose}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={confirmDeleteReservation} ml={3}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </SmoothMotionBox>
   );
 };

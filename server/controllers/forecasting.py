@@ -155,6 +155,29 @@ async def trigger_allocation_processing(
     await process_allocations(db)
     return {"status": "allocations processed"}
 
+@router.delete("/reservations/{reservation_id}")
+async def delete_reservation(
+    reservation_id: str,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a reservation and all its child reservations"""
+    try:
+        # First, check if the reservation exists
+        reservation = await db.reservations.find_first(where={"id": reservation_id})
+        if not reservation:
+            raise HTTPException(status_code=404, detail="Reservation not found")
+        
+        # Delete all child reservations (those with the same root ID)
+        await db.reservations.delete_many(where={"id": reservation_id})
+        
+        # Delete associated allocations
+        await db.reservationallocations.delete_many(where={"reservationId": reservation_id})
+        
+        return {"status": "reservation deleted successfully", "deleted_id": reservation_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete reservation: {str(e)}")
+
 # Internal functions
 async def explode_bom_smart(reservation_id: str, component_name: str, quantity: float, db: Prisma):
     """

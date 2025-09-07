@@ -71,7 +71,7 @@ class ComponentCreate(BaseModel):
     amount: float
     measure: Measures
     scannedBy: str
-    durationOfDevelopment: int
+    durationOfDevelopment: float
     triggerMinAmount: float
     supplier: str
     cost: float
@@ -83,7 +83,7 @@ class ComponentUpdate(BaseModel):
     amount: float | None = None
     measure: Measures | None = None
     scannedBy: str | None = None
-    durationOfDevelopment: int | None = None
+    durationOfDevelopment: float | None = None
     triggerMinAmount: float | None = None
     supplier: str | None = None
     cost: float | None = None
@@ -144,7 +144,6 @@ class ReturnUser(BaseModel):
 class CreateAppUser(BaseModel):
     name: str
     surname: str
-    password: str
 
     class Config:
         from_attributes = True

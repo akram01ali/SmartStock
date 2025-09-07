@@ -4,7 +4,7 @@
     "slug": "smartstock-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/iacs.png",
+    "icon": "./assets/iacs_logo.jpeg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -44,7 +44,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/iacs.png",
+        "foregroundImage": "./assets/iacs_logo.jpeg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -58,7 +58,7 @@
       "package": "com.akramali01.smartstockmobile"
     },
     "web": {
-      "favicon": "./assets/iacs.png"
+      "favicon": "./assets/iacs_logo.jpeg"
     },
     "extra": {
       "eas": {

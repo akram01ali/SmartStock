@@ -119,4 +119,12 @@ export class ForecastingService {
     });
     return this.handleResponse(response);
   }
+
+  static async deleteReservation(reservationId) {
+    const response = await fetch(`${API_URL}/forecasting/reservations/${reservationId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
 } 

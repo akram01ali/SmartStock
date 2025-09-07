@@ -10,20 +10,24 @@ import {
   useColorModeValue,
   Icon,
 } from '@chakra-ui/react';
-import { MdVisibility, MdPriorityHigh, MdSchedule } from 'react-icons/md';
+import { MdVisibility, MdPriorityHigh, MdSchedule, MdDelete } from 'react-icons/md';
 import { Reservation } from '../../types/forecasting';
 import SmoothCard from '../card/MotionCard';
 
 interface ReservationCardProps {
   reservation: Reservation;
   onViewBreakdown?: (reservationId: string) => void;
+  onDelete?: (reservationId: string) => void;
   showBreakdownButton?: boolean;
+  showDeleteButton?: boolean;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
   reservation,
   onViewBreakdown,
+  onDelete,
   showBreakdownButton = true,
+  showDeleteButton = true,
 }) => {
   const textColor = useColorModeValue('secondaryGray.900', 'white');
   const textColorSecondary = useColorModeValue('secondaryGray.600', 'white');
@@ -155,22 +159,39 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </HStack>
         </VStack>
 
-        {/* Action Button */}
-        {showBreakdownButton && onViewBreakdown && (
+        {/* Action Buttons */}
+        {(showBreakdownButton && onViewBreakdown) || (showDeleteButton && onDelete) ? (
           <Box pt={2} borderTop="1px solid" borderColor={borderColor}>
-            <Tooltip label="View BOM Breakdown">
-              <IconButton
-                aria-label="View breakdown"
-                icon={<Icon as={MdVisibility as any} />}
-                size="sm"
-                variant="ghost"
-                colorScheme="blue"
-                w="100%"
-                onClick={() => onViewBreakdown(reservation.id)}
-              />
-            </Tooltip>
+            <HStack spacing={2}>
+              {showBreakdownButton && onViewBreakdown && (
+                <Tooltip label="View BOM Breakdown">
+                  <IconButton
+                    aria-label="View breakdown"
+                    icon={<Icon as={MdVisibility as any} />}
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="blue"
+                    flex={1}
+                    onClick={() => onViewBreakdown(reservation.id)}
+                  />
+                </Tooltip>
+              )}
+              {showDeleteButton && onDelete && (
+                <Tooltip label="Delete Reservation">
+                  <IconButton
+                    aria-label="Delete reservation"
+                    icon={<Icon as={MdDelete as any} />}
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="red"
+                    flex={1}
+                    onClick={() => onDelete(reservation.id)}
+                  />
+                </Tooltip>
+              )}
+            </HStack>
           </Box>
-        )}
+        ) : null}
       </VStack>
     </SmoothCard>
   );

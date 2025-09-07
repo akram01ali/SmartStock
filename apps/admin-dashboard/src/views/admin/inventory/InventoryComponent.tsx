@@ -215,7 +215,7 @@ export default function InventoryComponent({
     try {
       const data = await ApiService.getComponentTotalCost(component.componentName, hourlyRate);
       setAnalyticsData(data);
-      showToast('Cost Calculated Successfully', 'Total cost and development time calculated.', 'success');
+      showToast('Cost Calculated Successfully', 'Total cost and production time calculated.', 'success');
     } catch (error) {
       showErrorToast(error, 'Error calculating cost');
     } finally {
@@ -356,7 +356,7 @@ export default function InventoryComponent({
                 {renderStatCard('Unit Cost', `€${component.cost}`)}
                 {renderStatCard('Min. Amount', component.triggerMinAmount)}
                 {renderStatCard('Supplier', component.supplier || 'Not specified')}
-                {renderStatCard('Dev. Time', component.durationOfDevelopment, 'hours')}
+                {renderStatCard('Production Time', component.durationOfDevelopment, 'hours')}
               </SimpleGrid>
 
               <Divider borderColor={borderColor} />
@@ -507,7 +507,7 @@ export default function InventoryComponent({
                           {analyticsData.total_development_time && (
                             <VStack spacing={1} align="start">
                               <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
-                                TOTAL DEVELOPMENT TIME
+                                TOTAL PRODUCTION TIME
                               </Text>
                               <Text fontSize="md" fontWeight="600" color={textColor}>
                                 {analyticsData.total_development_time} days

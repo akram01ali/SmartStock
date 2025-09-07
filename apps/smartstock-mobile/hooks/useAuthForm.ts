@@ -4,14 +4,12 @@ import { validateNotify } from '../utils/notifications';
 interface AuthFormData {
   name: string;
   surname: string;
-  password: string;
 }
 
 export const useAuthForm = () => {
   const [formData, setFormData] = useState<AuthFormData>({
     name: '',
     surname: '',
-    password: '',
   });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -35,15 +33,11 @@ export const useAuthForm = () => {
       validateNotify.required('Last name');
       return false;
     }
-    if (!formData.password.trim()) {
-      validateNotify.required('Password');
-      return false;
-    }
     return true;
   }, [formData]);
 
   const resetForm = useCallback(() => {
-    setFormData({ name: '', surname: '', password: '' });
+    setFormData({ name: '', surname: '' });
     setErrorMessage('');
     setRememberMe(false);
     setLoading(false);

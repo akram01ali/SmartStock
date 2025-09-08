@@ -510,7 +510,7 @@ export default function InventoryComponent({
                                 TOTAL PRODUCTION TIME
                               </Text>
                               <Text fontSize="md" fontWeight="600" color={textColor}>
-                                {analyticsData.total_development_time} days
+                                {analyticsData.total_development_time} hours
                               </Text>
                             </VStack>
                           )}

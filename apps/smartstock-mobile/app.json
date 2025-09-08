@@ -4,7 +4,7 @@
     "slug": "smartstock-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/iacs_logo.jpeg",
+    "icon": "./assets/iacs_logo.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -33,7 +33,8 @@
             "networkSecurityConfig": "@xml/network_security_config"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "ios": {
       "supportsTablet": true,
@@ -44,7 +45,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/iacs_logo.jpeg",
+        "foregroundImage": "./assets/iacs_logo.jpg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -58,7 +59,7 @@
       "package": "com.akramali01.smartstockmobile"
     },
     "web": {
-      "favicon": "./assets/iacs_logo.jpeg"
+      "favicon": "./assets/iacs_logo.jpg"
     },
     "extra": {
       "eas": {

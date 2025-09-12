@@ -23,7 +23,6 @@ class TokenData(BaseModel):
 class AppUser(BaseModel):
     name: str
     surname: str
-    password: str
 
 class ReturnUser(BaseModel):
     name: str
@@ -33,6 +32,5 @@ class ReturnUser(BaseModel):
 class CreateAppUser(BaseModel):
     name: str
     surname: str
-    password: str
 
     

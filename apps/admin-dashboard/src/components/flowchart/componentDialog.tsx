@@ -452,6 +452,14 @@ export function ComponentDialog({
     }
   };
 
+  const handleComponentNameChange = (value: string) => {
+    if (mode === 'create') {
+      handleComponentNameSearch(value);
+    } else {
+      handleChange('componentName', value);
+    }
+  };
+
   const handleChange = (field: keyof ComponentData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -508,14 +516,13 @@ export function ComponentDialog({
                 </FormLabel>
                 <Input
                   value={formData.componentName}
-                  onChange={(e) => handleComponentNameSearch(e.target.value)}
+                  onChange={(e) => handleComponentNameChange(e.target.value)}
                   onBlur={handleInputBlur}
                   onFocus={() => {
                     if (mode === 'create' && searchResults.length > 0) {
                       setShowSuggestions(true);
                     }
                   }}
-                  isReadOnly={mode === 'edit'}
                   placeholder={mode === 'create' ? 'Type to search existing components...' : 'Enter component name'}
                   bg={inputBg}
                   borderColor={borderColor}

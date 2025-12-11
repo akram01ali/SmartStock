@@ -212,8 +212,17 @@ const Flow = () => {
     try {
       setIsLoading(true);
       const graphData = await ApiService.getGraph(initialComponent) as { nodes: any[], edges: any[] };
+      
+      // Validate that we have nodes and edges
+      if (!graphData || !graphData.nodes || !Array.isArray(graphData.nodes)) {
+        console.warn('Invalid graph data received:', graphData);
+        setNodes([]);
+        setEdges([]);
+        return;
+      }
+      
       const { nodes: layoutedNodes, edges: layoutedEdges } =
-        getLayoutedElements(graphData.nodes, graphData.edges, 'TB');
+        getLayoutedElements(graphData.nodes, graphData.edges || [], 'TB');
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
     } catch (error) {
@@ -371,8 +380,27 @@ const Flow = () => {
 
   const handleUpdateComponent = async (componentData: ComponentCreate) => {
     try {
-      await ApiService.updateComponent(componentData);
+      // Get the original component name from selectedComponent
+      const originalComponentName = selectedComponent?.componentName;
+      
+      // Update the component, passing the original name if it exists
+      await ApiService.updateComponent(componentData, originalComponentName);
+      
+      // Close the dialog first
+      setIsDialogOpen(false);
+      
+      // If the component being renamed is the root component, we need to handle navigation
+      if (originalComponentName === initialComponent && componentData.componentName !== initialComponent) {
+        // Redirect to the new component name using the correct route
+        setTimeout(() => {
+          window.location.href = `/admin/graph/${encodeURIComponent(componentData.componentName)}`;
+        }, 500);
+        return;
+      }
+      
+      // Reload the graph after closing the dialog
       await loadGraph();
+      
       toast({
         title: 'Component updated',
         description: `Component ${componentData.componentName} has been updated`,

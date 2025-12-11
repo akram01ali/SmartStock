@@ -354,12 +354,64 @@ async def update_component(
                 detail=f"Component '{component_name}' not found"
             )
         
+        # Extract newComponentName separately from other fields
+        new_component_name = component.newComponentName
+        
         update_data = {
             k: v for k, v in component.dict().items() 
-            if v is not None
+            if v is not None and k != "newComponentName"
         }
         
         update_data["lastScanned"] = datetime.utcnow()
+
+        # Handle component rename if requested
+        if new_component_name and new_component_name != component_name:
+            # Check if new name already exists
+            existing_with_new_name = await db.components.find_unique(
+                where={"componentName": new_component_name}
+            )
+            if existing_with_new_name:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Component name '{new_component_name}' already exists"
+                )
+            
+            # Update all references to this component in Relationships table
+            await db.relationships.update_many(
+                where={"topComponent": component_name},
+                data={"topComponent": new_component_name}
+            )
+            await db.relationships.update_many(
+                where={"subComponent": component_name},
+                data={"subComponent": new_component_name}
+            )
+            
+            # Update references in ComponentHistory table
+            await db.componenthistory.update_many(
+                where={"componentName": component_name},
+                data={"componentName": new_component_name}
+            )
+            
+            # Update references in Reservations table
+            await db.reservations.update_many(
+                where={"componentName": component_name},
+                data={"componentName": new_component_name}
+            )
+            
+            # Update references in ReservationAllocations table
+            await db.reservationallocations.update_many(
+                where={"componentName": component_name},
+                data={"componentName": new_component_name}
+            )
+            
+            # Update references in PurchaseRequirements table
+            await db.purchaserequirements.update_many(
+                where={"componentName": component_name},
+                data={"componentName": new_component_name}
+            )
+            
+            # Add the new component name to update data
+            update_data["componentName"] = new_component_name
 
         updated = await db.components.update(
             where={"componentName": component_name},
@@ -368,6 +420,8 @@ async def update_component(
         
         return updated
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=400,

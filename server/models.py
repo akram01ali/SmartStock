@@ -80,6 +80,7 @@ class ComponentCreate(BaseModel):
     image: Optional[str] = None
 
 class ComponentUpdate(BaseModel):
+    newComponentName: Optional[str] = None
     amount: float | None = None
     measure: Measures | None = None
     scannedBy: str | None = None

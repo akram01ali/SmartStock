@@ -216,31 +216,40 @@ export class ApiService {
   /**
    * Updates an existing component
    * @param {Object} component - The component to update
+   * @param {string} originalComponentName - The original component name (for rename operations)
    * @returns {Promise<Object>} The updated component
    */
-  static async updateComponent(component) {
+  static async updateComponent(component, originalComponentName = null) {
     // Check if component name exists
     if (!component.componentName) {
       throw new Error('Component name is required for update');
     }
 
+    const nameToUse = originalComponentName || component.componentName;
+    const requestBody = {
+      amount: component.amount,
+      measure: component.measure,
+      scannedBy: component.scannedBy,
+      durationOfDevelopment: component.durationOfDevelopment,
+      triggerMinAmount: component.triggerMinAmount,
+      supplier: component.supplier,
+      cost: component.cost,
+      type: component.type,
+      description: component.description,
+      image: component.image,
+    };
+
+    // Add newComponentName if renaming
+    if (component.componentName !== nameToUse) {
+      requestBody.newComponentName = component.componentName;
+    }
+
     const response = await fetch(
-      `${API_URL}/components/${encodeURIComponent(component.componentName)}`,
+      `${API_URL}/components/${encodeURIComponent(nameToUse)}`,
       {
         method: 'PUT',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          amount: component.amount,
-          measure: component.measure,
-          scannedBy: component.scannedBy,
-          durationOfDevelopment: component.durationOfDevelopment,
-          triggerMinAmount: component.triggerMinAmount,
-          supplier: component.supplier,
-          cost: component.cost,
-          type: component.type,
-          description: component.description,
-          image: component.image,
-        }),
+        body: JSON.stringify(requestBody),
       },
     );
 

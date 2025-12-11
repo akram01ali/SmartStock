@@ -158,15 +158,16 @@ export default function InventoryComponent({
 
   const handleEditSubmit = useCallback(async (editedComponent: ComponentCreate) => {
     try {
+      const originalComponentName = component.componentName;
       const componentData = {
         ...editedComponent,
-        componentName: component.componentName,
+        componentName: editedComponent.componentName,
       };
 
-      const updatedComponent = (await ApiService.updateComponent(componentData)) as Component;
+      const updatedComponent = (await ApiService.updateComponent(componentData, originalComponentName)) as Component;
       showToast(
         'Component Updated Successfully',
-        `${component.componentName} details have been saved`,
+        `${editedComponent.componentName} details have been saved`,
         'success'
       );
 

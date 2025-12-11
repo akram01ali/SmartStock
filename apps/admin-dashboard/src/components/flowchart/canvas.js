@@ -473,8 +473,11 @@ export default function Flow({ initialComponent }) {
 
   const handleUpdateComponent = async (componentData) => {
     try {
+      // Get the original component name from selectedComponent
+      const originalComponentName = selectedComponent?.componentName;
+      
       // Update the component using PUT request
-      await ApiService.updateComponent(componentData);
+      await ApiService.updateComponent(componentData, originalComponentName);
 
       // Refresh the tree to show the updated component
       await fetchTreeData();

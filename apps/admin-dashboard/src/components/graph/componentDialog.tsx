@@ -316,7 +316,6 @@ export function ComponentDialog({
                 borderColor={colors.borderColor}
                 optionBg={colors.inputBg}
                 optionColor={colors.textColor}
-                isReadOnly={mode === 'edit'}
               />
 
               {showSuggestions && searchResults.length > 0 && (

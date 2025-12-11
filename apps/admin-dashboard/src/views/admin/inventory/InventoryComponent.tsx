@@ -36,6 +36,7 @@ import {
 } from '../../../components/common/IconWrapper';
 import { ComponentDialog } from '../../../components/graph/componentDialog';
 import { StockUpdateModal } from '../../../components/inventory/StockUpdateModal';
+import ManualUpload from '../../../components/inventory/ManualUpload';
 import {
   ComponentCreate,
   Measures,
@@ -669,6 +670,9 @@ export default function InventoryComponent({
               </VStack>
 
               <Divider borderColor={borderColor} />
+
+              {/* Manual Upload Section */}
+              <ManualUpload componentName={component.componentName} />
 
             </VStack>
           </CardBody>

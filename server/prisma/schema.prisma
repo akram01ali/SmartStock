@@ -45,6 +45,7 @@ model Components {
   image                 String?
   delivery_time         Float?
   location              Float?
+  manuals               ComponentManual[]
   
   @@index([type])
   @@index([lastScanned])
@@ -124,4 +125,18 @@ model PurchaseRequirements {
   
   @@index([componentName, status])
   @@index([neededByDate])
+}
+
+model ComponentManual {
+  id               String   @id @default(cuid())
+  componentName    String
+  component       Components @relation(fields: [componentName], references: [componentName], onDelete: Cascade)
+  fileName         String
+  fileUrl          String
+  fileType         String   // pdf, docx, doc, etc.
+  uploadedAt       DateTime @default(now())
+  uploadedBy       String
+  
+  @@index([componentName])
+  @@index([uploadedAt])
 }

@@ -697,4 +697,106 @@ export class ApiService {
       throw error;
     }
   }
+
+  /**
+   * Upload a manual for a component
+   * @param {string} componentName - The component name
+   * @param {File} file - The file to upload (PDF, DOC, DOCX, etc.)
+   * @returns {Promise<Object>} The created manual object
+   */
+  static async uploadComponentManual(componentName, file) {
+    try {
+      if (!componentName || !file) {
+        throw new Error('Component name and file are required');
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(
+        `${API_URL}/manuals/${encodeURIComponent(componentName)}/upload`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: localStorage.getItem('authToken')
+              ? `Bearer ${localStorage.getItem('authToken')}`
+              : '',
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to upload manual');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error uploading manual:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all manuals for a component
+   * @param {string} componentName - The component name
+   * @returns {Promise<Array>} List of manuals
+   */
+  static async getComponentManuals(componentName) {
+    try {
+      if (!componentName) {
+        throw new Error('Component name is required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/manuals/${encodeURIComponent(componentName)}`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to fetch manuals');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching manuals:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a manual
+   * @param {string} manualId - The manual ID
+   * @returns {Promise<Object>} Deletion confirmation
+   */
+  static async deleteComponentManual(manualId) {
+    try {
+      if (!manualId) {
+        throw new Error('Manual ID is required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/manuals/${encodeURIComponent(manualId)}`,
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to delete manual');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting manual:', error);
+      throw error;
+    }
+  }
 }

@@ -2,6 +2,10 @@ from datetime import datetime
 from fastapi import FastAPI, APIRouter, Body, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+import mimetypes
 from models import ComponentCreate
 
 from config import (
@@ -9,7 +13,7 @@ from config import (
     CORS_METHODS, CORS_HEADERS, HOST, PORT
 )
 from controllers.database import connect_db, disconnect_db
-from controllers import components, relationships, tree, graph, analytics, forecasting
+from controllers import components, relationships, tree, graph, analytics, forecasting, manuals
 from controllers.auth import auth_routes
 
 app = FastAPI(title=APP_TITLE, version=APP_VERSION)
@@ -23,6 +27,39 @@ app.add_middleware(
     allow_headers=CORS_HEADERS,
 )
 
+# Create uploads directory
+uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "uploads"))
+os.makedirs(uploads_dir, exist_ok=True)
+
+# Custom file serving endpoint with proper headers
+@app.get("/uploads/{file_path:path}")
+async def serve_file(file_path: str):
+    """Serve uploaded files with proper headers"""
+    full_path = os.path.abspath(os.path.join(uploads_dir, file_path))
+    
+    # Security check: prevent directory traversal
+    if not full_path.startswith(uploads_dir):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    if not os.path.isfile(full_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Get the correct MIME type
+    mime_type, _ = mimetypes.guess_type(full_path)
+    if mime_type is None:
+        mime_type = "application/octet-stream"
+    
+    # Get filename for download
+    filename = os.path.basename(full_path)
+    
+    # Force download with Content-Disposition header
+    return FileResponse(
+        full_path,
+        media_type=mime_type,
+        filename=filename,
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )
+
 # Include routers
 app.include_router(auth_routes.router)
 app.include_router(components.router)
@@ -31,6 +68,7 @@ app.include_router(tree.router)
 app.include_router(graph.router)
 app.include_router(analytics.router)
 app.include_router(forecasting.router)
+app.include_router(manuals.router)
 
 # Add direct compatibility routes for frontend
 from models import UserLogin, Token, Component, RelationshipCreate, Relationship, ComponentUpdate, UserCreate, CreateAppUser, ReturnUser, RelationshipRequest, ComponentName, ComponentNameOnly, User as UserModel

@@ -109,6 +109,24 @@ class ComponentHistory(BaseModel):
     class Config:
         from_attributes = True
 
+class ComponentManual(BaseModel):
+    id: str
+    componentName: str
+    fileName: str
+    fileUrl: str
+    fileType: str
+    uploadedAt: datetime
+    uploadedBy: str
+
+    class Config:
+        from_attributes = True
+
+class ComponentManualCreate(BaseModel):
+    fileName: str
+    fileUrl: str
+    fileType: str
+    uploadedBy: str
+
 class RelationshipCreate(BaseModel):
     topComponent: str
     subComponent: str

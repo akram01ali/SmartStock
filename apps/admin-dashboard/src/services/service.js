@@ -656,4 +656,40 @@ export class ApiService {
       throw error;
     }
   }
+
+  /**
+   * Updates component stock
+   * @param {string} componentName - The component name
+   * @param {number} amount - The amount to add/subtract or set
+   * @param {boolean} absolute - If true, sets amount; if false, adds/subtracts
+   * @param {string} scannedBy - Who performed the stock update (default: 'manual')
+   * @returns {Promise<Object>} The updated component
+   */
+  static async updateComponentStock(componentName, amount, absolute = false, scannedBy = 'manual') {
+    try {
+      if (!componentName) {
+        throw new Error('Component name is required');
+      }
+
+      const url = new URL(`${API_URL}/components/${encodeURIComponent(componentName)}/stock`);
+      url.searchParams.append('amount', amount.toString());
+      url.searchParams.append('absolute', absolute.toString());
+      url.searchParams.append('scannedBy', scannedBy);
+
+      const response = await fetch(url.toString(), {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to update component stock');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating component stock:', error);
+      throw error;
+    }
+  }
 }

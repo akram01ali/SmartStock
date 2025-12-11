@@ -35,6 +35,7 @@ import {
   TimeIcon,
 } from '../../../components/common/IconWrapper';
 import { ComponentDialog } from '../../../components/graph/componentDialog';
+import { StockUpdateModal } from '../../../components/inventory/StockUpdateModal';
 import {
   ComponentCreate,
   Measures,
@@ -84,6 +85,7 @@ export default function InventoryComponent({
 }: InventoryComponentProps) {
   // State
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStock, setIsUpdatingStock] = useState(false);
   const [hourlyRateInput, setHourlyRateInput] = useState('18.5');
   const [hourlyRateError, setHourlyRateError] = useState<string | null>(null);
   const [isCalculatingCost, setIsCalculatingCost] = useState(false);
@@ -91,6 +93,7 @@ export default function InventoryComponent({
 
   // Hooks
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isStockModalOpen, onOpen: onStockModalOpen, onClose: onStockModalClose } = useDisclosure();
   const toast = useToast();
 
   // Color mode values - FIXED: Use proper background colors
@@ -179,6 +182,33 @@ export default function InventoryComponent({
       showErrorToast(error, 'Error updating component');
     }
   }, [component.componentName, onEdit, onClose, showToast, showErrorToast]);
+
+  const handleStockUpdate = useCallback(async (amount: number, absolute: boolean, scannedBy: string) => {
+    try {
+      setIsUpdatingStock(true);
+      const updatedComponent = (await ApiService.updateComponentStock(
+        component.componentName,
+        amount,
+        absolute,
+        scannedBy,
+      )) as Component;
+
+      showToast(
+        'Stock Updated Successfully',
+        `${component.componentName} stock has been ${absolute ? 'set to' : 'updated by'} ${amount}`,
+        'success',
+      );
+
+      if (onEdit) {
+        await onEdit(updatedComponent);
+      }
+      onStockModalClose();
+    } catch (error) {
+      showErrorToast(error, 'Error updating stock');
+    } finally {
+      setIsUpdatingStock(false);
+    }
+  }, [component.componentName, onEdit, onStockModalClose, showToast, showErrorToast]);
 
   const handleHourlyRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -291,6 +321,14 @@ export default function InventoryComponent({
             size="md"
           >
             Edit Component
+          </Button>
+          <Button
+            leftIcon={<TimeIcon />}
+            colorScheme="green"
+            onClick={onStockModalOpen}
+            size="md"
+          >
+            Update Stock
           </Button>
           <Button
             leftIcon={<DeleteIcon />}
@@ -576,6 +614,15 @@ export default function InventoryComponent({
         onSubmit={handleEditSubmit}
         component={component as ComponentCreate}
         mode="edit"
+      />
+
+      <StockUpdateModal
+        isOpen={isStockModalOpen}
+        onClose={onStockModalClose}
+        componentName={component.componentName}
+        currentAmount={component.amount}
+        onSubmit={handleStockUpdate}
+        isLoading={isUpdatingStock}
       />
     </Box>
   );

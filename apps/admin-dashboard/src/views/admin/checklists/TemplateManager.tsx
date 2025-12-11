@@ -28,7 +28,7 @@ import {
   Tooltip,
   Icon,
 } from '@chakra-ui/react';
-import { MdAddCircle, MdDelete, MdArrowBack } from 'react-icons/md';
+import { MdAddCircle, MdDelete, MdArrowBack, MdArrowUpward, MdArrowDownward } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { ApiService } from '../../../services/service';
 
@@ -111,6 +111,28 @@ export default function TemplateManager() {
     },
     [newItems]
   );
+
+  const handleMoveItemUp = useCallback((index: number) => {
+    if (index === 0) return;
+    const updated = [...newItems];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    // Update order values
+    updated.forEach((item, i) => {
+      item.order = i;
+    });
+    setNewItems(updated);
+  }, [newItems]);
+
+  const handleMoveItemDown = useCallback((index: number) => {
+    if (index === newItems.length - 1) return;
+    const updated = [...newItems];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    // Update order values
+    updated.forEach((item, i) => {
+      item.order = i;
+    });
+    setNewItems(updated);
+  }, [newItems]);
 
   const handleDeleteTemplate = useCallback(
     async (templateId: string) => {
@@ -458,6 +480,28 @@ export default function TemplateManager() {
                         <option value="test">Testing</option>
                         <option value="control">Facts</option>
                       </Select>
+                      <Tooltip label="Move item up">
+                        <IconButton
+                          icon={<Icon as={MdArrowUpward as any} w={4} h={4} />}
+                          aria-label="Move up"
+                          colorScheme="blue"
+                          variant="ghost"
+                          size="sm"
+                          isDisabled={index === 0}
+                          onClick={() => handleMoveItemUp(index)}
+                        />
+                      </Tooltip>
+                      <Tooltip label="Move item down">
+                        <IconButton
+                          icon={<Icon as={MdArrowDownward as any} w={4} h={4} />}
+                          aria-label="Move down"
+                          colorScheme="blue"
+                          variant="ghost"
+                          size="sm"
+                          isDisabled={index === newItems.length - 1}
+                          onClick={() => handleMoveItemDown(index)}
+                        />
+                      </Tooltip>
                       <Tooltip label="Remove item">
                         <IconButton
                           icon={<Icon as={MdDelete as any} w={5} h={5} />}

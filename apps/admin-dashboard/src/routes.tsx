@@ -12,6 +12,7 @@ import {
   MdDashboard,
   MdInventory,
   MdAnalytics,
+  MdChecklist,
 } from 'react-icons/md';
 
 // Admin Imports
@@ -25,6 +26,8 @@ import Graph from 'views/admin/graph/graph';
 import InventoryPage from 'views/admin/inventory/InventoryPage';
 import GraphDagre from 'views/admin/graphDagre/index';
 import ForecastingPage from 'views/admin/forecasting/ForecastingPage';
+import TemplateManager from 'views/admin/checklists/TemplateManager';
+import ControlChecklistExecution from 'views/admin/checklists/ControlChecklistExecution';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -67,6 +70,20 @@ const routes = [
     ),
     component: <ForecastingPage />,
   },
+  {
+    name: 'Control Checklists',
+    layout: '/admin',
+    path: '/control-checklists',
+    icon: (
+      <Icon
+        as={MdChecklist as any}
+        width="20px"
+        height="20px"
+        color="inherit"
+      />
+    ),
+    component: <ControlChecklistExecution />,
+  },
 ];
 
 // Hidden routes (not shown in sidebar but accessible via navigation)
@@ -82,6 +99,12 @@ export const hiddenRoutes = [
     layout: '/admin',
     path: '/graph/:initialComponent',
     component: <GraphDagre />,
+  },
+  {
+    name: 'Template Manager',
+    layout: '/admin',
+    path: '/checklist-templates',
+    component: <TemplateManager />,
   },
   {
     name: 'Sign In',

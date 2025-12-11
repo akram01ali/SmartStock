@@ -168,4 +168,92 @@ class CreateAppUser(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Control Checklist Models
+class ControlChecklistItemCreate(BaseModel):
+    label: str
+    type: str  # 'test' or 'control'
+    order: int
+
+class ControlChecklistItemUpdate(BaseModel):
+    label: Optional[str] = None
+    type: Optional[str] = None
+    order: Optional[int] = None
+
+class ControlChecklistItem(BaseModel):
+    id: str
+    templateId: str
+    label: str
+    type: str
+    order: int
+    createdAt: datetime
+
+    class Config:
+        from_attributes = True
+
+class ControlChecklistTemplateCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    items: List[ControlChecklistItemCreate] = []
+
+class ControlChecklistTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    items: Optional[List[ControlChecklistItemCreate]] = None
+
+class ControlChecklistTemplate(BaseModel):
+    id: str
+    name: str
+    description: Optional[str]
+    createdAt: datetime
+    updatedAt: datetime
+    items: List[ControlChecklistItem] = []
+
+    class Config:
+        from_attributes = True
+
+class ControlChecklistEntryCreate(BaseModel):
+    itemId: str
+    isChecked: bool = False
+    value: Optional[str] = None
+    comment: Optional[str] = None
+
+class ControlChecklistEntryUpdate(BaseModel):
+    isChecked: Optional[bool] = None
+    value: Optional[str] = None
+    comment: Optional[str] = None
+
+class ControlChecklistEntry(BaseModel):
+    id: str
+    checklistId: str
+    itemId: str
+    isChecked: bool
+    value: Optional[str]
+    comment: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+class ControlChecklistCreate(BaseModel):
+    printerSerialNumber: str
+    templateId: str
+    entries: Optional[List[ControlChecklistEntryCreate]] = []
+
+class ControlChecklistUpdate(BaseModel):
+    status: Optional[str] = None
+    shippedAt: Optional[datetime] = None
+    entries: Optional[List[ControlChecklistEntryUpdate]] = None
+
+class ControlChecklist(BaseModel):
+    id: str
+    printerSerialNumber: str
+    templateId: str
+    status: str
+    shippedAt: Optional[datetime]
+    createdAt: datetime
+    completedAt: Optional[datetime]
+    entries: List[ControlChecklistEntry] = []
+
+    class Config:
+        from_attributes = True
     

@@ -54,6 +54,8 @@ export default function ManualUpload({
   const uploadBgColor = useColorModeValue('blue.50', 'blue.900');
   const uploadBorderColor = useColorModeValue('blue.200', 'blue.600');
   const uploadTextColor = useColorModeValue('blue.700', 'blue.200');
+  const linkColor = useColorModeValue('#3182ce', '#63b3ed');
+  const linkHoverColor = useColorModeValue('gray.100', 'navy.600');
 
   // Load manuals on mount
   useEffect(() => {
@@ -279,7 +281,7 @@ export default function ManualUpload({
                 borderColor={borderColor}
                 justify="space-between"
                 _hover={{
-                  bg: useColorModeValue('gray.100', 'navy.600'),
+                  bg: linkHoverColor,
                 }}
               >
                 <HStack spacing={3} flex={1} minW={0}>
@@ -290,7 +292,7 @@ export default function ManualUpload({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        color: useColorModeValue('#3182ce', '#63b3ed'),
+                        color: linkColor,
                         textDecoration: 'none',
                         wordBreak: 'break-word',
                       }}

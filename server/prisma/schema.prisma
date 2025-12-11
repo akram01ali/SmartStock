@@ -140,3 +140,64 @@ model ComponentManual {
   @@index([componentName])
   @@index([uploadedAt])
 }
+
+model ControlChecklistTemplate {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  items            ControlChecklistItem[]
+  checklists       ControlChecklist[]
+  
+  @@index([createdAt])
+}
+
+model ControlChecklistItem {
+  id               String   @id @default(cuid())
+  templateId       String
+  template         ControlChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  label            String
+  type             String   // 'test' or 'control'
+  order            Int
+  createdAt        DateTime @default(now())
+  
+  entries          ControlChecklistEntry[]
+  
+  @@index([templateId])
+  @@unique([templateId, order])
+}
+
+model ControlChecklist {
+  id                     String   @id @default(cuid())
+  printerSerialNumber    String
+  templateId             String
+  template               ControlChecklistTemplate @relation(fields: [templateId], references: [id])
+  status                 String   @default("draft") // 'draft', 'completed', 'shipped'
+  shippedAt              DateTime?
+  createdAt              DateTime @default(now())
+  completedAt            DateTime?
+  
+  entries                ControlChecklistEntry[]
+  
+  @@index([printerSerialNumber])
+  @@index([templateId])
+  @@index([status])
+  @@index([createdAt])
+  @@unique([printerSerialNumber, templateId, createdAt])
+}
+
+model ControlChecklistEntry {
+  id                 String   @id @default(cuid())
+  checklistId        String
+  checklist          ControlChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  itemId             String
+  item               ControlChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  isChecked          Boolean  @default(false)
+  value              String?
+  comment            String?
+  
+  @@index([checklistId])
+  @@index([itemId])
+  @@unique([checklistId, itemId])
+}

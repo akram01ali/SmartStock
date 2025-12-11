@@ -799,4 +799,351 @@ export class ApiService {
       throw error;
     }
   }
+
+  // ==================== CONTROL CHECKLISTS ====================
+
+  /**
+   * Create a new control checklist
+   * @param {Object} checklistData - Checklist data
+   * @returns {Promise<Object>} Created checklist
+   */
+  static async createControlChecklist(checklistData) {
+    try {
+      if (!checklistData.printerSerialNumber || !checklistData.templateId) {
+        throw new Error('Printer serial number and template ID are required');
+      }
+
+      const response = await fetch(`${API_URL}/checklists`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(checklistData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to create checklist');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating checklist:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get checklists for a specific printer
+   * @param {string} printerSerialNumber - The printer serial number
+   * @returns {Promise<Array>} List of checklists
+   */
+  static async getControlChecklistsByPrinter(printerSerialNumber) {
+    try {
+      if (!printerSerialNumber) {
+        throw new Error('Printer serial number is required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/checklists/printer/${encodeURIComponent(printerSerialNumber)}`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to fetch checklists');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching checklists:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update checklist status
+   * @param {string} checklistId - The checklist ID
+   * @param {string} status - New status (draft, completed, shipped)
+   * @returns {Promise<Object>} Updated checklist
+   */
+  static async updateControlChecklistStatus(checklistId, status) {
+    try {
+      if (!checklistId || !status) {
+        throw new Error('Checklist ID and status are required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/checklists/${encodeURIComponent(checklistId)}/status`,
+        {
+          method: 'PATCH',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to update checklist status');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating checklist status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all control checklists
+   * @returns {Promise<Array>} List of all checklists
+   */
+  static async getAllControlChecklists() {
+    try {
+      const response = await fetch(`${API_URL}/checklists`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to fetch checklists');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching checklists:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update a control checklist
+   * @param {string} checklistId - The checklist ID
+   * @param {Object} updateData - Data to update (entries, etc.)
+   * @returns {Promise<Object>} Updated checklist
+   */
+  static async updateControlChecklist(checklistId, updateData) {
+    try {
+      if (!checklistId) {
+        throw new Error('Checklist ID is required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/checklists/${encodeURIComponent(checklistId)}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to update checklist');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating checklist:', error);
+      throw error;
+    }
+  }
+
+  // ==================== TEMPLATE METHODS ====================
+
+  /**
+   * Get all control checklist templates
+   * @returns {Promise<Array>} List of all templates
+   */
+  static async getControlChecklistTemplates() {
+    try {
+      const response = await fetch(`${API_URL}/checklists/templates`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to fetch templates');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create a new control checklist template
+   * @param {Object} templateData - Template data (name, description, items)
+   * @returns {Promise<Object>} Created template
+   */
+  static async createControlChecklistTemplate(templateData) {
+    try {
+      if (!templateData.name) {
+        throw new Error('Template name is required');
+      }
+
+      const response = await fetch(`${API_URL}/checklists/templates`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(templateData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to create template');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a control checklist template
+   * @param {string} templateId - The template ID
+   * @param {Object} templateData - Updated template data
+   * @returns {Promise<Object>} Updated template
+   */
+  static async updateControlChecklistTemplate(templateId, templateData) {
+    try {
+      if (!templateId) {
+        throw new Error('Template ID is required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/checklists/templates/${encodeURIComponent(templateId)}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(templateData),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to update template');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a control checklist template
+   * @param {string} templateId - The template ID
+   * @returns {Promise<void>}
+   */
+  static async deleteControlChecklistTemplate(templateId) {
+    try {
+      if (!templateId) {
+        throw new Error('Template ID is required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/checklists/templates/${encodeURIComponent(templateId)}`,
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to delete template');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      throw error;
+    }
+  }
+
+  static async deleteControlChecklist(checklistId) {
+    try {
+      if (!checklistId) {
+        throw new Error('Checklist ID is required');
+      }
+
+      const response = await fetch(
+        `${API_URL}/checklists/${encodeURIComponent(checklistId)}`,
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to delete checklist');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting checklist:', error);
+      throw error;
+    }
+  }
+
+  // ==================== PDF GENERATION ====================
+
+  static async generateChecklistPDF(checklistId) {
+    try {
+      const response = await fetch(
+        `${API_URL}/checklists/${encodeURIComponent(checklistId)}/pdf`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to generate PDF');
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a temporary link and click it to download
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract filename from Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'checklist.pdf';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename=([^;]+)/);
+        if (match) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      throw error;
+    }
+  }
 }

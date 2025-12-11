@@ -27,6 +27,7 @@ export function SearchBar(props: {
   // Check which page we're on
   const isInventoryPage = location.pathname.includes('/inventory');
   const isComponentsPage = location.pathname.includes('/components');
+  const isChecklistPage = location.pathname.includes('/control-checklists');
   
   // Chakra Color Mode
   const searchIconColor = useColorModeValue('gray.700', 'white');
@@ -43,12 +44,14 @@ export function SearchBar(props: {
       return 'Search components...';
     } else if (isComponentsPage) {
       return 'Search groups, assemblies, printers...';
+    } else if (isChecklistPage) {
+      return 'Search systems...';
     }
     return placeholder || 'Search...';
   };
 
-  // Only show search functionality on inventory and components pages
-  const isSearchEnabled = isInventoryPage || isComponentsPage;
+  // Only show search functionality on inventory, components, and checklist pages
+  const isSearchEnabled = isInventoryPage || isComponentsPage || isChecklistPage;
 
   return (
     <InputGroup w={{ base: '100%', md: '200px' }} {...rest}>

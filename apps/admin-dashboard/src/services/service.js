@@ -239,6 +239,11 @@ export class ApiService {
       image: component.image,
     };
 
+    // Add location if present
+    if (component.location !== undefined && component.location !== null) {
+      requestBody.location = component.location;
+    }
+
     // Add newComponentName if renaming
     if (component.componentName !== nameToUse) {
       requestBody.newComponentName = component.componentName;

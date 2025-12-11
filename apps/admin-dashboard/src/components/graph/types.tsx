@@ -1,4 +1,4 @@
-import { Node, Edge, Position, XYPosition } from '@xyflow/react';
+import { Node, Edge } from '@xyflow/react';
 
 interface NodeData {
   label: string;
@@ -72,6 +72,7 @@ export interface ComponentCreate {
   lastScanned: string;
   description?: string;
   image?: string;
+  location?: string | number;
 }
 
 export interface ComponentUpdate {
@@ -85,6 +86,7 @@ export interface ComponentUpdate {
   type?: TypeOfComponent;
   description?: string;
   image?: string;
+  location?: string | number;
 }
 
 export interface ComponentDialogProps {

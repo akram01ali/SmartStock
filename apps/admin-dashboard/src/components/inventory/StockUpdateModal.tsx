@@ -15,8 +15,6 @@ import {
   FormErrorMessage,
   useColorModeValue,
   Text,
-  SegmentedControl,
-  Flex,
   Box,
 } from '@chakra-ui/react';
 
@@ -47,6 +45,12 @@ export function StockUpdateModal({
   const textColor = useColorModeValue('gray.800', 'white');
   const inputBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const previewBg = useColorModeValue('blue.50', 'blue.900');
+  const previewBorderColor = useColorModeValue('blue.200', 'blue.600');
+  const previewTextColor = useColorModeValue('blue.700', 'blue.200');
+  const previewHeadingColor = useColorModeValue('blue.800', 'blue.100');
+  const currentStockBg = useColorModeValue('gray.50', 'gray.800');
+  const currentStockTextColor = useColorModeValue('gray.600', 'gray.400');
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -112,12 +116,12 @@ export function StockUpdateModal({
             <Box
               w="100%"
               p={3}
-              bg={useColorModeValue('gray.50', 'gray.800')}
+              bg={currentStockBg}
               borderRadius="md"
               borderColor={borderColor}
               borderWidth={1}
             >
-              <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
+              <Text fontSize="sm" color={currentStockTextColor}>
                 Current Stock
               </Text>
               <Text fontSize="2xl" fontWeight="bold" color={textColor}>
@@ -170,15 +174,15 @@ export function StockUpdateModal({
               <Box
                 w="100%"
                 p={3}
-                bg={useColorModeValue('blue.50', 'blue.900')}
+                bg={previewBg}
                 borderRadius="md"
-                borderColor={useColorModeValue('blue.200', 'blue.600')}
+                borderColor={previewBorderColor}
                 borderWidth={1}
               >
-                <Text fontSize="sm" color={useColorModeValue('blue.700', 'blue.200')}>
+                <Text fontSize="sm" color={previewTextColor}>
                   New Stock Amount
                 </Text>
-                <Text fontSize="xl" fontWeight="bold" color={useColorModeValue('blue.800', 'blue.100')}>
+                <Text fontSize="xl" fontWeight="bold" color={previewHeadingColor}>
                   {calculatedAmount}
                 </Text>
               </Box>

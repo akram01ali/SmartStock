@@ -78,6 +78,7 @@ class ComponentCreate(BaseModel):
     type: TypeOfComponent
     description: Optional[str] = None
     image: Optional[str] = None
+    location: Optional[float] = None
 
 class ComponentUpdate(BaseModel):
     newComponentName: Optional[str] = None
@@ -91,6 +92,7 @@ class ComponentUpdate(BaseModel):
     type: TypeOfComponent | None = None
     description: Optional[str] = None
     image: Optional[str] = None
+    location: Optional[float] = None
 
 class Component(ComponentCreate):
     lastScanned: datetime

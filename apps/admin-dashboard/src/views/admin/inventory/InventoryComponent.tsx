@@ -86,6 +86,7 @@ export default function InventoryComponent({
   onDelete,
 }: InventoryComponentProps) {
   // State
+  const [currentComponent, setCurrentComponent] = useState<Component>(component);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
   const [isEditingLocation, setIsEditingLocation] = useState(false);
@@ -233,10 +234,13 @@ export default function InventoryComponent({
       }
 
       const updatedComponent = (await ApiService.updateComponent(
-        { ...component, location },
-        component.componentName,
+        { ...currentComponent, location },
+        currentComponent.componentName,
       )) as Component;
 
+      // Update local state immediately to reflect changes
+      setCurrentComponent(updatedComponent);
+      
       showToast('Location Updated', `Location set to ${location}`, 'success');
       if (onEdit) {
         await onEdit(updatedComponent);
@@ -246,10 +250,10 @@ export default function InventoryComponent({
     } catch (error) {
       showErrorToast(error, 'Error updating location');
     }
-  }, [locationInput, component, onEdit, showToast, showErrorToast]);
+  }, [locationInput, currentComponent, onEdit, showToast, showErrorToast]);
 
   const handleLocationCancel = () => {
-    setLocationInput(component.location?.toString() || '');
+    setLocationInput(currentComponent.location?.toString() || '');
     setLocationError(null);
     setIsEditingLocation(false);
   };
@@ -297,6 +301,12 @@ export default function InventoryComponent({
       setIsCalculatingCost(false);
     }
   }, [hourlyRateInput, component.componentName, hourlyRate, showToast, showErrorToast]);
+
+  // Sync component prop changes
+  useEffect(() => {
+    setCurrentComponent(component);
+    setLocationInput(component.location?.toString() || '');
+  }, [component.location, component.componentName]);
 
   // Auto-calculate cost on component mount with default hourly rate
   useEffect(() => {
@@ -474,8 +484,8 @@ export default function InventoryComponent({
                     ) : (
                       <HStack spacing={2} justify="space-between" w="100%">
                         <Heading size="2xl" color={locationHeadingColor}>
-                          {component.location !== undefined && component.location !== null
-                            ? component.location
+                          {currentComponent.location !== undefined && currentComponent.location !== null
+                            ? currentComponent.location
                             : 'Not set'}
                         </Heading>
                         <Button

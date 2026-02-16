@@ -131,6 +131,7 @@ async def get_all_components_light_paginated(
             "cost": component.cost,
             "type": component.type,
             "description": component.description,
+            "location": component.location,
             # Explicitly exclude the 'image' field
         }
         for component in components
@@ -218,6 +219,7 @@ async def search_components_light_paginated(
             "cost": component.cost,
             "type": component.type,
             "description": component.description,
+            "location": component.location,
         }
         
         # Include image field if requested
@@ -564,6 +566,7 @@ async def get_all_components_with_images_paginated(
                 "lastScanned": component.lastScanned,
                 "type": component.type,
                 "description": component.description,
+            "location": component.location,
                 "scannedBy": component.scannedBy,
                 "durationOfDevelopment": component.durationOfDevelopment,
                 "triggerMinAmount": component.triggerMinAmount,
@@ -692,7 +695,7 @@ async def get_low_stock_components(
             """
             SELECT "componentName", amount, measure, "lastScanned", "scannedBy", 
                    "durationOfDevelopment", "triggerMinAmount", supplier, cost, 
-                   type, description, image
+                   type, description, image, location
             FROM "Components" 
             WHERE amount < "triggerMinAmount"
             ORDER BY "componentName" ASC

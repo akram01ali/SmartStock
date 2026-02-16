@@ -283,15 +283,20 @@ export default function InventoryPage() {
   }, []);
 
   // Effects
+  // Fetch inventory and stats when search or filters change
   useEffect(() => {
     fetchInventory(1);
     fetchStatistics();
-  }, [searchQuery, typeFilter, fetchInventory, fetchStatistics]);
+  }, [searchQuery, typeFilter]);
 
+  // Fetch inventory when page changes
   useEffect(() => {
-    fetchInventory(currentPage);
-  }, [fetchInventory, currentPage]);
+    if (currentPage > 1) {
+      fetchInventory(currentPage);
+    }
+  }, [currentPage]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => setSearchQuery('');
   }, [setSearchQuery]);

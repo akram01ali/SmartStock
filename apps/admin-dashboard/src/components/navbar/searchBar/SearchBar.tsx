@@ -8,6 +8,7 @@ import {
 import { SearchIcon } from '@chakra-ui/icons';
 import { useSearch } from '../../../contexts/SearchContext';
 import { useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 export function SearchBar(props: {
   variant?: string;
@@ -24,6 +25,9 @@ export function SearchBar(props: {
   const { searchQuery, setSearchQuery } = useSearch();
   const location = useLocation();
   
+  // Local state for debounced search
+  const [inputValue, setInputValue] = useState(searchQuery);
+  
   // Check which page we're on
   const isInventoryPage = location.pathname.includes('/inventory');
   const isComponentsPage = location.pathname.includes('/components');
@@ -34,9 +38,23 @@ export function SearchBar(props: {
   const inputBg = useColorModeValue('secondaryGray.300', 'navy.900');
   const inputText = useColorModeValue('gray.700', 'gray.100');
 
+  // Debounce the search query with 500ms delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(inputValue);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [inputValue, setSearchQuery]);
+
+  // Sync context changes back to local input
+  useEffect(() => {
+    setInputValue(searchQuery);
+  }, [searchQuery]);
+
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
-    setSearchQuery(query);
+    setInputValue(query);
   };
 
   const getPlaceholder = () => {
@@ -82,7 +100,7 @@ export function SearchBar(props: {
         _placeholder={{ color: 'gray.400', fontSize: '14px' }}
         borderRadius={borderRadius ? borderRadius : '30px'}
         placeholder={getPlaceholder()}
-        value={isSearchEnabled ? searchQuery : ''}
+        value={isSearchEnabled ? inputValue : ''}
         onChange={isSearchEnabled ? handleSearchChange : undefined}
         disabled={!isSearchEnabled}
       />

@@ -80,6 +80,20 @@ else
     echo "⚠️  smartstock_backup.sql not found. Starting with empty database."
 fi
 
+# Setup automated backup scheduling
+echo "📅 Setting up automated backups..."
+BACKUP_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/backup-to-gdrive.sh"
+CRON_JOB="*/30 * * * * $BACKUP_SCRIPT"
+
+# Check if cron job already exists
+if crontab -l 2>/dev/null | grep -q "backup-to-gdrive.sh"; then
+    echo "⏰ Backup cron job already exists"
+else
+    # Add cron job (run every 30 minutes)
+    (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+    echo "✅ Backup cron job installed (runs every 30 minutes)"
+fi
+
 echo ""
 echo "🎉 SmartStock is now deployed!"
 echo ""

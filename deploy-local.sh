@@ -66,19 +66,18 @@ docker compose exec backend prisma db push
 docker compose exec backend prisma generate
 
 # Load latest backup data
-echo "📥 Loading latest backup data..."
-LATEST_BACKUP=$(ls -t smartstock_backup_*.sql 2>/dev/null | head -1)
-if [ -n "$LATEST_BACKUP" ]; then
-    echo "🔄 Found latest backup: $LATEST_BACKUP"
+echo "📥 Loading backup data..."
+if [ -f "smartstock_backup.sql" ]; then
+    echo "🔄 Found backup: smartstock_backup.sql"
     echo "📤 Importing backup data..."
-    docker compose exec -T postgres psql -U postgres -d smartstock < "$LATEST_BACKUP"
+    sudo docker compose exec -T postgres psql -U postgres -d smartstock < smartstock_backup.sql
     if [ $? -eq 0 ]; then
         echo "✅ Backup data loaded successfully!"
     else
         echo "⚠️  Backup import completed with warnings (this is often normal)"
     fi
 else
-    echo "⚠️  No backup files found. Starting with empty database."
+    echo "⚠️  smartstock_backup.sql not found. Starting with empty database."
 fi
 
 echo ""

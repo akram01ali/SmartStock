@@ -414,29 +414,27 @@ async def update_checklist(
         # Update entries if provided
         if checklist_data.entries is not None:
             for entry_update in checklist_data.entries:
-                # Find the entry (we need to match by checklist and item)
-                # The entries list should have the itemId
-                if hasattr(entry_update, 'itemId'):
-                    entry = await db.controlchecklistentry.find_first(
-                        where={
-                            "checklistId": checklist_id,
-                            "itemId": entry_update.itemId
-                        }
-                    )
-                    if entry:
-                        update_entry_data = {}
-                        if entry_update.isChecked is not None:
-                            update_entry_data["isChecked"] = entry_update.isChecked
-                        if entry_update.value is not None:
-                            update_entry_data["value"] = entry_update.value
-                        if entry_update.comment is not None:
-                            update_entry_data["comment"] = entry_update.comment
-                        
-                        if update_entry_data:
-                            await db.controlchecklistentry.update(
-                                where={"id": entry.id},
-                                data=update_entry_data
-                            )
+                # Find the entry by checklist ID and item ID
+                entry = await db.controlchecklistentry.find_first(
+                    where={
+                        "checklistId": checklist_id,
+                        "itemId": entry_update.itemId
+                    }
+                )
+                if entry:
+                    update_entry_data = {}
+                    if entry_update.isChecked is not None:
+                        update_entry_data["isChecked"] = entry_update.isChecked
+                    if entry_update.value is not None:
+                        update_entry_data["value"] = entry_update.value
+                    if entry_update.comment is not None:
+                        update_entry_data["comment"] = entry_update.comment
+                    
+                    if update_entry_data:
+                        await db.controlchecklistentry.update(
+                            where={"id": entry.id},
+                            data=update_entry_data
+                        )
         
         # Fetch updated checklist
         result = await db.controlchecklist.find_unique(

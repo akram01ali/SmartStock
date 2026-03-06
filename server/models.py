@@ -219,6 +219,7 @@ class ControlChecklistEntryCreate(BaseModel):
     comment: Optional[str] = None
 
 class ControlChecklistEntryUpdate(BaseModel):
+    itemId: str
     isChecked: Optional[bool] = None
     value: Optional[str] = None
     comment: Optional[str] = None

@@ -44,20 +44,27 @@ import {
 } from '../../../components/graph/types';
 
 // Types
+interface ProductionStage {
+  id?: string;
+  stageName: string;
+  duration: number;
+  order: number;
+}
+
 interface Component {
   componentName: string;
   amount: number;
   measure: Measures;
   lastScanned: string;
   scannedBy: string;
-  durationOfDevelopment: number;
   triggerMinAmount: number;
   supplier: string;
   cost: number;
   type: TypeOfComponent;
   description?: string;
   image?: string;
-  location?: number;
+  location?: string;
+  productionStages?: ProductionStage[];
 }
 
 interface InventoryComponentProps {
@@ -227,21 +234,15 @@ export default function InventoryComponent({
         return;
       }
 
-      const location = parseFloat(locationInput);
-      if (isNaN(location)) {
-        setLocationError('Please enter a valid number');
-        return;
-      }
-
       const updatedComponent = (await ApiService.updateComponent(
-        { ...currentComponent, location },
+        { ...currentComponent, location: locationInput.trim() },
         currentComponent.componentName,
       )) as Component;
 
       // Update local state immediately to reflect changes
       setCurrentComponent(updatedComponent);
       
-      showToast('Location Updated', `Location set to ${location}`, 'success');
+      showToast('Location Updated', `Location set to ${locationInput.trim()}`, 'success');
       if (onEdit) {
         await onEdit(updatedComponent);
       }
@@ -461,16 +462,15 @@ export default function InventoryComponent({
                     {isEditingLocation ? (
                       <HStack spacing={2} w="100%">
                         <Input
-                          type="number"
+                          type="text"
                           value={locationInput}
                           onChange={(e) => {
                             setLocationInput(e.target.value);
                             setLocationError(null);
                           }}
-                          placeholder="Enter location"
+                          placeholder="Enter location (number, word, or sentence)"
                           bg={inputBg}
                           borderColor={borderColor}
-                          step="0.01"
                           size="sm"
                           flex={1}
                         />
@@ -509,12 +509,49 @@ export default function InventoryComponent({
 
               <Divider borderColor={borderColor} />
 
+              {/* Production Stages */}
+              {component.productionStages && component.productionStages.length > 0 && (
+                <>
+                  <Divider borderColor={borderColor} />
+                  <VStack align="start" spacing={3} w="100%">
+                    <Text fontSize="lg" fontWeight="600" color={textColor}>
+                      Production Stages
+                    </Text>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="100%">
+                      {component.productionStages
+                        .sort((a, b) => a.order - b.order)
+                        .map((stage, idx) => (
+                          <VStack key={idx} align="start" spacing={1} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor} bg={cardBg}>
+                            <Text fontSize="sm" color={textColorSecondary} fontWeight="500">
+                              Stage {stage.order}
+                            </Text>
+                            <Text fontSize="md" fontWeight="600" color={textColor}>
+                              {stage.stageName}
+                            </Text>
+                            <Text fontSize="sm" color={textColorSecondary}>
+                              {stage.duration} {stage.duration === 1 ? 'hour' : 'hours'}
+                            </Text>
+                          </VStack>
+                        ))}
+                    </SimpleGrid>
+                    <Box pt={2} w="100%">
+                      <Stat>
+                        <StatLabel color={textColorSecondary}>Total Production Time</StatLabel>
+                        <StatNumber fontSize="md" color={textColor}>
+                          {component.productionStages.reduce((sum, stage) => sum + stage.duration, 0)} hours
+                        </StatNumber>
+                      </Stat>
+                    </Box>
+                  </VStack>
+                  <Divider borderColor={borderColor} />
+                </>
+              )}
+
               {/* Key Stats */}
               <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="100%">
                 {renderStatCard('Unit Cost', `€${component.cost}`)}
                 {renderStatCard('Min. Amount', component.triggerMinAmount)}
                 {renderStatCard('Supplier', component.supplier || 'Not specified')}
-                {renderStatCard('Production Time', component.durationOfDevelopment, 'hours')}
               </SimpleGrid>
 
               <Divider borderColor={borderColor} />

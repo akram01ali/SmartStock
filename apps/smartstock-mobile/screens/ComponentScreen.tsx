@@ -39,7 +39,7 @@ interface EditableComponent {
   description?: string;
   lastScanned: string;
   scannedBy: string;
-  durationOfDevelopment: number;
+  productionStages?: { stageName: string; duration: number; order: number }[];
   triggerMinAmount: number;
 }
 
@@ -69,7 +69,7 @@ export default function ComponentScreen() {
         description: '',
         lastScanned: new Date().toISOString(),
         scannedBy: '',
-        durationOfDevelopment: 0,
+        productionStages: [],
         triggerMinAmount: 0,
       };
     }
@@ -116,7 +116,7 @@ export default function ComponentScreen() {
         amount: number;
         measure: string;
         scannedBy: string;
-        durationOfDevelopment: number;
+        productionStages?: { stageName: string; duration: number; order: number }[];
         triggerMinAmount: number;
         supplier: string;
         cost: number;
@@ -127,7 +127,7 @@ export default function ComponentScreen() {
         amount: editedComponent.amount,
         measure: editedComponent.measure,
         scannedBy: editedComponent.scannedBy,
-        durationOfDevelopment: editedComponent.durationOfDevelopment,
+        productionStages: editedComponent.productionStages,
         triggerMinAmount: editedComponent.triggerMinAmount,
         supplier: editedComponent.supplier,
         cost: editedComponent.cost,
@@ -256,8 +256,8 @@ export default function ComponentScreen() {
           <DetailRow label="Type" value={component.type} styles={styles} />
           <DetailRow label="Supplier" value={component.supplier} styles={styles} />
           <DetailRow 
-            label="Development Time" 
-            value={`${component.durationOfDevelopment} hours`} 
+            label="Production Time" 
+            value={`${component.productionStages?.reduce((sum, stage) => sum + stage.duration, 0) || 0} hours`} 
             styles={styles} 
           />
           <DetailRow 

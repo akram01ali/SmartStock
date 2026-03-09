@@ -20,7 +20,7 @@ interface NewComponent {
   type: string;
   description?: string;
   scannedBy: string;
-  durationOfDevelopment: number;
+  productionStages?: { stageName: string; duration: number; order: number }[];
   triggerMinAmount: number;
 }
 
@@ -128,15 +128,6 @@ export const CreateComponentModal: React.FC<CreateComponentModalProps> = ({
               value={component.type}
               onChangeText={(text) => updateField('type', text)}
               placeholder="Enter component type"
-              styles={styles}
-            />
-
-            <FormField
-              label="Duration of Development (days)"
-              value={String(component.durationOfDevelopment)}
-              onChangeText={(text) => updateField('durationOfDevelopment', parseInt(text) || 0)}
-              placeholder="Enter development duration"
-              keyboardType="numeric"
               styles={styles}
             />
 

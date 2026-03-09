@@ -59,12 +59,18 @@ export enum TypeOfComponent {
   Assembly = 'assembly',
 }
 
+export interface ProductionStage {
+  id?: string;
+  stageName: string;
+  duration: string | number;
+  order: number;
+}
+
 export interface ComponentCreate {
   componentName: string;
   amount: string | number;
   measure: Measures;
   scannedBy: string;
-  durationOfDevelopment: string | number;
   triggerMinAmount: string | number;
   supplier: string;
   cost: string | number;
@@ -72,21 +78,22 @@ export interface ComponentCreate {
   lastScanned: string;
   description?: string;
   image?: string;
-  location?: string | number;
+  location?: string;
+  productionStages?: ProductionStage[];
 }
 
 export interface ComponentUpdate {
   amount?: string | number;
   measure?: Measures;
   scannedBy?: string;
-  durationOfDevelopment?: string | number;
   triggerMinAmount?: string | number;
   supplier?: string;
   cost?: string | number;
   type?: TypeOfComponent;
   description?: string;
   image?: string;
-  location?: string | number;
+  location?: string;
+  productionStages?: ProductionStage[];
 }
 
 export interface ComponentDialogProps {

@@ -23,7 +23,7 @@ interface EditableComponent {
   description?: string;
   lastScanned: string;
   scannedBy: string;
-  durationofDevelopment: number;
+  productionStages?: { stageName: string; duration: number; order: number }[];
   triggerMinAmount: number;
 }
 
@@ -123,13 +123,12 @@ export const EditComponentModal: React.FC<EditComponentModalProps> = ({
               onChangeText={(text) => updateField('type', text)}
             />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Duration of Development (hours)"
-              value={String(component.durationofDevelopment || 0)}
-              onChangeText={(text) => updateField('durationofDevelopment', Number(text) || 0)}
-              keyboardType="numeric"
-            />
+            <View style={styles.readOnlyField}>
+              <Text style={styles.label}>Total Production Time (hours)</Text>
+              <Text style={styles.readOnlyValue}>
+                {component.productionStages?.reduce((sum, stage) => sum + stage.duration, 0) || 0}
+              </Text>
+            </View>
 
             <TextInput
               style={styles.input}

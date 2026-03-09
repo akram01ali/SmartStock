@@ -66,36 +66,64 @@ class ComponentName(BaseModel):
 class ComponentNameOnly(BaseModel):
     componentName: str
 
+class ProductionStage(BaseModel):
+    id: Optional[str] = None
+    stageName: str
+    duration: float
+    order: int
+
+class ProductionStageCreate(BaseModel):
+    stageName: str
+    duration: float
+    order: int
+
+class ProductionStageUpdate(BaseModel):
+    stageName: Optional[str] = None
+    duration: Optional[float] = None
+    order: Optional[int] = None
+
 class ComponentCreate(BaseModel):
     componentName: str
     amount: float
     measure: Measures
     scannedBy: str
-    durationOfDevelopment: float
     triggerMinAmount: float
     supplier: str
     cost: float
     type: TypeOfComponent
     description: Optional[str] = None
     image: Optional[str] = None
-    location: Optional[float] = None
+    location: Optional[str] = None
+    productionStages: Optional[List[ProductionStageCreate]] = []
 
 class ComponentUpdate(BaseModel):
     newComponentName: Optional[str] = None
     amount: float | None = None
     measure: Measures | None = None
     scannedBy: str | None = None
-    durationOfDevelopment: float | None = None
     triggerMinAmount: float | None = None
     supplier: str | None = None
     cost: float | None = None
     type: TypeOfComponent | None = None
     description: Optional[str] = None
     image: Optional[str] = None
-    location: Optional[float] = None
+    location: Optional[str] = None
+    productionStages: Optional[List[ProductionStageCreate]] = None
 
-class Component(ComponentCreate):
+class Component(BaseModel):
+    componentName: str
+    amount: float
+    measure: Measures
     lastScanned: datetime
+    scannedBy: str
+    triggerMinAmount: float
+    supplier: str
+    cost: float
+    type: TypeOfComponent
+    description: Optional[str] = None
+    image: Optional[str] = None
+    location: Optional[str] = None
+    productionStages: List[ProductionStage] = []
 
     class Config:
         from_attributes = True

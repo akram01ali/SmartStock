@@ -80,12 +80,15 @@ async def _get_component_delivery_duration(component_name: str, db: Prisma) -> f
 async def _get_component_duration(component_name: str, db: Prisma) -> float:
     try:
         component = await db.components.find_first(
-            where={"componentName": component_name}
+            where={"componentName": component_name},
+            include={"productionStages": {"order_by": {"order": "asc"}}}
         )
         if not component:
             raise RecordNotFoundError(f"Component '{component_name}' not found")
         
-        return component.durationOfDevelopment
+        # Sum all production stage durations
+        total_duration = sum(stage.duration for stage in (component.productionStages or []))
+        return total_duration
     
     except RecordNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

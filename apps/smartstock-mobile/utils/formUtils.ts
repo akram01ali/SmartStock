@@ -56,7 +56,7 @@ export const resetComponentForm = (defaultScannedBy: string = 'mobile-app') => (
   type: 'component',
   description: '',
   scannedBy: defaultScannedBy,
-  durationOfDevelopment: 0,
+  productionStages: [],
   triggerMinAmount: 0,
 });
 

@@ -36,7 +36,6 @@ model Components {
   measure               Measures
   lastScanned           DateTime @default(now())
   scannedBy             String
-  durationOfDevelopment Float
   triggerMinAmount      Float
   supplier              String
   cost                  Float
@@ -44,12 +43,26 @@ model Components {
   description           String?
   image                 String?
   delivery_time         Float?
-  location              Float?
+  location              String?
+  productionStages      ProductionStage[]
   manuals               ComponentManual[]
   
   @@index([type])
   @@index([lastScanned])
   @@index([amount])
+}
+
+model ProductionStage {
+  id               String   @id @default(cuid())
+  componentName    String
+  component        Components @relation(fields: [componentName], references: [componentName], onDelete: Cascade)
+  stageName        String
+  duration         Float    // Duration in hours
+  order            Int      // Order of the stage
+  createdAt        DateTime @default(now())
+  
+  @@index([componentName])
+  @@unique([componentName, order])
 }
 
 model ComponentHistory {

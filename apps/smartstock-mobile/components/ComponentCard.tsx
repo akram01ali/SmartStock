@@ -14,7 +14,7 @@ interface Component {
   image?: string;
   lastScanned: string;
   scannedBy: string;
-  durationofDevelopment: number;
+  productionStages?: { stageName: string; duration: number; order: number }[];
   triggerMinAmount: number;
 }
 

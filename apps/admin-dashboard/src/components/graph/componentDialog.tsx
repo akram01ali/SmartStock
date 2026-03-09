@@ -11,13 +11,21 @@ import {
   useToast,
   useColorModeValue,
   Box,
+  HStack,
+  Input,
+  IconButton,
+  Text,
+  Heading,
+  Divider,
 } from '@chakra-ui/react';
+import { MdDelete, MdAdd } from 'react-icons/md';
 import { ApiService } from '../../services/service';
 import {
   ComponentCreate,
   ComponentDialogProps,
   Measures,
   TypeOfComponent,
+  ProductionStage,
 } from './types';
 import { FormField, componentFormFields } from './componentFormfield';
 import { Suggestions } from './Suggestions';
@@ -30,13 +38,14 @@ function getInitialFormData(): ComponentCreate {
     measure: Measures.Amount,
     lastScanned: new Date().toISOString(),
     scannedBy: '',
-    durationOfDevelopment: '0',
     triggerMinAmount: '0',
     supplier: '',
     cost: '0',
     type: TypeOfComponent.Component,
     description: '',
     image: '',
+    location: '',
+    productionStages: [],
   };
 }
 
@@ -55,7 +64,10 @@ function prepareFormDataForSubmission(formData: ComponentCreate): ComponentCreat
     amount: parseFloatSafe(formData.amount),
     triggerMinAmount: parseFloatSafe(formData.triggerMinAmount),
     cost: parseFloatSafe(formData.cost),
-    durationOfDevelopment: parseFloatSafe(formData.durationOfDevelopment),
+    productionStages: (formData.productionStages || []).map((stage: any) => ({
+      ...stage,
+      duration: parseFloatSafe(stage.duration),
+    })),
   };
 }
 
@@ -136,8 +148,13 @@ export function ComponentDialog({
           amount: component.amount?.toString() || '0',
           triggerMinAmount: component.triggerMinAmount?.toString() || '0',
           cost: component.cost?.toString() || '0',
-          durationOfDevelopment: component.durationOfDevelopment?.toString() || '0',
           lastScanned: component.lastScanned || new Date().toISOString(),
+          productionStages: (component.productionStages || []).map((stage: any) => ({
+            id: stage.id,
+            stageName: stage.stageName,
+            duration: stage.duration?.toString() || '0',
+            order: stage.order || 0,
+          })),
         });
       } else if (mode === 'create') {
         setFormData(getInitialFormData());
@@ -159,6 +176,29 @@ export function ComponentDialog({
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddProductionStage = () => {
+    const newStage: ProductionStage = {
+      stageName: '',
+      duration: '0',
+      order: (formData.productionStages?.length || 0) + 1,
+    };
+    setFormData((prev) => ({
+      ...prev,
+      productionStages: [...(prev.productionStages || []), newStage],
+    }));
+  };
+
+  const handleUpdateProductionStage = (index: number, field: string, value: any) => {
+    const stages = [...(formData.productionStages || [])];
+    stages[index] = { ...stages[index], [field]: value };
+    setFormData((prev) => ({ ...prev, productionStages: stages }));
+  };
+
+  const handleRemoveProductionStage = (index: number) => {
+    const stages = (formData.productionStages || []).filter((_, i) => i !== index);
+    setFormData((prev) => ({ ...prev, productionStages: stages }));
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
@@ -329,6 +369,97 @@ export function ComponentDialog({
 
             {/* Dynamic form fields */}
             {renderFormFields()}
+
+            {/* Production Stages Section */}
+            <Box width="100%">
+              <Divider my={2} borderColor={colors.borderColor} />
+              <Heading size="sm" color={colors.textColor} mb={3}>
+                Production Stages
+              </Heading>
+              
+              <VStack spacing={3} align="stretch">
+                {(formData.productionStages || []).map((stage, index) => (
+                  <Box
+                    key={index}
+                    p={3}
+                    bg={colors.inputBg}
+                    borderRadius="md"
+                    borderColor={colors.borderColor}
+                    borderWidth="1px"
+                  >
+                    <HStack spacing={2} align="flex-start">
+                      <VStack flex={1} spacing={2} align="stretch">
+                        <Input
+                          placeholder="Stage name (e.g., Design, Manufacturing, Testing)"
+                          value={stage.stageName}
+                          onChange={(e) => handleUpdateProductionStage(index, 'stageName', e.target.value)}
+                          bg="transparent"
+                          borderColor={colors.borderColor}
+                          color={colors.textColor}
+                          size="sm"
+                        />
+                        <HStack spacing={2}>
+                          <Box flex={1}>
+                            <Text fontSize="xs" color={colors.textColorSecondary} mb={1}>
+                              Duration (hours)
+                            </Text>
+                            <Input
+                              placeholder="0"
+                              type="number"
+                              value={stage.duration}
+                              onChange={(e) => handleUpdateProductionStage(index, 'duration', e.target.value)}
+                              bg="transparent"
+                              borderColor={colors.borderColor}
+                              color={colors.textColor}
+                              size="sm"
+                              min="0"
+                              step="0.5"
+                            />
+                          </Box>
+                          <Box flex={1}>
+                            <Text fontSize="xs" color={colors.textColorSecondary} mb={1}>
+                              Order
+                            </Text>
+                            <Input
+                              placeholder="1"
+                              type="number"
+                              value={stage.order}
+                              onChange={(e) => handleUpdateProductionStage(index, 'order', parseInt(e.target.value) || 0)}
+                              bg="transparent"
+                              borderColor={colors.borderColor}
+                              color={colors.textColor}
+                              size="sm"
+                              min="1"
+                            />
+                          </Box>
+                        </HStack>
+                      </VStack>
+                      <IconButton
+                        icon={<MdDelete />}
+                        aria-label="Delete stage"
+                        size="sm"
+                        colorScheme="red"
+                        variant="ghost"
+                        onClick={() => handleRemoveProductionStage(index)}
+                        mt={1}
+                      />
+                    </HStack>
+                  </Box>
+                ))}
+                
+                <Button
+                  size="sm"
+                  leftIcon={<MdAdd />}
+                  onClick={handleAddProductionStage}
+                  colorScheme="blue"
+                  variant="outline"
+                  width="100%"
+                >
+                  Add Production Stage
+                </Button>
+              </VStack>
+              <Divider my={2} borderColor={colors.borderColor} />
+            </Box>
 
             {/* Image Upload */}
             <ImageUpload

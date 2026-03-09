@@ -54,7 +54,7 @@ interface Component {
   measure: Measures;
   lastScanned: string;
   scannedBy: string;
-  durationOfDevelopment: number;
+  productionStages?: Array<{id?: string; stageName: string; duration: number; order: number}>;
   triggerMinAmount: number;
   supplier: string;
   cost: number;
@@ -205,15 +205,13 @@ export default function InventoryPage() {
 
   // Event handlers
   const handleItemClick = useCallback(async (item: Component) => {
-    if (!item.image) {
-      try {
-        const fullComponent = await ApiService.getComponent(item.componentName);
-        setSelectedComponent(fullComponent);
-      } catch (error) {
-        console.error('Error fetching full component:', error);
-        setSelectedComponent(item);
-      }
-    } else {
+    try {
+      // Always fetch the full component to ensure productionStages and all details are included
+      const fullComponent = await ApiService.getComponent(item.componentName);
+      setSelectedComponent(fullComponent);
+    } catch (error) {
+      console.error('Error fetching full component:', error);
+      // Fallback to item if fetch fails
       setSelectedComponent(item);
     }
   }, []);

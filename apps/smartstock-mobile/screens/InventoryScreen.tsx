@@ -35,7 +35,7 @@ interface NewComponent {
   type: string;
   description?: string;
   scannedBy: string;
-  durationOfDevelopment: number;
+  productionStages?: { stageName: string; duration: number; order: number }[];
   triggerMinAmount: number;
 }
 
@@ -62,7 +62,7 @@ const resetComponentForm = (defaultScannedBy: string = 'mobile-app'): NewCompone
   type: 'component',
   description: '',
   scannedBy: defaultScannedBy,
-  durationOfDevelopment: 0,
+  productionStages: [],
   triggerMinAmount: 0,
 });
 
@@ -280,7 +280,7 @@ export default function InventoryScreen() {
         amount: newComponent.amount,
         measure: newComponent.measure,
         scannedBy: newComponent.scannedBy,
-        durationOfDevelopment: newComponent.durationOfDevelopment,
+        productionStages: newComponent.productionStages,
         triggerMinAmount: newComponent.triggerMinAmount,
         supplier: newComponent.supplier,
         cost: newComponent.cost,
@@ -588,18 +588,6 @@ export default function InventoryScreen() {
                   value={newComponent.type}
                   onChangeText={(text) => setNewComponent({...newComponent, type: text})}
                   placeholder="Enter component type"
-                />
-              </View>
-
-              {/* Duration of Development */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Duration of Development (days)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={String(newComponent.durationOfDevelopment)}
-                  onChangeText={(text) => setNewComponent({...newComponent, durationOfDevelopment: parseInt(text) || 0})}
-                  placeholder="Enter development duration"
-                  keyboardType="numeric"
                 />
               </View>
 

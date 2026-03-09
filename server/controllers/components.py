@@ -18,7 +18,10 @@ async def get_printers(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        printers = await db.components.find_many(where={"type": TypeOfComponent.printer})
+        printers = await db.components.find_many(
+            where={"type": TypeOfComponent.printer},
+            include={"productionStages": {"order_by": {"order": "asc"}}}
+        )
         return printers
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to fetch printers")
@@ -29,7 +32,10 @@ async def get_groups(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        groups = await db.components.find_many(where={"type": TypeOfComponent.group})
+        groups = await db.components.find_many(
+            where={"type": TypeOfComponent.group},
+            include={"productionStages": {"order_by": {"order": "asc"}}}
+        )
         return groups
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to fetch groups")
@@ -40,7 +46,10 @@ async def get_assemblies(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        assemblies = await db.components.find_many(where={"type": TypeOfComponent.assembly})
+        assemblies = await db.components.find_many(
+            where={"type": TypeOfComponent.assembly},
+            include={"productionStages": {"order_by": {"order": "asc"}}}
+        )
         return assemblies
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to fetch assemblies")
@@ -125,14 +134,13 @@ async def get_all_components_light_paginated(
             "measure": component.measure,
             "lastScanned": component.lastScanned,
             "scannedBy": component.scannedBy,
-            "durationOfDevelopment": component.durationOfDevelopment,
             "triggerMinAmount": component.triggerMinAmount,
             "supplier": component.supplier,
             "cost": component.cost,
             "type": component.type,
             "description": component.description,
             "location": component.location,
-            # Explicitly exclude the 'image' field
+            # Explicitly exclude the 'image' field and production stages for light version
         }
         for component in components
     ]
@@ -213,7 +221,6 @@ async def search_components_light_paginated(
             "measure": component.measure,
             "lastScanned": component.lastScanned,
             "scannedBy": component.scannedBy,
-            "durationOfDevelopment": component.durationOfDevelopment,
             "triggerMinAmount": component.triggerMinAmount,
             "supplier": component.supplier,
             "cost": component.cost,
@@ -255,7 +262,10 @@ async def get_component(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        component = await db.components.find_unique(where={"componentName": component_name})
+        component = await db.components.find_unique(
+            where={"componentName": component_name},
+            include={"productionStages": {"order_by": {"order": "asc"}}}
+        )
         if not component:
             raise HTTPException(status_code=404, detail=f"Component '{component_name}' not found")
         return component
@@ -309,12 +319,28 @@ async def create_component(
             return existing
         
         else:
+            # Extract production stages from the request
+            production_stages = component.productionStages or []
+            component_data = component.dict()
+            component_data.pop('productionStages', None)
+            
             created = await db.components.create(  
                 data={
-                    **component.dict(),
+                    **component_data,
                     "lastScanned": datetime.utcnow()
                 }
             )
+            
+            # Create production stages if provided
+            for stage in production_stages:
+                await db.productionstage.create(
+                    data={
+                        "componentName": created.componentName,
+                        "stageName": stage.stageName,
+                        "duration": stage.duration,
+                        "order": stage.order,
+                    }
+                )
             
             try:
                 if root and root != component.componentName:
@@ -331,7 +357,12 @@ async def create_component(
                 )
                 raise Exception(f"Failed to create relationship: {str(rel_error)}")
             
-            return created
+            # Fetch the created component with its production stages
+            result = await db.components.find_unique(
+                where={"componentName": created.componentName},
+                include={"productionStages": {"order_by": {"order": "asc"}}}
+            )
+            return result
             
     except Exception as e:
         raise HTTPException(
@@ -356,12 +387,13 @@ async def update_component(
                 detail=f"Component '{component_name}' not found"
             )
         
-        # Extract newComponentName separately from other fields
+        # Extract newComponentName and productionStages separately
         new_component_name = component.newComponentName
+        production_stages = component.productionStages
         
         update_data = {
             k: v for k, v in component.dict().items() 
-            if v is not None and k != "newComponentName"
+            if v is not None and k != "newComponentName" and k != "productionStages"
         }
         
         update_data["lastScanned"] = datetime.utcnow()
@@ -412,15 +444,46 @@ async def update_component(
                 data={"componentName": new_component_name}
             )
             
+            # Update production stages component references
+            await db.productionstage.update_many(
+                where={"componentName": component_name},
+                data={"componentName": new_component_name}
+            )
+            
             # Add the new component name to update data
             update_data["componentName"] = new_component_name
 
         updated = await db.components.update(
             where={"componentName": component_name},
-            data=update_data
+            data=update_data,
+            include={"productionStages": {"order_by": {"order": "asc"}}}
         )
         
-        return updated
+        # Handle production stages update if provided
+        if production_stages is not None:
+            # Delete existing production stages
+            await db.productionstage.delete_many(
+                where={"componentName": updated.componentName}
+            )
+            
+            # Create new production stages
+            for stage in production_stages:
+                await db.productionstage.create(
+                    data={
+                        "componentName": updated.componentName,
+                        "stageName": stage.stageName,
+                        "duration": stage.duration,
+                        "order": stage.order,
+                    }
+                )
+        
+        # Fetch updated component with production stages
+        result = await db.components.find_unique(
+            where={"componentName": updated.componentName},
+            include={"productionStages": {"order_by": {"order": "asc"}}}
+        )
+        
+        return result
 
     except HTTPException:
         raise
@@ -568,7 +631,6 @@ async def get_all_components_with_images_paginated(
                 "description": component.description,
             "location": component.location,
                 "scannedBy": component.scannedBy,
-                "durationOfDevelopment": component.durationOfDevelopment,
                 "triggerMinAmount": component.triggerMinAmount,
                 "supplier": component.supplier,
                 "cost": component.cost,
@@ -694,7 +756,7 @@ async def get_low_stock_components(
         low_stock_components = await db.query_raw(
             """
             SELECT "componentName", amount, measure, "lastScanned", "scannedBy", 
-                   "durationOfDevelopment", "triggerMinAmount", supplier, cost, 
+                   "triggerMinAmount", supplier, cost, 
                    type, description, image, location
             FROM "Components" 
             WHERE amount < "triggerMinAmount"

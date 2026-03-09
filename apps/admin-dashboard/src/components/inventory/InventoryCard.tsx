@@ -24,7 +24,7 @@ interface Component {
   measure: Measures;
   lastScanned: string;
   scannedBy: string;
-  durationOfDevelopment: number;
+  productionStages?: Array<{id?: string; stageName: string; duration: number; order: number}>;
   triggerMinAmount: number;
   supplier: string;
   cost: number;

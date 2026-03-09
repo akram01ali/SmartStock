@@ -230,7 +230,7 @@ export class ApiService {
       amount: component.amount,
       measure: component.measure,
       scannedBy: component.scannedBy,
-      durationOfDevelopment: component.durationOfDevelopment,
+      productionStages: component.productionStages,
       triggerMinAmount: component.triggerMinAmount,
       supplier: component.supplier,
       cost: component.cost,

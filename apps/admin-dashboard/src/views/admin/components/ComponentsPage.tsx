@@ -203,13 +203,13 @@ export default function ComponentsPage() {
       measure: Measures.Amount,
       lastScanned: new Date().toISOString(),
       scannedBy: '',
-      durationOfDevelopment: 0,
       triggerMinAmount: 0,
       supplier: '',
       cost: 0,
       type: section.componentType,
       description: '',
       image: '',
+      productionStages: [],
     };
   }, [createType]);
 

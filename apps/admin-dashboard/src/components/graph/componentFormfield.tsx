@@ -85,7 +85,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   const [localError, setLocalError] = useState<string>('');
   
   // Handle floating point fields
-  const isFloatField = type === 'float' || (type === 'number' && ['amount', 'triggerMinAmount', 'cost', 'durationOfDevelopment'].includes(name));
+  const isFloatField = type === 'float' || (type === 'number' && ['amount', 'triggerMinAmount', 'cost'].includes(name));
 
   const handleFloatChange = (inputValue: string) => {
     setLocalError('');
@@ -241,12 +241,6 @@ export const componentFormFields = [
     placeholder: '0.00',
   },
   {
-    id: 'durationOfDevelopment',
-    label: 'Production Time',
-    type: 'time',
-    placeholder: '00:00',
-  },
-  {
     id: 'type',
     label: 'Type',
     type: 'select',
@@ -262,5 +256,11 @@ export const componentFormFields = [
     label: 'Description',
     type: 'textarea',
     placeholder: 'Enter component description (optional)',
+  },
+  {
+    id: 'location',
+    label: 'Location',
+    type: 'text',
+    placeholder: 'Enter location (e.g., "Warehouse A", "Shelf 3B", "Building 2 - Room 401")',
   },
 ];

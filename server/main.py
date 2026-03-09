@@ -13,7 +13,7 @@ from config import (
     CORS_METHODS, CORS_HEADERS, HOST, PORT
 )
 from controllers.database import connect_db, disconnect_db
-from controllers import components, relationships, tree, graph, analytics, forecasting, manuals, checklists
+from controllers import components, relationships, tree, graph, analytics, forecasting, manuals, checklists, laborprofiles
 from controllers.auth import auth_routes
 
 app = FastAPI(title=APP_TITLE, version=APP_VERSION)
@@ -70,6 +70,7 @@ app.include_router(analytics.router)
 app.include_router(forecasting.router)
 app.include_router(manuals.router)
 app.include_router(checklists.router)
+app.include_router(laborprofiles.router)
 
 # Add direct compatibility routes for frontend
 from models import UserLogin, Token, Component, RelationshipCreate, Relationship, ComponentUpdate, UserCreate, CreateAppUser, ReturnUser, RelationshipRequest, ComponentName, ComponentNameOnly, User as UserModel
@@ -372,10 +373,21 @@ async def get_low_stock_components_compat(
 async def get_component_total_cost_compat(
     topName: str = Query(...),
     hourly_rate: float = Query(18.5, description="Hourly rate for cost calculation in EUR"),
+    profileId: str = Query(None, description="Optional labor profile ID to use for cost calculation"),
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     from controllers.analytics import get_component_total_cost_detailed
+    
+    # If profileId is provided, fetch the profile and use its hourly rate
+    if profileId:
+        try:
+            profile = await db.laborprofile.find_unique(where={"id": profileId})
+            if profile:
+                hourly_rate = profile.hourlyRate
+        except:
+            pass  # Fall back to provided hourly_rate if profile fetch fails
+    
     return await get_component_total_cost_detailed(topName, hourly_rate, db, current_user)
 
 

@@ -155,6 +155,28 @@ class ComponentManualCreate(BaseModel):
     fileType: str
     uploadedBy: str
 
+# Labor Profile Models
+class LaborProfileCreate(BaseModel):
+    name: str
+    hourlyRate: float
+    description: Optional[str] = None
+
+class LaborProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    hourlyRate: Optional[float] = None
+    description: Optional[str] = None
+
+class LaborProfile(BaseModel):
+    id: str
+    name: str
+    hourlyRate: float
+    description: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
 class RelationshipCreate(BaseModel):
     topComponent: str
     subComponent: str

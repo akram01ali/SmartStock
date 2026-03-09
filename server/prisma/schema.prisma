@@ -154,6 +154,17 @@ model ComponentManual {
   @@index([uploadedAt])
 }
 
+model LaborProfile {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  hourlyRate       Float
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@index([createdAt])
+}
+
 model ControlChecklistTemplate {
   id               String   @id @default(cuid())
   name             String

@@ -24,6 +24,7 @@ import {
   FormErrorMessage,
   FormHelperText,
   Input,
+  Select,
 } from '@chakra-ui/react';
 
 import { ApiService } from '../../../services/service';
@@ -103,6 +104,9 @@ export default function InventoryComponent({
   const [hourlyRateError, setHourlyRateError] = useState<string | null>(null);
   const [isCalculatingCost, setIsCalculatingCost] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [laborProfiles, setLaborProfiles] = useState<any[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
 
   // Hooks
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -276,24 +280,29 @@ export default function InventoryComponent({
   };
 
   const handleCalculateCost = useCallback(async () => {
-    if (!hourlyRateInput) {
-      setHourlyRateError('Hourly rate is required.');
+    if (!hourlyRateInput && !selectedProfileId) {
+      setHourlyRateError('Please select a labor profile or enter an hourly rate.');
       return;
     }
 
-    if (isNaN(parseFloat(hourlyRateInput))) {
+    if (!selectedProfileId && isNaN(parseFloat(hourlyRateInput))) {
       setHourlyRateError('Please enter a valid number.');
       return;
     }
 
-    if (parseFloat(hourlyRateInput) <= 0) {
+    if (!selectedProfileId && parseFloat(hourlyRateInput) <= 0) {
       setHourlyRateError('Hourly rate must be positive.');
       return;
     }
 
     setIsCalculatingCost(true);
     try {
-      const data = await ApiService.getComponentTotalCost(component.componentName, hourlyRate);
+      let data;
+      if (selectedProfileId) {
+        data = await ApiService.getComponentTotalCostWithProfile(component.componentName, selectedProfileId);
+      } else {
+        data = await ApiService.getComponentTotalCost(component.componentName, hourlyRate);
+      }
       setAnalyticsData(data);
       showToast('Cost Calculated Successfully', 'Total cost and production time calculated.', 'success');
     } catch (error) {
@@ -301,7 +310,7 @@ export default function InventoryComponent({
     } finally {
       setIsCalculatingCost(false);
     }
-  }, [hourlyRateInput, component.componentName, hourlyRate, showToast, showErrorToast]);
+  }, [hourlyRateInput, selectedProfileId, component.componentName, hourlyRate, showToast, showErrorToast]);
 
   // Sync component prop changes
   useEffect(() => {
@@ -309,12 +318,39 @@ export default function InventoryComponent({
     setLocationInput(component.location?.toString() || '');
   }, [component.location, component.componentName]);
 
+  // Load labor profiles on component mount
+  useEffect(() => {
+    const loadLaborProfiles = async () => {
+      setIsLoadingProfiles(true);
+      try {
+        const profiles = await ApiService.getAllLaborProfiles();
+        setLaborProfiles(profiles);
+        // Auto-select the first profile if available
+        if (profiles.length > 0) {
+          setSelectedProfileId(profiles[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading labor profiles:', error);
+      } finally {
+        setIsLoadingProfiles(false);
+      }
+    };
+
+    loadLaborProfiles();
+  }, []);
+
   // Auto-calculate cost on component mount with default hourly rate
   useEffect(() => {
     const calculateInitialCost = async () => {
       setIsCalculatingCost(true);
       try {
-        const data = await ApiService.getComponentTotalCost(component.componentName, 18.5);
+        // Use selected profile if available, otherwise use default hourly rate
+        let data;
+        if (selectedProfileId) {
+          data = await ApiService.getComponentTotalCostWithProfile(component.componentName, selectedProfileId);
+        } else {
+          data = await ApiService.getComponentTotalCost(component.componentName, 18.5);
+        }
         setAnalyticsData(data);
       } catch (error) {
         console.error('Error calculating initial cost:', error);
@@ -325,7 +361,7 @@ export default function InventoryComponent({
     };
 
     calculateInitialCost();
-  }, [component.componentName]);
+  }, [component.componentName, selectedProfileId]);
 
   // Render helpers
   const renderStatCard = (label: string, value: string | number, unit?: string) => (
@@ -595,10 +631,38 @@ export default function InventoryComponent({
                 <Text fontSize="lg" fontWeight="600" color={textColor}>
                   Cost Analytics
                 </Text>
-                
+
+                <FormControl>
+                  <FormLabel color={textColor} fontSize="sm" fontWeight="500">
+                    Labor Profile
+                  </FormLabel>
+                  <Select
+                    value={selectedProfileId}
+                    onChange={(e) => {
+                      setSelectedProfileId(e.target.value);
+                      setHourlyRateError(null);
+                    }}
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    color={textColor}
+                    size="sm"
+                    isDisabled={isLoadingProfiles}
+                    placeholder="Select a labor profile..."
+                  >
+                    {laborProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name} (€{profile.hourlyRate.toFixed(2)}/hr)
+                      </option>
+                    ))}
+                  </Select>
+                  <FormHelperText fontSize="xs" color={textColorSecondary}>
+                    Select a labor profile to use for cost calculation. The hourly rate will be taken from the selected profile.
+                  </FormHelperText>
+                </FormControl>
+
                 <FormControl isInvalid={Boolean(hourlyRateError)}>
                   <FormLabel color={textColor} fontSize="sm" fontWeight="500">
-                    Hourly Rate (EUR)
+                    Custom Hourly Rate (EUR) - Optional
                   </FormLabel>
                   <HStack spacing={3}>
                     <Input
@@ -613,6 +677,7 @@ export default function InventoryComponent({
                       size="sm"
                       maxW="120px"
                       _placeholder={{ color: textColorSecondary }}
+                      isDisabled={Boolean(selectedProfileId)}
                     />
                     <Button
                       onClick={handleCalculateCost}
@@ -620,7 +685,7 @@ export default function InventoryComponent({
                       size="sm"
                       isLoading={isCalculatingCost}
                       loadingText="Calculating..."
-                      isDisabled={!hourlyRate || Boolean(hourlyRateError)}
+                      isDisabled={!selectedProfileId && (!hourlyRate || Boolean(hourlyRateError))}
                     >
                       Recalculate
                     </Button>
@@ -629,7 +694,7 @@ export default function InventoryComponent({
                     <FormErrorMessage fontSize="xs">{hourlyRateError}</FormErrorMessage>
                   )}
                   <FormHelperText fontSize="xs" color={textColorSecondary}>
-                    Default rate is €18.5/hr. Change the rate and click "Recalculate" to update the cost analysis.
+                    Use a custom rate to override the profile rate. Leave empty to use the selected profile rate.
                   </FormHelperText>
                 </FormControl>
 

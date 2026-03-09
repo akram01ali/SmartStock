@@ -13,6 +13,7 @@ import {
   MdInventory,
   MdAnalytics,
   MdChecklist,
+  MdPeople,
 } from 'react-icons/md';
 
 // Admin Imports
@@ -28,6 +29,7 @@ import GraphDagre from 'views/admin/graphDagre/index';
 import ForecastingPage from 'views/admin/forecasting/ForecastingPage';
 import TemplateManager from 'views/admin/checklists/TemplateManager';
 import ControlChecklistExecution from 'views/admin/checklists/ControlChecklistExecution';
+import LaborProfilesPage from 'views/admin/laborprofiles/LaborProfilesPage';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -83,6 +85,20 @@ const routes = [
       />
     ),
     component: <ControlChecklistExecution />,
+  },
+  {
+    name: 'Labor Profiles',
+    layout: '/admin',
+    path: '/labor-profiles',
+    icon: (
+      <Icon
+        as={MdPeople as any}
+        width="20px"
+        height="20px"
+        color="inherit"
+      />
+    ),
+    component: <LaborProfilesPage />,
   },
 ];
 

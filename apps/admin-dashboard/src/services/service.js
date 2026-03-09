@@ -663,6 +663,31 @@ export class ApiService {
   }
 
   /**
+   * Get component total cost using a labor profile
+   * @param {string} topName - The component name
+   * @param {string} profileId - The labor profile ID
+   * @returns {Promise<Object>} Cost analytics data
+   */
+  static async getComponentTotalCostWithProfile(topName, profileId) {
+    try {
+      const headers = this.getAuthHeaders();
+      const url = new URL(`${API_URL}/analytics`);
+      url.searchParams.append('topName', topName);
+      url.searchParams.append('profileId', profileId);
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers,
+      });
+
+      return await this.handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching component total cost with profile:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Updates component stock
    * @param {string} componentName - The component name
    * @param {number} amount - The amount to add/subtract or set
@@ -1145,5 +1170,87 @@ export class ApiService {
       console.error('Error generating PDF:', error);
       throw error;
     }
+  }
+
+  // Labor Profile Management
+  static async getAllLaborProfiles() {
+    const response = await fetch(`${API_URL}/labor-profiles/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch labor profiles');
+    }
+
+    return await response.json();
+  }
+
+  static async getLaborProfile(profileId) {
+    const response = await fetch(
+      `${API_URL}/labor-profiles/${encodeURIComponent(profileId)}`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch labor profile');
+    }
+
+    return await response.json();
+  }
+
+  static async createLaborProfile(profileData) {
+    const response = await fetch(`${API_URL}/labor-profiles/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create labor profile');
+    }
+
+    return await response.json();
+  }
+
+  static async updateLaborProfile(profileId, profileData) {
+    const response = await fetch(
+      `${API_URL}/labor-profiles/${encodeURIComponent(profileId)}`,
+      {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(profileData),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update labor profile');
+    }
+
+    return await response.json();
+  }
+
+  static async deleteLaborProfile(profileId) {
+    const response = await fetch(
+      `${API_URL}/labor-profiles/${encodeURIComponent(profileId)}`,
+      {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete labor profile');
+    }
+
+    return { success: true };
   }
 }

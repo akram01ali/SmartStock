@@ -316,7 +316,7 @@ export default function InventoryComponent({
   useEffect(() => {
     setCurrentComponent(component);
     setLocationInput(component.location?.toString() || '');
-  }, [component.location, component.componentName]);
+  }, [component]);
 
   // Load labor profiles on component mount
   useEffect(() => {

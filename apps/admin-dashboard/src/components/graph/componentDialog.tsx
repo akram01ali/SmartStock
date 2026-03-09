@@ -18,7 +18,7 @@ import {
   Heading,
   Divider,
 } from '@chakra-ui/react';
-import { MdDelete, MdAdd } from 'react-icons/md';
+import { DeleteIcon, AddIcon } from '../common/IconWrapper';
 import { ApiService } from '../../services/service';
 import {
   ComponentCreate,
@@ -435,7 +435,7 @@ export function ComponentDialog({
                         </HStack>
                       </VStack>
                       <IconButton
-                        icon={<MdDelete />}
+                        icon={<DeleteIcon />}
                         aria-label="Delete stage"
                         size="sm"
                         colorScheme="red"
@@ -449,7 +449,7 @@ export function ComponentDialog({
                 
                 <Button
                   size="sm"
-                  leftIcon={<MdAdd />}
+                  leftIcon={<AddIcon />}
                   onClick={handleAddProductionStage}
                   colorScheme="blue"
                   variant="outline"

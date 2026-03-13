@@ -11,8 +11,10 @@ import {
   useToast,
   Spinner,
   Badge,
+  Icon,
 } from '@chakra-ui/react';
 import { AnimatePresence } from 'framer-motion';
+import { MdPrint } from 'react-icons/md';
 
 import { ApiService } from '../../../services/service';
 import InventoryComponent from './InventoryComponent';
@@ -30,6 +32,7 @@ import {
   BackIcon,
   WarningIcon,
 } from '../../../components/common/IconWrapper';
+import { printLowStockAlert } from '../../../utils/printUtils';
 
 // Types
 interface Component {
@@ -170,6 +173,25 @@ export default function LowStockView({ onBack, onEdit, onDelete, typeFilter }: L
     }
   }, [onDelete, fetchLowStockComponents]);
 
+  const handlePrintLowStock = useCallback(() => {
+    if (lowStockComponents.length === 0) {
+      toast({
+        title: 'No Items to Print',
+        description: 'There are no low stock components to print',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    printLowStockAlert(lowStockComponents, {
+      title: 'Low Stock Alert Report',
+      subtitle: `Report generated for ${lowStockComponents.length} component${lowStockComponents.length !== 1 ? 's' : ''}`,
+      filename: `low-stock-alert-${new Date().toISOString().split('T')[0]}`,
+    });
+  }, [lowStockComponents, toast]);
+
   // Effects
   useEffect(() => {
     fetchLowStockComponents();
@@ -222,17 +244,32 @@ export default function LowStockView({ onBack, onEdit, onDelete, typeFilter }: L
                   {typeFilter !== 'all' && ` (${typeFilter} type only)`}
                 </Text>
               </VStack>
-              <Button
-                leftIcon={<BackIcon size="16px" />}
-                colorScheme="gray"
-                variant="outline"
-                size="lg"
-                onClick={onBack}
-                _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
-                transition="all 0.2s"
-              >
-                Back to Inventory
-              </Button>
+              <Flex gap={2}>
+                {lowStockComponents.length > 0 && (
+                  <Button
+                    leftIcon={<Icon as={MdPrint as any} />}
+                    colorScheme="blue"
+                    variant="outline"
+                    size="lg"
+                    onClick={handlePrintLowStock}
+                    _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
+                    transition="all 0.2s"
+                  >
+                    Print Report
+                  </Button>
+                )}
+                <Button
+                  leftIcon={<BackIcon size="16px" />}
+                  colorScheme="gray"
+                  variant="outline"
+                  size="lg"
+                  onClick={onBack}
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
+                  transition="all 0.2s"
+                >
+                  Back to Inventory
+                </Button>
+              </Flex>
             </Flex>
 
             {/* Low Stock Grid */}

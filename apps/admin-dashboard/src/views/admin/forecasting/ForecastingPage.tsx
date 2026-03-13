@@ -32,7 +32,7 @@ import {
   AlertDialogContent,
   AlertDialogOverlay,
 } from '@chakra-ui/react';
-import { MdAdd, MdRefresh, MdSearch } from 'react-icons/md';
+import { MdAdd, MdRefresh, MdSearch, MdPrint } from 'react-icons/md';
 import { ForecastingService } from '../../../services/forecastingService';
 import { ApiService } from '../../../services/service';
 import {
@@ -46,6 +46,7 @@ import ReservationCard from '../../../components/forecasting/ReservationCard';
 import CreateReservationModal from '../../../components/forecasting/CreateReservationModal';
 import { ReservationDetailsModal } from '../../../components/forecasting/ReservationDetailsModal';
 import SmoothMotionBox, { fadeInUp } from '../../../components/transitions/MotionBox';
+import { printPurchaseRequirements } from '../../../utils/printUtils';
 
 const ForecastingPage: React.FC = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -247,6 +248,25 @@ const ForecastingPage: React.FC = () => {
     }
   };
 
+  const handlePrintPurchaseRequirements = () => {
+    if (purchaseRequirements.length === 0) {
+      toast({
+        title: 'No Items to Print',
+        description: 'There are no purchase requirements to print',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    printPurchaseRequirements(purchaseRequirements, {
+      title: 'Purchase Requirements Report',
+      subtitle: `Report generated for ${purchaseRequirements.length} requirement${purchaseRequirements.length !== 1 ? 's' : ''}`,
+      filename: `purchase-requirements-${new Date().toISOString().split('T')[0]}`,
+    });
+  };
+
   const filteredReservations = reservations.filter(reservation =>
     reservation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     reservation.componentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -396,45 +416,63 @@ const ForecastingPage: React.FC = () => {
 
               {/* Purchase Requirements Panel */}
               <TabPanel p={0} pt={6}>
-                {purchaseRequirements.length === 0 ? (
-                  <Center py={12}>
-                    <VStack spacing={4}>
-                      <Icon as={MdRefresh as any} size="48px" color="gray.400" />
-                      <Text color={textColorSecondary} fontSize="lg">
-                        No purchase requirements
-                      </Text>
-                      <Text color={textColorSecondary} fontSize="sm">
-                        Purchase requirements will appear here when components need to be ordered
-                      </Text>
-                    </VStack>
-                  </Center>
-                ) : (
-                  <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                    {purchaseRequirements.map((req) => {
-                      const fakeReservation: Reservation = {
-                        id: req.id,
-                        isRoot: true,
-                        level: 0,
-                        title: req.componentName,
-                        componentName: req.componentName,
-                        quantity: req.requiredQuantity,
-                        priority: 10,
-                        requestedBy: 'Purchase System',
-                        neededByDate: req.neededByDate,
-                        status: ReservationStatus.PENDING,
-                        createdAt: req.createdAt,
-                      };
-                      return (
-                        <SmoothMotionBox key={req.id} variants={fadeInUp}>
-                          <ReservationCard
-                            reservation={fakeReservation}
-                            onViewBreakdown={handleViewBreakdown}
-                          />
-                        </SmoothMotionBox>
-                      );
-                    })}
-                  </SimpleGrid>
-                )}
+                <VStack spacing={6} align="stretch">
+                  {/* Print Button */}
+                  {purchaseRequirements.length > 0 && (
+                    <HStack justify="flex-end">
+                      <Button
+                        leftIcon={<Icon as={MdPrint as any} />}
+                        colorScheme="green"
+                        variant="outline"
+                        size="md"
+                        onClick={handlePrintPurchaseRequirements}
+                      >
+                        Print Report
+                      </Button>
+                    </HStack>
+                  )}
+
+                  {/* Content */}
+                  {purchaseRequirements.length === 0 ? (
+                    <Center py={12}>
+                      <VStack spacing={4}>
+                        <Icon as={MdRefresh as any} size="48px" color="gray.400" />
+                        <Text color={textColorSecondary} fontSize="lg">
+                          No purchase requirements
+                        </Text>
+                        <Text color={textColorSecondary} fontSize="sm">
+                          Purchase requirements will appear here when components need to be ordered
+                        </Text>
+                      </VStack>
+                    </Center>
+                  ) : (
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                      {purchaseRequirements.map((req) => {
+                        const fakeReservation: Reservation = {
+                          id: req.id,
+                          isRoot: true,
+                          level: 0,
+                          title: req.componentName,
+                          componentName: req.componentName,
+                          quantity: req.requiredQuantity,
+                          priority: 10,
+                          requestedBy: 'Purchase System',
+                          neededByDate: req.neededByDate,
+                          status: ReservationStatus.PENDING,
+                          createdAt: req.createdAt,
+                        };
+                        return (
+                          <SmoothMotionBox key={req.id} variants={fadeInUp}>
+                            <ReservationCard
+                              reservation={fakeReservation}
+                              onViewBreakdown={handleViewBreakdown}
+                            />
+                          </SmoothMotionBox>
+                        );
+                      })}
+                    </SimpleGrid>
+                  )}
+                </VStack>
               </TabPanel>
             </TabPanels>
           </Tabs>

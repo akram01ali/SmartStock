@@ -325,46 +325,54 @@ export default function ComponentsPage() {
     return () => setSearchQuery('');
   }, [setSearchQuery]);
 
-  if (loading) {
-    return (
-      <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
+{loading ? (
+  <Flex justify="center" align="center" minH="200px">
+    <Text fontSize="lg" color={textColorSecondary}>
+      Loading Components...
+    </Text>
+  </Flex>
+) : (
+  COMPONENT_SECTIONS.map(renderComponentSection)
+)}
+
+  return (
+  <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
+    <VStack spacing={8} align="stretch">
+      {/* Header — always visible */}
+      <Flex justify="space-between" align="center">
+        <VStack align="start" spacing={2}>
+          <Heading size="lg" color={textColor}>
+            Components
+          </Heading>
+          {searchQuery && !loading && (
+            <Text color={textColorSecondary} fontSize="sm">
+              Showing {totalResults} of {totalComponents} components matching "{searchQuery}"
+            </Text>
+          )}
+        </VStack>
+        <Button
+          leftIcon={<DownloadIcon />}
+          colorScheme="blue"
+          variant="outline"
+          onClick={onExportOpen}
+        >
+          Export CSV
+        </Button>
+      </Flex>
+
+      {/* Loading state — only gates the component sections */}
+      {loading ? (
         <Flex justify="center" align="center" minH="200px">
           <Text fontSize="lg" color={textColorSecondary}>
             Loading Components...
           </Text>
         </Flex>
-      </SmoothMotionBox>
-    );
-  }
-  return (
-    
-    <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
-      <VStack spacing={8} align="stretch">
-        {/* Header */}
-        <Flex justify="space-between" align="center">
-          <VStack align="start" spacing={2}>
-            <Heading size="lg" color={textColor}>
-              Components
-            </Heading>
-            {searchQuery && (
-              <Text color={textColorSecondary} fontSize="sm">
-                Showing {totalResults} of {totalComponents} components matching "{searchQuery}"
-              </Text>
-            )}
-          </VStack>
-        <Button
-            leftIcon={<DownloadIcon />}
-            colorScheme="blue"
-            variant="outline"
-            onClick={onExportOpen}
-          >
-            Export CSV
-          </Button>
-        </Flex>
-
-        {/* Render component sections */}
-        {COMPONENT_SECTIONS.map(renderComponentSection)}
-      </VStack>
+      ) : (
+        COMPONENT_SECTIONS.map(renderComponentSection)
+      )}
+    </VStack>
+ 
+  
 
       <ComponentDialog
         isOpen={isOpen}

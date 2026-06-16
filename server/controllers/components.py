@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
+import io
+import csv
 from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from prisma import Prisma
 from prisma.enums import TypeOfComponent
 from prisma.errors import RecordNotFoundError
@@ -9,8 +12,44 @@ from .auth.auth import get_current_user
 from .auth.models import User
 from .database import get_db
 from models import Component, ComponentCreate, ComponentUpdate, ComponentTree, TreeNode, GraphData, Node, NodeData, Edge, ComponentName, ComponentNameOnly
+from controllers.analytics import get_component_total_cost_detailed
 
 router = APIRouter(prefix="/components", tags=["components"])
+
+@router.get("/export/csv")
+async def export_components_csv(
+    hourly_rate: float = Query(18.5, description="Hourly rate for cost calculation in EUR"),
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        components = await db.components.find_many()
+        
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(["Component name", "Material cost", "Labor cost", "Total cost"])
+        
+        for comp in components:
+            try:
+                cost_data = await get_component_total_cost_detailed(comp.componentName, hourly_rate, db, current_user)
+                writer.writerow([
+                    comp.componentName,
+                    f"{cost_data['material_cost']:.2f}",
+                    f"{cost_data['labor_cost']:.2f}",
+                    f"{cost_data['total_cost']:.2f}"
+                ])
+            except Exception as e:
+                # Fallback if cost calculation fails for a specific component
+                writer.writerow([comp.componentName, "Error", "Error", "Error"])
+        
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="components_cost.csv"'}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/printers", response_model=List[Component])
 async def get_printers(

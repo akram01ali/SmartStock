@@ -50,6 +50,32 @@ export class ApiService {
     return await response.json();
   }
 
+  /**
+   * Export components cost data as CSV
+   * @param {number} hourlyRate - The hourly rate for labor cost calculation
+   * @returns {Promise<Blob>} The CSV file blob
+   */
+  static async exportComponentsCSV(hourlyRate = 18.5) {
+    const response = await fetch(`${API_URL}/components/export/csv?hourly_rate=${hourlyRate}`, {
+      method: 'GET',
+      headers: {
+        ...(localStorage.getItem('authToken') && { Authorization: `Bearer ${localStorage.getItem('authToken')}` }),
+      },
+    });
+
+    if (!response.ok) {
+      const error = new Error('Failed to export CSV');
+      error.status = response.status;
+      if (response.status === 401 && this.authErrorHandler) {
+        this.authErrorHandler(error);
+        return;
+      }
+      throw error;
+    }
+
+    return await response.blob();
+  }
+
   // Components endpoints
   static async getPrinters() {
     try {

@@ -24,7 +24,7 @@ import {
   NumberDecrementStepper,
   FormControl,
   FormLabel,
-  Icon, 
+  Icon,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { MdGroups, MdPrint, MdBuild } from 'react-icons/md';
@@ -124,14 +124,14 @@ export default function ComponentsPage() {
   const componentsByType = useMemo(() => {
     const filterComponents = (type: TypeOfComponent) => {
       let filtered = components.filter(component => component.type === type);
-      
+
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(component =>
           component.componentName.toLowerCase().includes(query)
         );
       }
-      
+
       return filtered;
     };
 
@@ -152,10 +152,8 @@ export default function ComponentsPage() {
   const fetchAllComponents = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('Fetching printers, groups, and assemblies...');
-      const components = await ApiService.getPrintersGroupsAssemblies() as Component[];
-      console.log('Components loaded:', components);
-      setComponents(components || []);
+      const fetched = await ApiService.getPrintersGroupsAssemblies() as Component[];
+      setComponents(fetched || []);
     } catch (error) {
       console.error('Error fetching components:', error);
       showErrorToast(error, 'Error fetching components');
@@ -218,7 +216,6 @@ export default function ComponentsPage() {
         'success'
       );
 
-      // Refresh data
       await fetchAllComponents();
       onClose();
     } catch (error) {
@@ -228,10 +225,10 @@ export default function ComponentsPage() {
 
   const getInitialComponent = useCallback((): ComponentCreate | null => {
     if (!createType) return null;
-    
+
     const section = COMPONENT_SECTIONS.find(s => s.type === createType);
     if (!section) return null;
-    
+
     return {
       componentName: '',
       amount: 0,
@@ -279,8 +276,10 @@ export default function ComponentsPage() {
   ), [handleCardClick, cardShadow]);
 
   const renderComponentSection = useCallback((section: SectionConfig) => {
-    const sectionComponents = componentsByType[section.type === 'printer' ? 'printers' : 
-                                              section.type === 'group' ? 'groups' : 'assemblies'];
+    const sectionComponents = componentsByType[
+      section.type === 'printer' ? 'printers' :
+      section.type === 'group' ? 'groups' : 'assemblies'
+    ];
     const allSectionComponents = components.filter(c => c.type === section.componentType);
 
     return (
@@ -307,7 +306,7 @@ export default function ComponentsPage() {
           </SmoothCard>
         ) : (
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
-            {sectionComponents.map((component, index) => 
+            {sectionComponents.map((component, index) =>
               renderComponentCard(component, index, section.gradient)
             )}
           </SimpleGrid>
@@ -325,54 +324,42 @@ export default function ComponentsPage() {
     return () => setSearchQuery('');
   }, [setSearchQuery]);
 
-{loading ? (
-  <Flex justify="center" align="center" minH="200px">
-    <Text fontSize="lg" color={textColorSecondary}>
-      Loading Components...
-    </Text>
-  </Flex>
-) : (
-  COMPONENT_SECTIONS.map(renderComponentSection)
-)}
-
   return (
-  <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
-    <VStack spacing={8} align="stretch">
-      {/* Header — always visible */}
-      <Flex justify="space-between" align="center">
-        <VStack align="start" spacing={2}>
-          <Heading size="lg" color={textColor}>
-            Components
-          </Heading>
-          {searchQuery && !loading && (
-            <Text color={textColorSecondary} fontSize="sm">
-              Showing {totalResults} of {totalComponents} components matching "{searchQuery}"
-            </Text>
-          )}
-        </VStack>
-        <Button
-          leftIcon={<DownloadIcon />}
-          colorScheme="blue"
-          variant="outline"
-          onClick={onExportOpen}
-        >
-          Export CSV
-        </Button>
-      </Flex>
-
-      {/* Loading state — only gates the component sections */}
-      {loading ? (
-        <Flex justify="center" align="center" minH="200px">
-          <Text fontSize="lg" color={textColorSecondary}>
-            Loading Components...
-          </Text>
+    <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
+      <VStack spacing={8} align="stretch">
+        {/* Header — always visible, never gated by loading */}
+        <Flex justify="space-between" align="center">
+          <VStack align="start" spacing={2}>
+            <Heading size="lg" color={textColor}>
+              Components
+            </Heading>
+            {searchQuery && !loading && (
+              <Text color={textColorSecondary} fontSize="sm">
+                Showing {totalResults} of {totalComponents} components matching "{searchQuery}"
+              </Text>
+            )}
+          </VStack>
+          <Button
+            leftIcon={<DownloadIcon />}
+            colorScheme="blue"
+            variant="outline"
+            onClick={onExportOpen}
+          >
+            Export CSV
+          </Button>
         </Flex>
-      ) : (
-        COMPONENT_SECTIONS.map(renderComponentSection)
-      )}
-    </VStack>
- 
-  
+
+        {/* Component sections — gated by loading */}
+        {loading ? (
+          <Flex justify="center" align="center" minH="200px">
+            <Text fontSize="lg" color={textColorSecondary}>
+              Loading Components...
+            </Text>
+          </Flex>
+        ) : (
+          COMPONENT_SECTIONS.map(renderComponentSection)
+        )}
+      </VStack>
 
       <ComponentDialog
         isOpen={isOpen}
@@ -390,10 +377,10 @@ export default function ComponentsPage() {
           <ModalBody>
             <FormControl>
               <FormLabel>Hourly Rate for Labor Cost (€)</FormLabel>
-              <NumberInput 
-                value={exportHourlyRate} 
-                onChange={(_, value) => setExportHourlyRate(isNaN(value) ? 0 : value)} 
-                min={0} 
+              <NumberInput
+                value={exportHourlyRate}
+                onChange={(_, value) => setExportHourlyRate(isNaN(value) ? 0 : value)}
+                min={0}
                 precision={2}
               >
                 <NumberInputField />
@@ -414,7 +401,6 @@ export default function ComponentsPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
     </SmoothMotionBox>
   );
 }

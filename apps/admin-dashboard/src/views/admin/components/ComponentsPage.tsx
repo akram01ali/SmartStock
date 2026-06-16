@@ -336,8 +336,9 @@ export default function ComponentsPage() {
       </SmoothMotionBox>
     );
   }
-
+const DownloadIcon = MdDownload as any;
   return (
+    
     <SmoothMotionBox pt={{ base: '130px', md: '80px', xl: '80px' }}>
       <VStack spacing={8} align="stretch">
         {/* Header */}
@@ -352,8 +353,8 @@ export default function ComponentsPage() {
               </Text>
             )}
           </VStack>
-      <Button
-            leftIcon={<Icon as={MdDownload} />}
+        <Button
+            leftIcon={<DownloadIcon />}
             colorScheme="blue"
             variant="outline"
             onClick={onExportOpen}

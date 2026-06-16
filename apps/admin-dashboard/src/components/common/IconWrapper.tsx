@@ -1,6 +1,7 @@
 import React from 'react';
 import { Icon, IconProps } from '@chakra-ui/react';
 import { IconType } from 'react-icons';
+import { MdDownload } from 'react-icons/md';
 
 interface IconWrapperProps extends Omit<IconProps, 'as'> {
   icon: IconType;
@@ -96,3 +97,7 @@ export const TravelIcon: React.FC<SimpleIconProps> = (props) => (
 export const PersonOutlineIcon: React.FC<SimpleIconProps> = (props) => (
   <span style={{ fontSize: props.size || '16px', color: props.color, ...props.style }}>👤</span>
 ); 
+
+export const DownloadIcon: React.FC<Omit<IconProps, 'as'>> = (props) => (
+  <IconWrapper icon={MdDownload} {...props} />
+);

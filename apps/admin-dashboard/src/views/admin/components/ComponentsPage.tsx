@@ -27,7 +27,7 @@ import {
   Icon, 
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { MdGroups, MdPrint, MdBuild, MdDownload } from 'react-icons/md';
+import { MdGroups, MdPrint, MdBuild } from 'react-icons/md';
 
 import { ApiService } from '../../../services/service';
 import SmoothCard from 'components/card/MotionCard';
@@ -35,7 +35,7 @@ import SmoothMotionBox, { fadeInUp } from 'components/transitions/MotionBox';
 import { useSearch } from '../../../contexts/SearchContext';
 import { ComponentDialog } from '../../../components/graph/componentDialog';
 import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
-import { AddIcon } from '../../../components/common/IconWrapper';
+import { AddIcon, DownloadIcon } from '../../../components/common/IconWrapper';
 
 // Types
 interface Component {
@@ -353,7 +353,7 @@ export default function ComponentsPage() {
             )}
           </VStack>
         <Button
-            leftIcon={<Icon as={MdDownload as any} />}
+            leftIcon={<DownloadIcon />}
             colorScheme="blue"
             variant="outline"
             onClick={onExportOpen}

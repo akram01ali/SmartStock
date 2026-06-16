@@ -24,6 +24,7 @@ import {
   NumberDecrementStepper,
   FormControl,
   FormLabel,
+  Icon, 
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { MdGroups, MdPrint, MdBuild, MdDownload } from 'react-icons/md';
@@ -351,8 +352,8 @@ export default function ComponentsPage() {
               </Text>
             )}
           </VStack>
-          <Button
-            leftIcon={<MdDownload />}
+      <Button
+            leftIcon={<Icon as={MdDownload} />}
             colorScheme="blue"
             variant="outline"
             onClick={onExportOpen}

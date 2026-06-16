@@ -315,7 +315,7 @@ async def generate_pdf(checklist_id: str, db: Prisma = Depends(lambda: Prisma())
         return StreamingResponse(
             iter([pdf_buffer.getvalue()]),
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=checklist_{checklist.printerSerialNumber}.pdf"}
+            headers={"Content-Disposition": f'attachment; filename="{checklist.printerSerialNumber}.pdf"'}
         )
     
     except Exception as e:

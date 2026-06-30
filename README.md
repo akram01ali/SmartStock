@@ -232,3 +232,5 @@ To see the logs of the backup, execute:
 ```bash
 cat /var/log/smartstock_backup.log
 ```
+
+sudo docker exec -i mydb psql -U postgres -d mydb < smartstock_backup.sql

@@ -64,7 +64,7 @@ jobs:
           cd ~/SmartStock
           echo "Schema changed — running prisma db push..."
           timeout 60s bash -c 'until docker exec smartstock_postgres pg_isready -U postgres; do sleep 2; done'
-          docker compose exec -T backend npx prisma db push
+          docker compose exec -T backend npx prisma@5 db push --accept-data-loss
 
       - name: Cleanup old images
         run: docker image prune -f

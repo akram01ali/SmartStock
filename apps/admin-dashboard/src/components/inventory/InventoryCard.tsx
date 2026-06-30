@@ -183,15 +183,6 @@ const InventoryCard = React.memo<InventoryCardProps>(({
     </Text>
   ), [textColorSecondary, textColor, item.supplier]);
 
-  const renderLocationInfo = useCallback(() => (
-    <Text color={textColorSecondary} fontSize="xs" noOfLines={1}>
-      Location:{' '}
-      <Text as="span" color={textColor} fontWeight="500">
-        {item.location || '—'}
-      </Text>
-    </Text>
-  ), [textColorSecondary, textColor, item.location]);
-
   return (
     <SmoothCard
       onClick={handleClick}
@@ -211,7 +202,7 @@ const InventoryCard = React.memo<InventoryCardProps>(({
       {/* Card Content */}
       <VStack align="stretch" spacing={3} p={4}>
         {/* Stats Grid */}
-        <SimpleGrid columns={2} spacing={4}>
+        <SimpleGrid columns={3} spacing={4}>
           {renderStatItem('Amount', item.amount, item.measure)}
           <Box>
             <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
@@ -225,14 +216,21 @@ const InventoryCard = React.memo<InventoryCardProps>(({
               <Spinner size="sm" mt={1} />
             )}
           </Box>
+          <Box>
+            <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
+              Location
+            </Text>
+            <Text color={textColor} fontWeight="bold" fontSize="lg" noOfLines={1}>
+              {item.location || '—'}
+            </Text>
+          </Box>
         </SimpleGrid>
 
         {/* Stock Status */}
         {renderStockLevel()}
 
-        {/* Supplier & Location Info */}
+        {/* Supplier Info */}
         {renderSupplierInfo()}
-        {renderLocationInfo()}
       </VStack>
     </SmoothCard>
   );

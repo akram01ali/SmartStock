@@ -60,6 +60,8 @@ model ProductionStage {
   duration         Float    // Duration in hours
   order            Int      // Order of the stage
   createdAt        DateTime @default(now())
+  laborProfileId   String?
+  laborProfile     LaborProfile? @relation(fields: [laborProfileId], references: [id], onDelete: SetNull)
   
   @@index([componentName])
   @@unique([componentName, order])
@@ -161,6 +163,7 @@ model LaborProfile {
   description      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  productionStages ProductionStage[]
   
   @@index([createdAt])
 }

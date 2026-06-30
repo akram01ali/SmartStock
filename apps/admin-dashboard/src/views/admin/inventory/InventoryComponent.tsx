@@ -19,12 +19,7 @@ import {
   Stat,
   StatLabel,
   StatNumber,
-  FormControl,
-  FormLabel,
-  FormErrorMessage,
-  FormHelperText,
-  Input,
-  Select,
+  Spinner,
 } from '@chakra-ui/react';
 
 import { ApiService } from '../../../services/service';
@@ -96,13 +91,8 @@ export default function InventoryComponent({
   // State
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
-  const [hourlyRateInput, setHourlyRateInput] = useState('18.5');
-  const [hourlyRateError, setHourlyRateError] = useState<string | null>(null);
   const [isCalculatingCost, setIsCalculatingCost] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [laborProfiles, setLaborProfiles] = useState<any[]>([]);
-  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
-  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
 
   // Hooks
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -117,7 +107,6 @@ export default function InventoryComponent({
   const borderColor = useColorModeValue('gray.200', 'whiteAlpha.300');
   const imageBg = useColorModeValue('gray.50', 'gray.700');
   const fallbackBg = useColorModeValue('gray.100', 'gray.600');
-  const inputBg = useColorModeValue('gray.100', 'gray.800');
   const analyticsBg = useColorModeValue('blue.50', 'blue.900');
   const analyticsBorderColor = useColorModeValue('blue.200', 'blue.600');
   const analyticsTextColor = useColorModeValue('blue.700', 'blue.200');
@@ -129,7 +118,6 @@ export default function InventoryComponent({
 
   // Computed values
   const isLowStock = component.amount < component.triggerMinAmount;
-  const hourlyRate = parseFloat(hourlyRateInput) || 0;
 
   // Utility functions
   const getTypeColor = useCallback((type: TypeOfComponent) => {
@@ -227,100 +215,23 @@ export default function InventoryComponent({
     }
   }, [component.componentName, onEdit, onStockModalClose, showToast, showErrorToast]);
 
-  const handleHourlyRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setHourlyRateInput(value);
-    setHourlyRateError(null);
-  };
-
-  const handleHourlyRateBlur = () => {
-    if (!hourlyRateInput) {
-      setHourlyRateError('Hourly rate is required.');
-    } else if (isNaN(parseFloat(hourlyRateInput))) {
-      setHourlyRateError('Please enter a valid number.');
-    } else if (parseFloat(hourlyRateInput) <= 0) {
-      setHourlyRateError('Hourly rate must be positive.');
-    }
-  };
-
-  const handleCalculateCost = useCallback(async () => {
-    if (!hourlyRateInput && !selectedProfileId) {
-      setHourlyRateError('Please select a labor profile or enter an hourly rate.');
-      return;
-    }
-
-    if (!selectedProfileId && isNaN(parseFloat(hourlyRateInput))) {
-      setHourlyRateError('Please enter a valid number.');
-      return;
-    }
-
-    if (!selectedProfileId && parseFloat(hourlyRateInput) <= 0) {
-      setHourlyRateError('Hourly rate must be positive.');
-      return;
-    }
-
+  const calculateCost = useCallback(async () => {
     setIsCalculatingCost(true);
     try {
-      let data;
-      if (selectedProfileId) {
-        data = await ApiService.getComponentTotalCostWithProfile(component.componentName, selectedProfileId);
-      } else {
-        data = await ApiService.getComponentTotalCost(component.componentName, hourlyRate);
-      }
+      const data = await ApiService.getComponentTotalCost(component.componentName);
       setAnalyticsData(data);
-      showToast('Cost Calculated Successfully', 'Total cost and production time calculated.', 'success');
     } catch (error) {
-      showErrorToast(error, 'Error calculating cost');
+      console.error('Error calculating cost:', error);
     } finally {
       setIsCalculatingCost(false);
     }
-  }, [hourlyRateInput, selectedProfileId, component.componentName, hourlyRate, showToast, showErrorToast]);
+  }, [component.componentName]);
 
 
-  // Load labor profiles on component mount
+  // Auto-calculate cost on mount / when component changes
   useEffect(() => {
-    const loadLaborProfiles = async () => {
-      setIsLoadingProfiles(true);
-      try {
-        const profiles = await ApiService.getAllLaborProfiles();
-        setLaborProfiles(profiles);
-        // Auto-select the first profile if available
-        if (profiles.length > 0) {
-          setSelectedProfileId(profiles[0].id);
-        }
-      } catch (error) {
-        console.error('Error loading labor profiles:', error);
-      } finally {
-        setIsLoadingProfiles(false);
-      }
-    };
-
-    loadLaborProfiles();
-  }, []);
-
-  // Auto-calculate cost on component mount with default hourly rate
-  useEffect(() => {
-    const calculateInitialCost = async () => {
-      setIsCalculatingCost(true);
-      try {
-        // Use selected profile if available, otherwise use default hourly rate
-        let data;
-        if (selectedProfileId) {
-          data = await ApiService.getComponentTotalCostWithProfile(component.componentName, selectedProfileId);
-        } else {
-          data = await ApiService.getComponentTotalCost(component.componentName, 18.5);
-        }
-        setAnalyticsData(data);
-      } catch (error) {
-        console.error('Error calculating initial cost:', error);
-        // Don't show error toast on initial load, just log it
-      } finally {
-        setIsCalculatingCost(false);
-      }
-    };
-
-    calculateInitialCost();
-  }, [component.componentName, selectedProfileId]);
+    calculateCost();
+  }, [calculateCost]);
 
   // Render helpers
   const renderStatCard = (label: string, value: string | number, unit?: string) => (
@@ -548,153 +459,42 @@ export default function InventoryComponent({
                   Cost Analytics
                 </Text>
 
-                <FormControl>
-                  <FormLabel color={textColor} fontSize="sm" fontWeight="500">
-                    Labor Profile
-                  </FormLabel>
-                  <Select
-                    value={selectedProfileId}
-                    onChange={(e) => {
-                      setSelectedProfileId(e.target.value);
-                      setHourlyRateError(null);
-                    }}
-                    bg={inputBg}
-                    borderColor={borderColor}
-                    color={textColor}
-                    size="sm"
-                    isDisabled={isLoadingProfiles}
-                    placeholder="Select a labor profile..."
-                  >
-                    {laborProfiles.map((profile) => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name} (€{profile.hourlyRate.toFixed(2)}/hr)
-                      </option>
-                    ))}
-                  </Select>
-                  <FormHelperText fontSize="xs" color={textColorSecondary}>
-                    Select a labor profile to use for cost calculation. The hourly rate will be taken from the selected profile.
-                  </FormHelperText>
-                </FormControl>
-
-                <FormControl isInvalid={Boolean(hourlyRateError)}>
-                  <FormLabel color={textColor} fontSize="sm" fontWeight="500">
-                    Custom Hourly Rate (EUR) - Optional
-                  </FormLabel>
-                  <HStack spacing={3}>
-                    <Input
-                      type="text"
-                      value={hourlyRateInput}
-                      onChange={handleHourlyRateChange}
-                      onBlur={handleHourlyRateBlur}
-                      placeholder="18.5"
-                      bg={inputBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      size="sm"
-                      maxW="120px"
-                      _placeholder={{ color: textColorSecondary }}
-                      isDisabled={Boolean(selectedProfileId)}
-                    />
-                    <Button
-                      onClick={handleCalculateCost}
-                      colorScheme="blue"
-                      size="sm"
-                      isLoading={isCalculatingCost}
-                      loadingText="Calculating..."
-                      isDisabled={!selectedProfileId && (!hourlyRate || Boolean(hourlyRateError))}
-                    >
-                      Recalculate
-                    </Button>
-                  </HStack>
-                  {hourlyRateError && (
-                    <FormErrorMessage fontSize="xs">{hourlyRateError}</FormErrorMessage>
-                  )}
-                  <FormHelperText fontSize="xs" color={textColorSecondary}>
-                    Use a custom rate to override the profile rate. Leave empty to use the selected profile rate.
-                  </FormHelperText>
-                </FormControl>
-
-                {(analyticsData || isCalculatingCost) && (
-                  <Box
-                    p={4}
-                    bg={analyticsBg}
-                    borderRadius="lg"
-                    border="1px solid"
-                    borderColor={analyticsBorderColor}
-                  >
-                    <VStack spacing={3} align="stretch">
-                      <HStack justify="space-between">
-                        <Text fontSize="md" fontWeight="600" color={analyticsTextColor}>
-                          Cost Analysis Results
+                <Box p={4} bg={analyticsBg} borderRadius="lg" border="1px solid" borderColor={analyticsBorderColor}>
+                  {isCalculatingCost ? (
+                    <Flex justify="center" align="center" minH="80px">
+                      <Spinner color={analyticsTextColor} />
+                    </Flex>
+                  ) : analyticsData ? (
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                      <VStack spacing={1} align="start">
+                        <Text fontSize="xs" color={textColorSecondary} fontWeight="500">MATERIAL COST</Text>
+                        <Text fontSize="lg" fontWeight="700" color={textColor}>
+                          €{(analyticsData.material_cost ?? 0).toFixed(2)}
                         </Text>
-                        {isCalculatingCost && (
-                          <Text fontSize="xs" color={textColorSecondary}>
-                            Calculating...
-                          </Text>
-                        )}
-                      </HStack>
-                      
-                      {isCalculatingCost ? (
-                        <Flex justify="center" align="center" minH="100px">
-                          <Text color={textColorSecondary}>
-                            Calculating cost breakdown...
-                          </Text>
-                        </Flex>
-                      ) : analyticsData ? (
-                        <>
-                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                            <VStack spacing={1} align="start">
-                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
-                                MATERIAL COST
-                              </Text>
-                              <Text fontSize="lg" fontWeight="700" color={textColor}>
-                                €{analyticsData.material_cost?.toFixed(2) || '0.00'}
-                              </Text>
-                            </VStack>
-                            
-                            <VStack spacing={1} align="start">
-                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
-                                LABOR COST
-                              </Text>
-                              <Text fontSize="lg" fontWeight="700" color={textColor}>
-                                €{analyticsData.labor_cost?.toFixed(2) || '0.00'}
-                              </Text>
-                            </VStack>
-                            
-                            <VStack spacing={1} align="start">
-                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
-                                TOTAL COST
-                              </Text>
-                              <Text fontSize="xl" fontWeight="800" color={totalCostColor}>
-                                €{analyticsData.total_cost?.toFixed(2) || '0.00'}
-                              </Text>
-                            </VStack>
-                            
-                            <VStack spacing={1} align="start">
-                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
-                                HOURLY RATE USED
-                              </Text>
-                              <Text fontSize="lg" fontWeight="700" color={textColor}>
-                                €{analyticsData.hourly_rate?.toFixed(2) || '0.00'}/hr
-                              </Text>
-                            </VStack>
-                          </SimpleGrid>
-                          
-                          {analyticsData.total_development_time && (
-                            <VStack spacing={1} align="start">
-                              <Text fontSize="xs" color={textColorSecondary} fontWeight="500">
-                                TOTAL PRODUCTION TIME
-                              </Text>
-                              <Text fontSize="md" fontWeight="600" color={textColor}>
-                                {analyticsData.total_development_time} hours
-                              </Text>
-                            </VStack>
-                          )}
-                        </>
-                      ) : null}
-                    </VStack>
-                  </Box>
-                )}
+                      </VStack>
+                      <VStack spacing={1} align="start">
+                        <Text fontSize="xs" color={textColorSecondary} fontWeight="500">LABOR COST</Text>
+                        <Text fontSize="lg" fontWeight="700" color={textColor}>
+                          €{(analyticsData.labor_cost ?? 0).toFixed(2)}
+                        </Text>
+                      </VStack>
+                      <VStack spacing={1} align="start">
+                        <Text fontSize="xs" color={textColorSecondary} fontWeight="500">TOTAL COST</Text>
+                        <Text fontSize="xl" fontWeight="800" color={totalCostColor}>
+                          €{(analyticsData.total_cost ?? 0).toFixed(2)}
+                        </Text>
+                      </VStack>
+                      <VStack spacing={1} align="start">
+                        <Text fontSize="xs" color={textColorSecondary} fontWeight="500">TOTAL PRODUCTION TIME</Text>
+                        <Text fontSize="lg" fontWeight="700" color={textColor}>
+                          {(analyticsData.total_development_time ?? 0).toFixed(2)} hrs
+                        </Text>
+                      </VStack>
+                    </SimpleGrid>
+                  ) : (
+                    <Text fontSize="sm" color={textColorSecondary}>No data available.</Text>
+                  )}
+                </Box>
               </VStack>
 
               <Divider borderColor={borderColor} />

@@ -17,6 +17,7 @@ import {
   Text,
   Heading,
   Divider,
+  Select,
 } from '@chakra-ui/react';
 import { DeleteIcon, AddIcon } from '../common/IconWrapper';
 import { ApiService } from '../../services/service';
@@ -57,6 +58,22 @@ function parseFloatSafe(value: string | number): number {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+/** Convert a float hours value to "HH:MM" string for a time input */
+function hoursToTimeString(hours: number | string): string {
+  const h = parseFloatSafe(hours);
+  const totalMinutes = Math.round(h * 60);
+  const hh = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+  const mm = (totalMinutes % 60).toString().padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/** Convert "HH:MM" string back to float hours */
+function timeStringToHours(time: string): number {
+  if (!time) return 0;
+  const [hh, mm] = time.split(':').map(Number);
+  return (hh || 0) + (mm || 0) / 60;
+}
+
 // Helper function to prepare form data for submission
 function prepareFormDataForSubmission(formData: ComponentCreate): ComponentCreate {
   return {
@@ -66,7 +83,7 @@ function prepareFormDataForSubmission(formData: ComponentCreate): ComponentCreat
     cost: parseFloatSafe(formData.cost),
     productionStages: (formData.productionStages || []).map((stage: any) => ({
       ...stage,
-      duration: parseFloatSafe(stage.duration),
+      duration: timeStringToHours(stage.duration),
     })),
   };
 }
@@ -104,6 +121,7 @@ export function ComponentDialog({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [allComponents, setAllComponents] = useState<string[]>([]);
+  const [laborProfiles, setLaborProfiles] = useState<{ id: string; name: string; hourlyRate: number }[]>([]);
   const toast = useToast();
 
   // Color mode values
@@ -142,6 +160,11 @@ export function ComponentDialog({
   // Effects and handlers
   useEffect(() => {
     if (isOpen) {
+      // Load labor profiles whenever dialog opens
+      ApiService.getAllLaborProfiles()
+        .then((profiles: any) => setLaborProfiles(profiles || []))
+        .catch(() => setLaborProfiles([]));
+
       if (component && mode === 'edit') {
         setFormData({
           ...component,
@@ -152,8 +175,9 @@ export function ComponentDialog({
           productionStages: (component.productionStages || []).map((stage: any) => ({
             id: stage.id,
             stageName: stage.stageName,
-            duration: stage.duration?.toString() || '0',
+            duration: hoursToTimeString(stage.duration ?? 0),
             order: stage.order || 0,
+            laborProfileId: stage.laborProfileId || '',
           })),
         });
       } else if (mode === 'create') {
@@ -181,7 +205,7 @@ export function ComponentDialog({
   const handleAddProductionStage = () => {
     const newStage: ProductionStage = {
       stageName: '',
-      duration: '0',
+      duration: '00:00',
       order: (formData.productionStages?.length || 0) + 1,
     };
     setFormData((prev) => ({
@@ -401,20 +425,53 @@ export function ComponentDialog({
                         <HStack spacing={2}>
                           <Box flex={1}>
                             <Text fontSize="xs" color={colors.textColorSecondary} mb={1}>
-                              Duration (hours)
+                              Duration
                             </Text>
-                            <Input
-                              placeholder="0"
-                              type="number"
-                              value={stage.duration}
-                              onChange={(e) => handleUpdateProductionStage(index, 'duration', e.target.value)}
-                              bg="transparent"
-                              borderColor={colors.borderColor}
-                              color={colors.textColor}
-                              size="sm"
-                              min="0"
-                              step="0.5"
-                            />
+                            <HStack spacing={1}>
+                              <Input
+                                type="number"
+                                min={0}
+                                placeholder="0"
+                                value={(() => {
+                                  const t = (stage.duration as string) || '00:00';
+                                  return parseInt(t.split(':')[0] || '0', 10);
+                                })()}
+                                onChange={(e) => {
+                                  const current = (stage.duration as string) || '00:00';
+                                  const mm = current.split(':')[1] || '00';
+                                  const hh = Math.max(0, parseInt(e.target.value) || 0).toString().padStart(2, '0');
+                                  handleUpdateProductionStage(index, 'duration', `${hh}:${mm}`);
+                                }}
+                                bg="transparent"
+                                borderColor={colors.borderColor}
+                                color={colors.textColor}
+                                size="sm"
+                                w="60px"
+                              />
+                              <Text fontSize="xs" color={colors.textColorSecondary}>h</Text>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={59}
+                                placeholder="0"
+                                value={(() => {
+                                  const t = (stage.duration as string) || '00:00';
+                                  return parseInt(t.split(':')[1] || '0', 10);
+                                })()}
+                                onChange={(e) => {
+                                  const current = (stage.duration as string) || '00:00';
+                                  const hh = current.split(':')[0] || '00';
+                                  const mm = Math.min(59, Math.max(0, parseInt(e.target.value) || 0)).toString().padStart(2, '0');
+                                  handleUpdateProductionStage(index, 'duration', `${hh}:${mm}`);
+                                }}
+                                bg="transparent"
+                                borderColor={colors.borderColor}
+                                color={colors.textColor}
+                                size="sm"
+                                w="60px"
+                              />
+                              <Text fontSize="xs" color={colors.textColorSecondary}>m</Text>
+                            </HStack>
                           </Box>
                           <Box flex={1}>
                             <Text fontSize="xs" color={colors.textColorSecondary} mb={1}>
@@ -433,6 +490,26 @@ export function ComponentDialog({
                             />
                           </Box>
                         </HStack>
+                        <Box>
+                          <Text fontSize="xs" color={colors.textColorSecondary} mb={1}>
+                            Labor Profile
+                          </Text>
+                          <Select
+                            value={(stage as any).laborProfileId || ''}
+                            onChange={(e) => handleUpdateProductionStage(index, 'laborProfileId', e.target.value)}
+                            bg="transparent"
+                            borderColor={colors.borderColor}
+                            color={colors.textColor}
+                            size="sm"
+                            placeholder="No labor profile"
+                          >
+                            {laborProfiles.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} (€{p.hourlyRate.toFixed(2)}/hr)
+                              </option>
+                            ))}
+                          </Select>
+                        </Box>
                       </VStack>
                       <IconButton
                         icon={<DeleteIcon />}

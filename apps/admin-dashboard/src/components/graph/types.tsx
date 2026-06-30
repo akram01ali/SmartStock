@@ -64,6 +64,7 @@ export interface ProductionStage {
   stageName: string;
   duration: string | number;
   order: number;
+  laborProfileId?: string;
 }
 
 export interface ComponentCreate {

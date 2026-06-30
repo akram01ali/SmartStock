@@ -372,23 +372,11 @@ async def get_low_stock_components_compat(
 @app.get("/analytics", response_model=dict)
 async def get_component_total_cost_compat(
     topName: str = Query(...),
-    hourly_rate: float = Query(18.5, description="Hourly rate for cost calculation in EUR"),
-    profileId: str = Query(None, description="Optional labor profile ID to use for cost calculation"),
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     from controllers.analytics import get_component_total_cost_detailed
-    
-    # If profileId is provided, fetch the profile and use its hourly rate
-    if profileId:
-        try:
-            profile = await db.laborprofile.find_unique(where={"id": profileId})
-            if profile:
-                hourly_rate = profile.hourlyRate
-        except:
-            pass  # Fall back to provided hourly_rate if profile fetch fails
-    
-    return await get_component_total_cost_detailed(topName, hourly_rate, db, current_user)
+    return await get_component_total_cost_detailed(topName, db, current_user)
 
 
 

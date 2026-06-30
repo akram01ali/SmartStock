@@ -669,12 +669,11 @@ export class ApiService {
    * @param {number} hourlyRate - Hourly rate for cost calculation in EUR (default: 18.5)
    * @returns {Promise<Object>} Analytics data including total cost
    */
-  static async getComponentTotalCost(topName, hourlyRate = 18.5) {
+  static async getComponentTotalCost(topName) {
     try {
       const headers = this.getAuthHeaders();
       const url = new URL(`${API_URL}/analytics`);
       url.searchParams.append('topName', topName);
-      url.searchParams.append('hourly_rate', hourlyRate.toString());
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -689,42 +688,16 @@ export class ApiService {
   }
 
   /**
-   * Get component total cost using a labor profile
-   * @param {string} topName - The component name
-   * @param {string} profileId - The labor profile ID
-   * @returns {Promise<Object>} Cost analytics data
-   */
-  static async getComponentTotalCostWithProfile(topName, profileId) {
-    try {
-      const headers = this.getAuthHeaders();
-      const url = new URL(`${API_URL}/analytics`);
-      url.searchParams.append('topName', topName);
-      url.searchParams.append('profileId', profileId);
-
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers,
-      });
-
-      return await this.handleResponse(response);
-    } catch (error) {
-      console.error('Error fetching component total cost with profile:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Get flat BOM export data for a top component
    * @param {string} topName - The top component name
    * @param {number} hourlyRate - Hourly labor rate in EUR (default: 18.5)
    * @returns {Promise<Array>} Flat list of BOM rows with depth and cost data
    */
-  static async getBomExport(topName, hourlyRate = 18.5) {
+  static async getBomExport(topName) {
     try {
       const headers = this.getAuthHeaders();
       const url = new URL(`${API_URL}/analytics/bom-export`);
       url.searchParams.append('topName', topName);
-      url.searchParams.append('hourly_rate', hourlyRate.toString());
       const response = await fetch(url.toString(), { method: 'GET', headers });
       return await this.handleResponse(response);
     } catch (error) {

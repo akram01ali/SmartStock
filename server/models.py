@@ -71,16 +71,19 @@ class ProductionStage(BaseModel):
     stageName: str
     duration: float
     order: int
+    laborProfileId: Optional[str] = None
 
 class ProductionStageCreate(BaseModel):
     stageName: str
     duration: float
     order: int
+    laborProfileId: Optional[str] = None
 
 class ProductionStageUpdate(BaseModel):
     stageName: Optional[str] = None
     duration: Optional[float] = None
     order: Optional[int] = None
+    laborProfileId: Optional[str] = None
 
 class ComponentCreate(BaseModel):
     componentName: str

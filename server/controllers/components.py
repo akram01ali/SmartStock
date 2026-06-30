@@ -372,14 +372,15 @@ async def create_component(
             
             # Create production stages if provided
             for stage in production_stages:
-                await db.productionstage.create(
-                    data={
-                        "componentName": created.componentName,
-                        "stageName": stage.stageName,
-                        "duration": stage.duration,
-                        "order": stage.order,
-                    }
-                )
+                stage_data = {
+                    "componentName": created.componentName,
+                    "stageName": stage.stageName,
+                    "duration": stage.duration,
+                    "order": stage.order,
+                }
+                if stage.laborProfileId:
+                    stage_data["laborProfileId"] = stage.laborProfileId
+                await db.productionstage.create(data=stage_data)
             
             try:
                 if root and root != component.componentName:
@@ -507,14 +508,15 @@ async def update_component(
             
             # Create new production stages
             for stage in production_stages:
-                await db.productionstage.create(
-                    data={
-                        "componentName": updated.componentName,
-                        "stageName": stage.stageName,
-                        "duration": stage.duration,
-                        "order": stage.order,
-                    }
-                )
+                stage_data = {
+                    "componentName": updated.componentName,
+                    "stageName": stage.stageName,
+                    "duration": stage.duration,
+                    "order": stage.order,
+                }
+                if stage.laborProfileId:
+                    stage_data["laborProfileId"] = stage.laborProfileId
+                await db.productionstage.create(data=stage_data)
         
         # Fetch updated component with production stages
         result = await db.components.find_unique(

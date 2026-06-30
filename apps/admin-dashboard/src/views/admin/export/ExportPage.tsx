@@ -9,11 +9,9 @@ import {
   FormControl,
   FormLabel,
   FormHelperText,
-  FormErrorMessage,
   Input,
   InputGroup,
   InputLeftElement,
-  Select,
   useColorModeValue,
   useToast,
   Spinner,
@@ -80,11 +78,6 @@ export default function ExportPage() {
   const [selectedName, setSelectedName] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const [laborProfiles, setLaborProfiles] = useState<{ id: string; name: string; hourlyRate: number }[]>([]);
-  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
-  const [selectedProfileId, setSelectedProfileId] = useState('');
-  const [customRate, setCustomRate] = useState('');
-  const [hourlyRateError, setHourlyRateError] = useState('');
   const [bomData, setBomData] = useState<BomRow[] | null>(null);
   const [loadingBom, setLoadingBom] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -118,32 +111,6 @@ export default function ExportPage() {
       }
     })();
   }, [toast]);
-
-  // ── Load labor profiles ───────────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      setIsLoadingProfiles(true);
-      try {
-        const profiles = await ApiService.getAllLaborProfiles() as { id: string; name: string; hourlyRate: number }[];
-        setLaborProfiles(profiles);
-        if (profiles.length > 0) setSelectedProfileId(profiles[0].id);
-      } catch {
-        // non-fatal, user can still enter a custom rate
-      } finally {
-        setIsLoadingProfiles(false);
-      }
-    })();
-  }, []);
-
-  // Effective rate: profile rate takes priority, custom rate used when no profile selected
-  const effectiveRate = useMemo(() => {
-    if (selectedProfileId) {
-      const profile = laborProfiles.find((p) => p.id === selectedProfileId);
-      return profile ? profile.hourlyRate : null;
-    }
-    const parsed = parseFloat(customRate);
-    return isNaN(parsed) ? null : parsed;
-  }, [selectedProfileId, laborProfiles, customRate]);
 
   // ── Fuse.js fuzzy search ───────────────────────────────────────────────────
   const fuse = useMemo(
@@ -194,22 +161,17 @@ export default function ExportPage() {
       toast({ title: 'Please select a component', status: 'warning', duration: 2000 });
       return;
     }
-    if (effectiveRate === null || effectiveRate < 0) {
-      setHourlyRateError('Enter a valid hourly rate or select a labor profile.');
-      return;
-    }
-    setHourlyRateError('');
     setLoadingBom(true);
     setBomData(null);
     try {
-      const rows = await ApiService.getBomExport(selectedName, effectiveRate) as BomRow[];
+      const rows = await ApiService.getBomExport(selectedName) as BomRow[];
       setBomData(rows);
     } catch (err: any) {
       toast({ title: 'Failed to load BOM', description: err?.message ?? 'Unknown error', status: 'error', duration: 4000 });
     } finally {
       setLoadingBom(false);
     }
-  }, [selectedName, effectiveRate, toast]);
+  }, [selectedName, toast]);
 
   const handleExport = useCallback(async () => {
     if (!bomData || bomData.length === 0) return;
@@ -371,58 +333,6 @@ export default function ExportPage() {
                 </FormHelperText>
               </FormControl>
 
-              {/* Labor profile + optional custom rate */}
-              <VStack align="stretch" spacing={4}>
-                <FormControl>
-                  <FormLabel color={textColor} fontSize="sm" fontWeight="600">
-                    Labor Profile
-                  </FormLabel>
-                  <Select
-                    value={selectedProfileId}
-                    onChange={(e) => {
-                      setSelectedProfileId(e.target.value);
-                      setHourlyRateError('');
-                    }}
-                    bg={inputBg}
-                    isDisabled={isLoadingProfiles}
-                    placeholder={isLoadingProfiles ? 'Loading profiles…' : 'Select a labor profile…'}
-                  >
-                    {laborProfiles.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} (€{p.hourlyRate.toFixed(2)}/hr)
-                      </option>
-                    ))}
-                  </Select>
-                  <FormHelperText fontSize="xs" color={subText}>
-                    The profile's hourly rate is used for labor cost calculation.
-                  </FormHelperText>
-                </FormControl>
-
-                <FormControl isInvalid={Boolean(hourlyRateError)}>
-                  <FormLabel color={textColor} fontSize="sm" fontWeight="600">
-                    Custom Hourly Rate (€) — optional
-                  </FormLabel>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    placeholder="e.g. 18.5"
-                    value={customRate}
-                    onChange={(e) => {
-                      setCustomRate(e.target.value);
-                      setHourlyRateError('');
-                    }}
-                    bg={inputBg}
-                    isDisabled={Boolean(selectedProfileId)}
-                  />
-                  {hourlyRateError
-                    ? <FormErrorMessage fontSize="xs">{hourlyRateError}</FormErrorMessage>
-                    : <FormHelperText fontSize="xs" color={subText}>
-                        Overrides the profile rate. Leave empty to use the selected profile.
-                      </FormHelperText>
-                  }
-                </FormControl>
-              </VStack>
             </SimpleGrid>
 
             {/* Action buttons */}
@@ -478,7 +388,7 @@ export default function ExportPage() {
                   Preview — {selectedName}
                 </Text>
                 <Text fontSize="xs" color={subText}>
-                  {bomData.length} rows · labor rate €{effectiveRate?.toFixed(2)}/hr
+                  {bomData.length} rows · labor costs from stage profiles
                 </Text>
               </VStack>
               <HStack spacing={2}>

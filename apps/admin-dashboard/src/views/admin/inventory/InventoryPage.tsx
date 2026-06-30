@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Heading,
@@ -20,6 +20,11 @@ import {
   Center,
   ButtonGroup,
   IconButton,
+  Select,
+  Input,
+  FormControl,
+  FormLabel,
+  FormHelperText,
 } from '@chakra-ui/react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { AnimatePresence } from 'framer-motion';
@@ -117,6 +122,10 @@ export default function InventoryPage() {
   });
   const [isLowStockFilterActive, setIsLowStockFilterActive] = useState(false);
   const [totalCosts, setTotalCosts] = useState<Record<string, number>>({});
+  const [laborProfiles, setLaborProfiles] = useState<{ id: string; name: string; hourlyRate: number }[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState('');
+  const [customRate, setCustomRate] = useState('');
 
   // Hooks
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -132,6 +141,32 @@ export default function InventoryPage() {
   );
   const brandColor = useColorModeValue('brand.500', 'white');
   const imageFallbackBg = useColorModeValue('gray.100', 'gray.600');
+
+  // Effective labor rate: profile wins over custom input, fallback to 18.5
+  const effectiveRate = useMemo(() => {
+    if (selectedProfileId) {
+      const profile = laborProfiles.find((p) => p.id === selectedProfileId);
+      if (profile) return profile.hourlyRate;
+    }
+    const parsed = parseFloat(customRate);
+    return isNaN(parsed) || parsed < 0 ? 18.5 : parsed;
+  }, [selectedProfileId, laborProfiles, customRate]);
+
+  // Load labor profiles once on mount
+  useEffect(() => {
+    (async () => {
+      setIsLoadingProfiles(true);
+      try {
+        const profiles = await ApiService.getAllLaborProfiles() as { id: string; name: string; hourlyRate: number }[];
+        setLaborProfiles(profiles);
+        if (profiles.length > 0) setSelectedProfileId(profiles[0].id);
+      } catch {
+        // non-fatal
+      } finally {
+        setIsLoadingProfiles(false);
+      }
+    })();
+  }, []);
 
   // Utility functions
   const getTypeGradient = useCallback((type: TypeOfComponent) => {
@@ -177,6 +212,22 @@ export default function InventoryPage() {
     }
   }, [searchQuery, typeFilter, showErrorToast]);
 
+  const fetchTotalCostsForItems = useCallback((items: Component[], rate: number) => {
+    setTotalCosts({});
+    Promise.allSettled(
+      items.map((item) =>
+        ApiService.getComponentTotalCost(item.componentName, rate)
+          .then((res: any) => ({ name: item.componentName, total: res.total_cost as number }))
+      )
+    ).then((results) => {
+      const costs: Record<string, number> = {};
+      results.forEach((r) => {
+        if (r.status === 'fulfilled') costs[r.value.name] = r.value.total;
+      });
+      setTotalCosts(costs);
+    });
+  }, []);
+
   const fetchInventory = useCallback(async (page = 1) => {
     try {
       setLoading(true);
@@ -192,23 +243,7 @@ export default function InventoryPage() {
       setInventory(data);
       setPagination(paginationInfo);
       setCurrentPage(page);
-
-      // Fetch total costs for all items on this page in parallel (background, non-blocking)
-      const DEFAULT_HOURLY_RATE = 18.5;
-      Promise.allSettled(
-        data.map((item) =>
-          ApiService.getComponentTotalCost(item.componentName, DEFAULT_HOURLY_RATE)
-            .then((res: any) => ({ name: item.componentName, total: res.total_cost as number }))
-        )
-      ).then((results) => {
-        const costs: Record<string, number> = {};
-        results.forEach((r) => {
-          if (r.status === 'fulfilled') {
-            costs[r.value.name] = r.value.total;
-          }
-        });
-        setTotalCosts((prev) => ({ ...prev, ...costs }));
-      });
+      fetchTotalCostsForItems(data, effectiveRate);
     } catch (error) {
       console.error('Error fetching inventory:', error);
       showErrorToast(error, 'Error fetching inventory');
@@ -305,6 +340,12 @@ export default function InventoryPage() {
     fetchInventory(1);
     fetchStatistics();
   }, [searchQuery, typeFilter]);
+
+  // Re-fetch costs when the labor rate changes (inventory already loaded)
+  useEffect(() => {
+    if (inventory.length > 0) fetchTotalCostsForItems(inventory, effectiveRate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveRate]);
 
   // Fetch inventory when page changes
   useEffect(() => {
@@ -504,6 +545,52 @@ export default function InventoryPage() {
                 {TYPE_FILTER_CONFIG.map(renderTypeFilterButton)}
               </HStack>
             </Box>
+
+            {/* Labor Rate Selector */}
+            <SmoothCard boxShadow={cardShadow} p={4} mb={6}>
+              <HStack spacing={6} flexWrap="wrap" align="flex-end">
+                <FormControl maxW="280px">
+                  <FormLabel fontSize="sm" fontWeight="600" color={textColor} mb={1}>
+                    Labor Profile
+                  </FormLabel>
+                  <Select
+                    value={selectedProfileId}
+                    onChange={(e) => setSelectedProfileId(e.target.value)}
+                    size="sm"
+                    isDisabled={isLoadingProfiles}
+                    placeholder={isLoadingProfiles ? 'Loading…' : 'Select a profile…'}
+                  >
+                    {laborProfiles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} (€{p.hourlyRate.toFixed(2)}/hr)
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl maxW="180px">
+                  <FormLabel fontSize="sm" fontWeight="600" color={textColor} mb={1}>
+                    Custom Rate (€/hr)
+                  </FormLabel>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="e.g. 18.5"
+                    value={customRate}
+                    onChange={(e) => { setCustomRate(e.target.value); setSelectedProfileId(''); }}
+                    size="sm"
+                    isDisabled={Boolean(selectedProfileId)}
+                  />
+                </FormControl>
+
+                <Box pb={1}>
+                  <Text fontSize="xs" color={textColorSecondary}>
+                    Using <strong>€{effectiveRate.toFixed(2)}/hr</strong> for total cost
+                  </Text>
+                </Box>
+              </HStack>
+            </SmoothCard>
 
             {/* Inventory Grid */}
             {inventory.length === 0 && searchQuery ? (

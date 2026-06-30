@@ -14,6 +14,7 @@ import {
   MdAnalytics,
   MdChecklist,
   MdPeople,
+  MdDownload,
 } from 'react-icons/md';
 
 // Admin Imports
@@ -30,6 +31,7 @@ import ForecastingPage from 'views/admin/forecasting/ForecastingPage';
 import TemplateManager from 'views/admin/checklists/TemplateManager';
 import ControlChecklistExecution from 'views/admin/checklists/ControlChecklistExecution';
 import LaborProfilesPage from 'views/admin/laborprofiles/LaborProfilesPage';
+import ExportPage from 'views/admin/export/ExportPage';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -99,6 +101,20 @@ const routes = [
       />
     ),
     component: <LaborProfilesPage />,
+  },
+  {
+    name: 'Export',
+    layout: '/admin',
+    path: '/export',
+    icon: (
+      <Icon
+        as={MdDownload as any}
+        width="20px"
+        height="20px"
+        color="inherit"
+      />
+    ),
+    component: <ExportPage />,
   },
 ];
 

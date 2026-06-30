@@ -714,6 +714,26 @@ export class ApiService {
   }
 
   /**
+   * Get flat BOM export data for a top component
+   * @param {string} topName - The top component name
+   * @param {number} hourlyRate - Hourly labor rate in EUR (default: 18.5)
+   * @returns {Promise<Array>} Flat list of BOM rows with depth and cost data
+   */
+  static async getBomExport(topName, hourlyRate = 18.5) {
+    try {
+      const headers = this.getAuthHeaders();
+      const url = new URL(`${API_URL}/analytics/bom-export`);
+      url.searchParams.append('topName', topName);
+      url.searchParams.append('hourly_rate', hourlyRate.toString());
+      const response = await fetch(url.toString(), { method: 'GET', headers });
+      return await this.handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching BOM export data:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Updates component stock
    * @param {string} componentName - The component name
    * @param {number} amount - The amount to add/subtract or set

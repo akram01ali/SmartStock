@@ -10,21 +10,6 @@ import {
   VStack,
   useToast,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  NumberInput,
-  NumberInputField,
-  NumberInputStepper,
-  NumberIncrementStepper,
-  NumberDecrementStepper,
-  FormControl,
-  FormLabel,
-  Icon,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { MdGroups, MdPrint, MdBuild } from 'react-icons/md';
@@ -35,7 +20,7 @@ import SmoothMotionBox, { fadeInUp } from 'components/transitions/MotionBox';
 import { useSearch } from '../../../contexts/SearchContext';
 import { ComponentDialog } from '../../../components/graph/componentDialog';
 import { ComponentCreate, Measures, TypeOfComponent } from '../../../components/graph/types';
-import { AddIcon, DownloadIcon } from '../../../components/common/IconWrapper';
+import { AddIcon } from '../../../components/common/IconWrapper';
 
 // Types
 interface Component {
@@ -88,13 +73,11 @@ export default function ComponentsPage() {
   const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
   const [createType, setCreateType] = useState<CreateType | null>(null);
-  const [exportHourlyRate, setExportHourlyRate] = useState<number>(18.5);
 
   // Hooks
   const navigate = useNavigate();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isExportOpen, onOpen: onExportOpen, onClose: onExportClose } = useDisclosure();
   const { searchQuery, setSearchQuery } = useSearch();
 
   // Color mode values
@@ -166,24 +149,6 @@ export default function ComponentsPage() {
   const handleCardClick = useCallback((componentName: string) => {
     navigate(`/admin/graph/${componentName}`);
   }, [navigate]);
-
-  const handleDownloadCSV = useCallback(async () => {
-    try {
-      onExportClose();
-      showToast('Preparing Download', 'Generating cost data...', 'success');
-      const blob = await ApiService.exportComponentsCSV(exportHourlyRate);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'components_cost.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      showErrorToast(error, 'Error downloading CSV');
-    }
-  }, [showToast, showErrorToast, exportHourlyRate, onExportClose]);
 
   const handleCreateClick = useCallback((type: CreateType) => {
     setCreateType(type);
@@ -339,14 +304,6 @@ export default function ComponentsPage() {
               </Text>
             )}
           </VStack>
-          <Button
-            leftIcon={<DownloadIcon />}
-            colorScheme="blue"
-            variant="outline"
-            onClick={onExportOpen}
-          >
-            Export CSV
-          </Button>
         </Flex>
 
         {/* Component sections — gated by loading */}
@@ -369,38 +326,6 @@ export default function ComponentsPage() {
         mode="create"
       />
 
-      <Modal isOpen={isExportOpen} onClose={onExportClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Export Components Data</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <FormControl>
-              <FormLabel>Hourly Rate for Labor Cost (€)</FormLabel>
-              <NumberInput
-                value={exportHourlyRate}
-                onChange={(_, value) => setExportHourlyRate(isNaN(value) ? 0 : value)}
-                min={0}
-                precision={2}
-              >
-                <NumberInputField />
-                <NumberInputStepper>
-                  <NumberIncrementStepper />
-                  <NumberDecrementStepper />
-                </NumberInputStepper>
-              </NumberInput>
-            </FormControl>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onExportClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleDownloadCSV}>
-              Download CSV
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </SmoothMotionBox>
   );
 }

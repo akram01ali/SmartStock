@@ -150,6 +150,72 @@ async def get_component_total_duration(
         )
 
 
+@router.get("/bom-export", response_model=list)
+async def get_bom_export(
+    topName: str = Query(..., description="Top-level component name"),
+    hourly_rate: float = Query(18.5, description="Hourly labor rate in EUR"),
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Return a flat BOM list for the given top component, with depth and cost data.
+    Each row contains the component's own unit costs (not subtree rollup).
+    """
+    rows = []
+
+    async def dfs(node, depth: int):
+        name = node["name"]
+        amount = node["amount"]
+
+        comp = await db.components.find_first(
+            where={"componentName": name},
+            include={"productionStages": True, "manuals": True}
+        )
+
+        if comp is None:
+            rows.append({
+                "component_name": name,
+                "depth": depth,
+                "material_cost": 0.0,
+                "labor_cost": 0.0,
+                "total_cost": 0.0,
+                "amount": amount,
+                "min_amount": 0.0,
+                "supplier": "",
+                "type": "",
+                "delivery_time": None,
+                "location": None,
+                "has_manual": False,
+            })
+        else:
+            labor_duration = sum(s.duration for s in (comp.productionStages or []))
+            labor_cost = labor_duration * hourly_rate
+            material_cost = comp.cost
+            total_cost = material_cost + labor_cost
+
+            rows.append({
+                "component_name": comp.componentName,
+                "depth": depth,
+                "material_cost": material_cost,
+                "labor_cost": labor_cost,
+                "total_cost": total_cost,
+                "amount": amount,
+                "min_amount": comp.triggerMinAmount,
+                "supplier": comp.supplier,
+                "type": comp.type,
+                "delivery_time": comp.delivery_time,
+                "location": comp.location,
+                "has_manual": len(comp.manuals or []) > 0,
+            })
+
+        for child in node.get("children", []):
+            await dfs(child, depth + 1)
+
+    tree = await get_tree(topName=topName, db=db, current_user=current_user)
+    await dfs(tree["tree"], 0)
+    return rows
+
+
 # Compatibility function for main.py direct endpoint
 async def get_component_total_cost_detailed(
     topName: str,

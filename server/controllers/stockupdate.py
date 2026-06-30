@@ -54,7 +54,8 @@ async def update_component_stock_logic(
                 "amount": new_amount,
                 "lastScanned": datetime.utcnow(),
                 "scannedBy": scannedBy
-            }
+            },
+            include={"productionStages": True}
         )
 
         # If an assembly is increased, decrease the subcomponents that were used to create it:

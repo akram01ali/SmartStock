@@ -30,7 +30,7 @@ import {
   Flex,
   SimpleGrid,
 } from '@chakra-ui/react';
-import { MdSearch, MdDownload, MdClose } from 'react-icons/md';
+import { MdSearch, MdDownload, MdClose, MdPrint } from 'react-icons/md';
 import Fuse from 'fuse.js';
 import * as XLSX from 'xlsx';
 
@@ -172,6 +172,67 @@ export default function ExportPage() {
       setLoadingBom(false);
     }
   }, [selectedName, toast]);
+
+  const handlePrint = useCallback(() => {
+    if (!bomData || bomData.length === 0) return;
+
+    const rows = bomData.map((row) => `
+      <tr>
+        <td style="padding-left:${row.depth * 14 + 4}px">${row.depth > 0 ? '└ ' : ''}${row.component_name}</td>
+        <td>${row.depth}</td>
+        <td>€${row.material_cost.toFixed(2)}</td>
+        <td>€${row.labor_cost.toFixed(2)}</td>
+        <td><strong>€${row.total_cost.toFixed(2)}</strong></td>
+        <td>${row.amount}</td>
+        <td>${row.min_amount}</td>
+        <td>${row.supplier || '—'}</td>
+        <td>${row.type || '—'}</td>
+        <td>${row.delivery_time ?? '—'}</td>
+        <td>${row.location || '—'}</td>
+        <td>${row.has_manual ? '✓' : '—'}</td>
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>BOM — ${selectedName}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #111; padding: 16px; }
+    h2 { font-size: 14px; margin-bottom: 4px; }
+    p.meta { font-size: 9px; color: #666; margin-bottom: 12px; }
+    table { border-collapse: collapse; width: 100%; table-layout: auto; }
+    th { background: #e8ecf0; font-size: 9px; text-transform: uppercase;
+         letter-spacing: .4px; padding: 5px 6px; border: 1px solid #ccc; white-space: nowrap; }
+    td { padding: 4px 6px; border: 1px solid #ddd; vertical-align: middle; }
+    tr:nth-child(even) td { background: #f9f9f9; }
+    @page { margin: 12mm; size: A4 landscape; }
+  </style>
+</head>
+<body>
+  <h2>Bill of Materials — ${selectedName}</h2>
+  <p class="meta">Generated ${new Date().toLocaleString()} · ${bomData.length} components</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th><th>Depth</th><th>Mat. Cost</th><th>Labor Cost</th>
+        <th>Total Cost</th><th>Amount</th><th>Min</th><th>Supplier</th>
+        <th>Type</th><th>Del. Time</th><th>Location</th><th>Manual</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=1000,height=700');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 400);
+  }, [bomData, selectedName]);
 
   const handleExport = useCallback(async () => {
     if (!bomData || bomData.length === 0) return;
@@ -395,6 +456,15 @@ export default function ExportPage() {
                 <Badge colorScheme="blue" variant="subtle" px={3} py={1} borderRadius="full">
                   {bomData.length} components
                 </Badge>
+                <Button
+                  leftIcon={<Icon as={MdPrint as any} />}
+                  colorScheme="purple"
+                  size="sm"
+                  variant="outline"
+                  onClick={handlePrint}
+                >
+                  Print PDF
+                </Button>
                 <Button
                   leftIcon={<Icon as={MdDownload as any} />}
                   colorScheme="green"

@@ -18,6 +18,7 @@ SmartStock/
 └── README.md
 ```
 
+
 ## Applications
 
 ### 🖥️ Admin Dashboard (Web)

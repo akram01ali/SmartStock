@@ -10,6 +10,7 @@ import {
   Image,
   Center,
   AspectRatio,
+  Spinner,
   useColorModeValue,
 } from '@chakra-ui/react';
 
@@ -31,6 +32,7 @@ interface Component {
   type: TypeOfComponent;
   description?: string;
   image?: string;
+  location?: string;
 }
 
 interface InventoryCardProps {
@@ -42,6 +44,7 @@ interface InventoryCardProps {
   textColorSecondary: string;
   cardShadow: string;
   imageFallbackBg: string;
+  totalCost?: number;
 }
 
 // Constants
@@ -59,6 +62,7 @@ const InventoryCard = React.memo<InventoryCardProps>(({
   textColorSecondary,
   cardShadow,
   imageFallbackBg,
+  totalCost,
 }) => {
   // Color mode values
   const fallbackIconColor = useColorModeValue('gray.400', 'gray.500');
@@ -164,8 +168,11 @@ const InventoryCard = React.memo<InventoryCardProps>(({
           transition="all 0.3s ease"
         />
       </Box>
+      <Text color={textColorSecondary} fontSize="xs" mt={1}>
+        Min: {item.triggerMinAmount} {item.measure}
+      </Text>
     </Box>
-  ), [textColorSecondary, isLowStock, progressBarBg, stockColor, stockPercentage]);
+  ), [textColorSecondary, isLowStock, progressBarBg, stockColor, stockPercentage, item.triggerMinAmount, item.measure]);
 
   const renderSupplierInfo = useCallback(() => (
     <Text color={textColorSecondary} fontSize="xs" noOfLines={1}>
@@ -175,6 +182,15 @@ const InventoryCard = React.memo<InventoryCardProps>(({
       </Text>
     </Text>
   ), [textColorSecondary, textColor, item.supplier]);
+
+  const renderLocationInfo = useCallback(() => (
+    <Text color={textColorSecondary} fontSize="xs" noOfLines={1}>
+      Location:{' '}
+      <Text as="span" color={textColor} fontWeight="500">
+        {item.location || '—'}
+      </Text>
+    </Text>
+  ), [textColorSecondary, textColor, item.location]);
 
   return (
     <SmoothCard
@@ -197,14 +213,26 @@ const InventoryCard = React.memo<InventoryCardProps>(({
         {/* Stats Grid */}
         <SimpleGrid columns={2} spacing={4}>
           {renderStatItem('Amount', item.amount, item.measure)}
-          {renderStatItem('Cost', `€${item.cost}`, 'per unit')}
+          <Box>
+            <Text color={textColorSecondary} fontSize="sm" fontWeight="500">
+              Total Cost
+            </Text>
+            {totalCost !== undefined ? (
+              <Text color={textColor} fontWeight="bold" fontSize="lg">
+                €{totalCost.toFixed(2)}
+              </Text>
+            ) : (
+              <Spinner size="sm" mt={1} />
+            )}
+          </Box>
         </SimpleGrid>
 
         {/* Stock Status */}
         {renderStockLevel()}
 
-        {/* Supplier Info */}
+        {/* Supplier & Location Info */}
         {renderSupplierInfo()}
+        {renderLocationInfo()}
       </VStack>
     </SmoothCard>
   );

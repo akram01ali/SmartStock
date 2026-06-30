@@ -94,12 +94,8 @@ export default function InventoryComponent({
   onDelete,
 }: InventoryComponentProps) {
   // State
-  const [currentComponent, setCurrentComponent] = useState<Component>(component);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
-  const [locationInput, setLocationInput] = useState(component.location?.toString() || '');
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [hourlyRateInput, setHourlyRateInput] = useState('18.5');
   const [hourlyRateError, setHourlyRateError] = useState<string | null>(null);
   const [isCalculatingCost, setIsCalculatingCost] = useState(false);
@@ -231,38 +227,6 @@ export default function InventoryComponent({
     }
   }, [component.componentName, onEdit, onStockModalClose, showToast, showErrorToast]);
 
-  const handleLocationSave = useCallback(async () => {
-    try {
-      if (!locationInput.trim()) {
-        setLocationError('Location cannot be empty');
-        return;
-      }
-
-      const updatedComponent = (await ApiService.updateComponent(
-        { ...currentComponent, location: locationInput.trim() },
-        currentComponent.componentName,
-      )) as Component;
-
-      // Update local state immediately to reflect changes
-      setCurrentComponent(updatedComponent);
-      
-      showToast('Location Updated', `Location set to ${locationInput.trim()}`, 'success');
-      if (onEdit) {
-        await onEdit(updatedComponent);
-      }
-      setIsEditingLocation(false);
-      setLocationError(null);
-    } catch (error) {
-      showErrorToast(error, 'Error updating location');
-    }
-  }, [locationInput, currentComponent, onEdit, showToast, showErrorToast]);
-
-  const handleLocationCancel = () => {
-    setLocationInput(currentComponent.location?.toString() || '');
-    setLocationError(null);
-    setIsEditingLocation(false);
-  };
-
   const handleHourlyRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setHourlyRateInput(value);
@@ -312,11 +276,6 @@ export default function InventoryComponent({
     }
   }, [hourlyRateInput, selectedProfileId, component.componentName, hourlyRate, showToast, showErrorToast]);
 
-  // Sync component prop changes
-  useEffect(() => {
-    setCurrentComponent(component);
-    setLocationInput(component.location?.toString() || '');
-  }, [component]);
 
   // Load labor profiles on component mount
   useEffect(() => {
@@ -481,7 +440,7 @@ export default function InventoryComponent({
 
               <Divider borderColor={borderColor} />
 
-              {/* Location Card - Prominent Display */}
+              {/* Location Card - Read Only */}
               <Box
                 w="100%"
                 p={4}
@@ -490,57 +449,14 @@ export default function InventoryComponent({
                 borderWidth={2}
                 borderRadius="lg"
               >
-                <Flex justify="space-between" align="center" gap={4}>
-                  <VStack align="start" spacing={1} flex={1}>
-                    <Text fontSize="sm" color={locationLabelColor} fontWeight="bold">
-                      LOCATION
-                    </Text>
-                    {isEditingLocation ? (
-                      <HStack spacing={2} w="100%">
-                        <Input
-                          type="text"
-                          value={locationInput}
-                          onChange={(e) => {
-                            setLocationInput(e.target.value);
-                            setLocationError(null);
-                          }}
-                          placeholder="Enter location (number, word, or sentence)"
-                          bg={inputBg}
-                          borderColor={borderColor}
-                          size="sm"
-                          flex={1}
-                        />
-                        <Button size="sm" colorScheme="green" onClick={handleLocationSave}>
-                          Save
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={handleLocationCancel}>
-                          Cancel
-                        </Button>
-                      </HStack>
-                    ) : (
-                      <HStack spacing={2} justify="space-between" w="100%">
-                        <Heading size="2xl" color={locationHeadingColor}>
-                          {currentComponent.location !== undefined && currentComponent.location !== null
-                            ? currentComponent.location
-                            : 'Not set'}
-                        </Heading>
-                        <Button
-                          size="sm"
-                          colorScheme="amber"
-                          variant="ghost"
-                          onClick={() => setIsEditingLocation(true)}
-                        >
-                          Edit
-                        </Button>
-                      </HStack>
-                    )}
-                    {locationError && (
-                      <Text fontSize="xs" color="red.500">
-                        {locationError}
-                      </Text>
-                    )}
-                  </VStack>
-                </Flex>
+                <VStack align="start" spacing={1}>
+                  <Text fontSize="sm" color={locationLabelColor} fontWeight="bold">
+                    LOCATION
+                  </Text>
+                  <Heading size="2xl" color={locationHeadingColor}>
+                    {component.location ?? 'Not set'}
+                  </Heading>
+                </VStack>
               </Box>
 
               <Divider borderColor={borderColor} />

@@ -61,6 +61,7 @@ interface Component {
   type: TypeOfComponent;
   description?: string;
   image?: string;
+  location?: string;
 }
 
 interface PaginationInfo {
@@ -115,6 +116,7 @@ export default function InventoryPage() {
     totalValue: 0 
   });
   const [isLowStockFilterActive, setIsLowStockFilterActive] = useState(false);
+  const [totalCosts, setTotalCosts] = useState<Record<string, number>>({});
 
   // Hooks
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -190,6 +192,23 @@ export default function InventoryPage() {
       setInventory(data);
       setPagination(paginationInfo);
       setCurrentPage(page);
+
+      // Fetch total costs for all items on this page in parallel (background, non-blocking)
+      const DEFAULT_HOURLY_RATE = 18.5;
+      Promise.allSettled(
+        data.map((item) =>
+          ApiService.getComponentTotalCost(item.componentName, DEFAULT_HOURLY_RATE)
+            .then((res: any) => ({ name: item.componentName, total: res.total_cost as number }))
+        )
+      ).then((results) => {
+        const costs: Record<string, number> = {};
+        results.forEach((r) => {
+          if (r.status === 'fulfilled') {
+            costs[r.value.name] = r.value.total;
+          }
+        });
+        setTotalCosts((prev) => ({ ...prev, ...costs }));
+      });
     } catch (error) {
       console.error('Error fetching inventory:', error);
       showErrorToast(error, 'Error fetching inventory');
@@ -513,6 +532,7 @@ export default function InventoryPage() {
                       textColorSecondary={textColorSecondary}
                       cardShadow={cardShadow}
                       imageFallbackBg={imageFallbackBg}
+                      totalCost={totalCosts[item.componentName]}
                     />
                   ))}
                 </SimpleGrid>

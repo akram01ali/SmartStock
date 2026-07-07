@@ -123,23 +123,42 @@ async def update_template(
                 data=update_data
             )
         
-        # Update items if provided
+        # Update items if provided — preserve existing item IDs to avoid
+        # cascade-deleting ControlChecklistEntry rows for existing checklists.
         if template_data.items is not None:
-            # Delete existing items
-            await db.controlchecklistitem.delete_many(
+            # IDs of items the client wants to keep/update
+            incoming_ids = {item.id for item in template_data.items if item.id}
+
+            # Delete only items that are no longer in the list
+            existing_items = await db.controlchecklistitem.find_many(
                 where={"templateId": template_id}
             )
-            
-            # Create new items
+            for existing in existing_items:
+                if existing.id not in incoming_ids:
+                    await db.controlchecklistitem.delete(where={"id": existing.id})
+
+            # Update existing items or create new ones
             for item_data in template_data.items:
-                await db.controlchecklistitem.create(
-                    data={
-                        "templateId": template_id,
-                        "label": item_data.label,
-                        "type": item_data.type,
-                        "order": item_data.order,
-                    }
-                )
+                if item_data.id:
+                    # Update in place — entries referencing this id survive
+                    await db.controlchecklistitem.update(
+                        where={"id": item_data.id},
+                        data={
+                            "label": item_data.label,
+                            "type": item_data.type,
+                            "order": item_data.order,
+                        }
+                    )
+                else:
+                    # Genuinely new item
+                    await db.controlchecklistitem.create(
+                        data={
+                            "templateId": template_id,
+                            "label": item_data.label,
+                            "type": item_data.type,
+                            "order": item_data.order,
+                        }
+                    )
         
         # Fetch updated template
         result = await db.controlchecklisttemplate.find_unique(
@@ -435,6 +454,18 @@ async def update_checklist(
                             where={"id": entry.id},
                             data=update_entry_data
                         )
+                else:
+                    # Entry doesn't exist yet — item was added to the template after
+                    # the checklist was created. Create it now.
+                    await db.controlchecklistentry.create(
+                        data={
+                            "checklistId": checklist_id,
+                            "itemId": entry_update.itemId,
+                            "isChecked": entry_update.isChecked or False,
+                            "value": entry_update.value,
+                            "comment": entry_update.comment,
+                        }
+                    )
         
         # Fetch updated checklist
         result = await db.controlchecklist.find_unique(

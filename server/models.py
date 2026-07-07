@@ -224,6 +224,7 @@ class CreateAppUser(BaseModel):
 
 # Control Checklist Models
 class ControlChecklistItemCreate(BaseModel):
+    id: Optional[str] = None  # present when updating an existing item
     label: str
     type: str  # 'test' or 'control'
     order: int

@@ -206,10 +206,14 @@ export default function ControlChecklistExecution() {
 
   const handleEntryChange = useCallback(
     (itemId: string, field: keyof Entry, value: any) => {
-      const updated = entries.map((entry) =>
-        entry.itemId === itemId ? { ...entry, [field]: value } : entry
-      );
-      setEntries(updated);
+      const exists = entries.some((e) => e.itemId === itemId);
+      if (exists) {
+        setEntries(entries.map((e) => e.itemId === itemId ? { ...e, [field]: value } : e));
+      } else {
+        // New template item added after checklist was created — create entry in local state
+        const newEntry: Entry = { itemId, isChecked: false, value: undefined, comment: undefined };
+        setEntries([...entries, { ...newEntry, [field]: value }]);
+      }
     },
     [entries]
   );

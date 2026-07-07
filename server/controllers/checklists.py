@@ -137,10 +137,20 @@ async def update_template(
                 if existing.id not in incoming_ids:
                     await db.controlchecklistitem.delete(where={"id": existing.id})
 
-            # Update existing items or create new ones
+            # Update existing items or create new ones.
+            # Use a two-phase update for existing items to avoid the
+            # @@unique([templateId, order]) constraint when orders are swapped:
+            # Phase 1 — move all existing items to temporary high order values
+            for i, item_data in enumerate(template_data.items):
+                if item_data.id:
+                    await db.controlchecklistitem.update(
+                        where={"id": item_data.id},
+                        data={"order": 10000 + i}
+                    )
+
+            # Phase 2 — apply final label/type/order, or create new items
             for item_data in template_data.items:
                 if item_data.id:
-                    # Update in place — entries referencing this id survive
                     await db.controlchecklistitem.update(
                         where={"id": item_data.id},
                         data={

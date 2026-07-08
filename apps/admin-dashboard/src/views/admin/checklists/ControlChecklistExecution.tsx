@@ -29,8 +29,13 @@ import {
   IconButton,
   Tooltip,
   Icon,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from '@chakra-ui/react';
 import { MdAddCircle, MdCheckCircle, MdLocalShipping, MdDownload, MdDelete } from 'react-icons/md';
+import * as XLSX from 'xlsx';
 import { ApiService } from '../../../services/service';
 import { useSearch } from '../../../contexts/SearchContext';
 
@@ -75,6 +80,8 @@ export default function ControlChecklistExecution() {
   const [isLoading, setIsLoading] = useState(true);
   const [newSerialNumber, setNewSerialNumber] = useState('');
   const [newTemplateId, setNewTemplateId] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportMode, setExportMode] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
@@ -97,8 +104,11 @@ export default function ControlChecklistExecution() {
     try {
       setIsLoading(true);
       const data = await ApiService.getAllControlChecklists();
-      setAllChecklists(data || []);
-      setFilteredChecklists(data || []);
+      const sorted = (data || []).slice().sort((a: Checklist, b: Checklist) =>
+        b.printerSerialNumber.localeCompare(a.printerSerialNumber, undefined, { numeric: true, sensitivity: 'base' })
+      );
+      setAllChecklists(sorted);
+      setFilteredChecklists(sorted);
     } catch (error) {
       console.error('Error loading checklists:', error);
       toast({
@@ -120,9 +130,9 @@ export default function ControlChecklistExecution() {
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = allChecklists.filter((checklist) =>
-      checklist.printerSerialNumber.toLowerCase().includes(query)
-    );
+    const filtered = allChecklists
+      .filter((checklist) => checklist.printerSerialNumber.toLowerCase().includes(query))
+      .sort((a, b) => b.printerSerialNumber.localeCompare(a.printerSerialNumber, undefined, { numeric: true, sensitivity: 'base' }));
     setFilteredChecklists(filtered);
   }, [searchQuery, allChecklists]);
 
@@ -374,6 +384,78 @@ export default function ControlChecklistExecution() {
     return template?.items.filter((i) => i.type === 'control') || [];
   };
 
+  const toggleSelectId = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected =
+    filteredChecklists.length > 0 && filteredChecklists.every((c) => selectedIds.has(c.id));
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredChecklists.map((c) => c.id)));
+    }
+  };
+
+  const enterExportMode = () => {
+    setSelectedIds(new Set());
+    setExportMode(true);
+  };
+
+  const exitExportMode = () => {
+    setSelectedIds(new Set());
+    setExportMode(false);
+  };
+
+  const handleExportSelected = (mode: 'tests' | 'facts' | 'both') => {
+    const toExport = allChecklists.filter((c) => selectedIds.has(c.id));
+    if (toExport.length === 0) return;
+
+    const sheetRows: Record<string, any>[] = [];
+
+    toExport.forEach((checklist) => {
+      const template = templates.find((t) => t.id === checklist.templateId);
+      if (!template) return;
+
+      const items = template.items
+        .filter((i) => mode === 'both' || (mode === 'tests' ? i.type === 'test' : i.type === 'control'))
+        .sort((a, b) => a.order - b.order);
+
+      const row: Record<string, any> = {
+        'Serial Number': checklist.printerSerialNumber,
+        'Template': template.name,
+        'Status': checklist.status,
+        'Date': new Date(checklist.createdAt).toLocaleDateString(),
+      };
+
+      items.forEach((item) => {
+        const entry = checklist.entries.find((e) => e.itemId === item.id);
+        const prefix = item.type === 'test' ? '✓ ' : '';
+        if (item.type === 'test') {
+          row[`${prefix}${item.label}`] = entry?.isChecked ? 'Yes' : 'No';
+          if (entry?.comment) row[`${prefix}${item.label} (comment)`] = entry.comment;
+        } else {
+          row[`${item.label}`] = entry?.value ?? '';
+        }
+      });
+
+      sheetRows.push(row);
+    });
+
+    const ws = XLSX.utils.json_to_sheet(sheetRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Checklists');
+    const label = mode === 'tests' ? 'Tests' : mode === 'facts' ? 'Facts' : 'All';
+    XLSX.writeFile(wb, `Checklists_${label}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: `Exported ${toExport.length} system(s)`, status: 'success', duration: 2000 });
+  };
+
   return (
     <Box pt="130px" px={{ base: '24px', md: '24px' }} pb="40px">
       <VStack spacing={6} align="stretch">
@@ -402,30 +484,111 @@ export default function ControlChecklistExecution() {
                 {/* Header Controls */}
                 <VStack spacing={3} align="stretch">
                   <Flex justify="space-between" align="center">
-                    <Heading size="md" color={textColor}>
-                      Systems
-                    </Heading>
-                    <Tooltip label="Add new system" placement="left">
-                      <IconButton
-                        icon={<Icon as={MdAddCircle as any} w={5} h={5} />}
-                        aria-label="Add system"
-                        colorScheme="blue"
-                        size="sm"
-                        onClick={onOpen}
-                      />
-                    </Tooltip>
+                    <Heading size="md" color={textColor}>Systems</Heading>
+                    <HStack spacing={1}>
+                      {!exportMode && (
+                        <>
+                          <Tooltip label="Export to Excel" placement="left">
+                            <IconButton
+                              icon={<Icon as={MdDownload as any} w={5} h={5} />}
+                              aria-label="Export"
+                              colorScheme="green"
+                              variant="outline"
+                              size="sm"
+                              onClick={enterExportMode}
+                            />
+                          </Tooltip>
+                          <Tooltip label="Add new system" placement="left">
+                            <IconButton
+                              icon={<Icon as={MdAddCircle as any} w={5} h={5} />}
+                              aria-label="Add system"
+                              colorScheme="blue"
+                              size="sm"
+                              onClick={onOpen}
+                            />
+                          </Tooltip>
+                        </>
+                      )}
+                    </HStack>
                   </Flex>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    colorScheme="gray"
-                    onClick={() => navigate('/admin/checklist-templates')}
-                    w="full"
-                    fontSize="xs"
-                  >
-                    Manage Templates
-                  </Button>
+                  {!exportMode && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorScheme="gray"
+                      onClick={() => navigate('/admin/checklist-templates')}
+                      w="full"
+                      fontSize="xs"
+                    >
+                      Manage Templates
+                    </Button>
+                  )}
                 </VStack>
+
+                {/* Export mode action bar */}
+                {exportMode && (
+                  <Box
+                    bg="green.50"
+                    border="1px solid"
+                    borderColor="green.200"
+                    borderRadius="lg"
+                    p={3}
+                  >
+                    <VStack spacing={2} align="stretch">
+                      <Flex justify="space-between" align="center">
+                        <Text fontWeight="700" fontSize="sm" color="green.700">
+                          {selectedIds.size === 0
+                            ? 'Select systems to export'
+                            : `${selectedIds.size} selected`}
+                        </Text>
+                        <Button size="xs" variant="ghost" colorScheme="gray" onClick={exitExportMode}>
+                          Cancel
+                        </Button>
+                      </Flex>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        colorScheme="green"
+                        onClick={toggleSelectAll}
+                      >
+                        {allVisibleSelected ? 'Deselect all' : 'Select all'}
+                      </Button>
+                      <Divider borderColor="green.200" />
+                      <Text fontSize="xs" color="green.600" fontWeight="600">Export selection as:</Text>
+                      <VStack spacing={1} align="stretch">
+                        <Button
+                          size="sm"
+                          colorScheme="green"
+                          leftIcon={<Icon as={MdDownload as any} />}
+                          isDisabled={selectedIds.size === 0}
+                          onClick={() => handleExportSelected('both')}
+                        >
+                          Tests &amp; Facts
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="purple"
+                          variant="outline"
+                          leftIcon={<Icon as={MdDownload as any} />}
+                          isDisabled={selectedIds.size === 0}
+                          onClick={() => handleExportSelected('tests')}
+                        >
+                          Tests only
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="blue"
+                          variant="outline"
+                          leftIcon={<Icon as={MdDownload as any} />}
+                          isDisabled={selectedIds.size === 0}
+                          onClick={() => handleExportSelected('facts')}
+                        >
+                          Facts only
+                        </Button>
+                      </VStack>
+                    </VStack>
+                  </Box>
+                )}
 
                 <Divider />
 
@@ -445,55 +608,81 @@ export default function ControlChecklistExecution() {
                   </Box>
                 ) : (
                   <VStack spacing={2} align="stretch" overflowY="auto" flex={1}>
-                    {filteredChecklists.map((checklist) => (
-                      <Box
-                        key={checklist.id}
-                        p={3}
-                        borderRadius="12px"
-                        bg={selectedChecklist?.id === checklist.id ? 'brand.500' : bgColorSecondary}
-                        borderWidth={selectedChecklist?.id === checklist.id ? '0' : '1px'}
-                        borderColor={borderColor}
-                        cursor="pointer"
-                        transition="all 0.2s"
-                        _hover={{
-                          bg: selectedChecklist?.id === checklist.id ? 'brand.500' : 'gray.100',
-                          transform: 'translateX(2px)',
-                        }}
-                        onClick={() => handleSelectChecklist(checklist)}
-                      >
-                        <VStack align="start" spacing={1}>
-                          <HStack spacing={2} w="100%">
-                            <Text
-                              fontWeight="600"
-                              color={selectedChecklist?.id === checklist.id ? 'white' : textColor}
-                              noOfLines={1}
-                              fontSize="sm"
-                            >
-                              {checklist.printerSerialNumber}
-                            </Text>
-                            <Badge
-                              colorScheme={
-                                checklist.status === 'shipped'
-                                  ? 'green'
-                                  : checklist.status === 'completed'
-                                  ? 'blue'
-                                  : 'yellow'
-                              }
-                              fontSize="xs"
-                              ml="auto"
-                            >
-                              {checklist.status}
-                            </Badge>
+                    {filteredChecklists.map((checklist) => {
+                      const isSelected = selectedIds.has(checklist.id);
+                      const isActive = selectedChecklist?.id === checklist.id;
+                      return (
+                        <Box
+                          key={checklist.id}
+                          p={3}
+                          borderRadius="12px"
+                          bg={
+                            exportMode && isSelected
+                              ? 'green.100'
+                              : isActive
+                              ? 'brand.500'
+                              : bgColorSecondary
+                          }
+                          borderWidth="2px"
+                          borderColor={
+                            exportMode && isSelected
+                              ? 'green.400'
+                              : isActive
+                              ? 'brand.500'
+                              : borderColor
+                          }
+                          cursor="pointer"
+                          transition="all 0.15s"
+                          _hover={{
+                            borderColor: exportMode ? 'green.400' : isActive ? 'brand.500' : 'blue.300',
+                            transform: 'translateX(2px)',
+                          }}
+                          onClick={() => exportMode ? toggleSelectId(checklist.id) : handleSelectChecklist(checklist)}
+                        >
+                          <HStack spacing={3} align="center">
+                            {exportMode && (
+                              <Checkbox
+                                isChecked={isSelected}
+                                onChange={() => toggleSelectId(checklist.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                size="lg"
+                                colorScheme="green"
+                                flexShrink={0}
+                              />
+                            )}
+                            <VStack align="start" spacing={1} flex={1} minW={0}>
+                              <HStack spacing={2} w="100%">
+                                <Text
+                                  fontWeight="600"
+                                  color={isActive && !exportMode ? 'white' : exportMode && isSelected ? 'green.800' : textColor}
+                                  noOfLines={1}
+                                  fontSize="sm"
+                                >
+                                  {checklist.printerSerialNumber}
+                                </Text>
+                                <Badge
+                                  colorScheme={
+                                    checklist.status === 'shipped' ? 'green'
+                                    : checklist.status === 'completed' ? 'blue'
+                                    : 'yellow'
+                                  }
+                                  fontSize="xs"
+                                  ml="auto"
+                                >
+                                  {checklist.status}
+                                </Badge>
+                              </HStack>
+                              <Text
+                                fontSize="xs"
+                                color={isActive && !exportMode ? 'whiteAlpha.700' : textColorSecondary}
+                              >
+                                {new Date(checklist.createdAt).toLocaleDateString()}
+                              </Text>
+                            </VStack>
                           </HStack>
-                          <Text
-                            fontSize="xs"
-                            color={selectedChecklist?.id === checklist.id ? 'whiteAlpha.700' : textColorSecondary}
-                          >
-                            {new Date(checklist.createdAt).toLocaleDateString()}
-                          </Text>
-                        </VStack>
-                      </Box>
-                    ))}
+                        </Box>
+                      );
+                    })}
                   </VStack>
                 )}
               </VStack>

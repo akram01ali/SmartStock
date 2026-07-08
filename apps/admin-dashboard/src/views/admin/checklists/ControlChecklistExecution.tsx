@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -403,6 +403,36 @@ export default function ControlChecklistExecution() {
     }
   };
 
+  // Drag-to-select refs
+  const isDragging = useRef(false);
+  const dragAction = useRef<'add' | 'remove'>('add'); // determined on mousedown
+
+  useEffect(() => {
+    const onMouseUp = () => { isDragging.current = false; };
+    document.addEventListener('mouseup', onMouseUp);
+    return () => document.removeEventListener('mouseup', onMouseUp);
+  }, []);
+
+  const handleRowMouseDown = useCallback((id: string) => {
+    if (!exportMode) return;
+    isDragging.current = true;
+    dragAction.current = selectedIds.has(id) ? 'remove' : 'add';
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      dragAction.current === 'add' ? next.add(id) : next.delete(id);
+      return next;
+    });
+  }, [exportMode, selectedIds]);
+
+  const handleRowMouseEnter = useCallback((id: string) => {
+    if (!exportMode || !isDragging.current) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      dragAction.current === 'add' ? next.add(id) : next.delete(id);
+      return next;
+    });
+  }, [exportMode]);
+
   const enterExportMode = () => {
     setSelectedIds(new Set());
     setExportMode(true);
@@ -607,7 +637,13 @@ export default function ControlChecklistExecution() {
                     </Button>
                   </Box>
                 ) : (
-                  <VStack spacing={2} align="stretch" overflowY="auto" flex={1}>
+                  <VStack
+                    spacing={2}
+                    align="stretch"
+                    overflowY="auto"
+                    flex={1}
+                    userSelect={exportMode ? 'none' : 'auto'}
+                  >
                     {filteredChecklists.map((checklist) => {
                       const isSelected = selectedIds.has(checklist.id);
                       const isActive = selectedChecklist?.id === checklist.id;
@@ -631,23 +667,25 @@ export default function ControlChecklistExecution() {
                               ? 'brand.500'
                               : borderColor
                           }
-                          cursor="pointer"
+                          cursor={exportMode ? 'pointer' : 'pointer'}
                           transition="all 0.15s"
                           _hover={{
                             borderColor: exportMode ? 'green.400' : isActive ? 'brand.500' : 'blue.300',
                             transform: 'translateX(2px)',
                           }}
-                          onClick={() => exportMode ? toggleSelectId(checklist.id) : handleSelectChecklist(checklist)}
+                          onMouseDown={() => handleRowMouseDown(checklist.id)}
+                          onMouseEnter={() => handleRowMouseEnter(checklist.id)}
+                          onClick={() => !exportMode && handleSelectChecklist(checklist)}
                         >
                           <HStack spacing={3} align="center">
                             {exportMode && (
                               <Checkbox
                                 isChecked={isSelected}
-                                onChange={() => toggleSelectId(checklist.id)}
-                                onClick={(e) => e.stopPropagation()}
+                                onChange={() => {}}
                                 size="lg"
                                 colorScheme="green"
                                 flexShrink={0}
+                                pointerEvents="none"
                               />
                             )}
                             <VStack align="start" spacing={1} flex={1} minW={0}>

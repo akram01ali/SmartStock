@@ -380,6 +380,19 @@ async def get_component_total_cost_compat(
 
 
 
+@app.get("/components/export-all", response_model=List[Component])
+async def export_all_components(
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Return all components with full details for Excel export."""
+    components = await db.components.find_many(
+        include={"productionStages": True},
+        order=[{"componentName": "asc"}]
+    )
+    return components
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=HOST, port=PORT)

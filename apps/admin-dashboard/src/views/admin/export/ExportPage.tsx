@@ -81,6 +81,7 @@ export default function ExportPage() {
   const [bomData, setBomData] = useState<BomRow[] | null>(null);
   const [loadingBom, setLoadingBom] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
 
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
@@ -155,6 +156,50 @@ export default function ExportPage() {
     setBomData(null);
     setShowSuggestions(true);
   }, []);
+
+  const handleExportAll = useCallback(async () => {
+    setExportingAll(true);
+    try {
+      const components = await ApiService.getAllComponentsExport() as any[];
+      const rows = components.map((c: any) => ({
+        'Component Name':   c.componentName,
+        'Type':             c.type,
+        'Amount':           c.amount,
+        'Measure':          c.measure,
+        'Min. Amount':      c.triggerMinAmount,
+        'Cost (€)':         c.cost,
+        'Supplier':         c.supplier,
+        'Location':         c.location ?? '',
+        'Delivery Time':    c.delivery_time ?? '',
+        'Description':      c.description ?? '',
+        'Last Scanned':     c.lastScanned ? new Date(c.lastScanned).toLocaleDateString() : '',
+        'Scanned By':       c.scannedBy,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [
+        { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 },
+        { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 14 }, { wch: 30 },
+        { wch: 16 }, { wch: 16 },
+      ];
+      // Mark numeric columns
+      ['C', 'E', 'F'].forEach((col) => {
+        for (let r = 2; r <= rows.length + 1; r++) {
+          const ref = `${col}${r}`;
+          if (ws[ref] && ws[ref].v !== '' && ws[ref].v != null) ws[ref].t = 'n';
+        }
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Components');
+      XLSX.writeFile(wb, `All_Components_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast({ title: 'Downloaded', description: `${rows.length} components exported`, status: 'success', duration: 2000 });
+    } catch (err: any) {
+      toast({ title: 'Export failed', description: err?.message, status: 'error', duration: 4000 });
+    } finally {
+      setExportingAll(false);
+    }
+  }, [toast]);
 
   const handlePreview = useCallback(async () => {
     if (!selectedName) {
@@ -286,13 +331,25 @@ export default function ExportPage() {
       <VStack align="stretch" spacing={8}>
 
         {/* Page header */}
-        <Box>
-          <Heading size="lg" color={textColor} mb={1}>BOM Export</Heading>
-          <Text color={subText} fontSize="sm">
-            Select a top-level component, configure the hourly labor rate, preview the full
-            bill-of-materials and download as Excel.
-          </Text>
-        </Box>
+        <Flex align="flex-end" justify="space-between" wrap="wrap" gap={4}>
+          <Box>
+            <Heading size="lg" color={textColor} mb={1}>BOM Export</Heading>
+            <Text color={subText} fontSize="sm">
+              Select a top-level component to preview and export its full bill-of-materials, or download a flat list of all components.
+            </Text>
+          </Box>
+          <Button
+            leftIcon={<Icon as={MdDownload as any} />}
+            colorScheme="teal"
+            size="sm"
+            onClick={handleExportAll}
+            isLoading={exportingAll}
+            loadingText="Exporting…"
+            flexShrink={0}
+          >
+            Export All Components
+          </Button>
+        </Flex>
 
         {/* Settings card */}
         <SmoothCard boxShadow={cardShadow} p={6}>

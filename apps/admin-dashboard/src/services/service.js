@@ -693,6 +693,19 @@ export class ApiService {
    * @param {number} hourlyRate - Hourly labor rate in EUR (default: 18.5)
    * @returns {Promise<Array>} Flat list of BOM rows with depth and cost data
    */
+  static async getAllComponentsExport() {
+    try {
+      const response = await fetch(`${API_URL}/components/export-all`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching all components for export:', error);
+      throw error;
+    }
+  }
+
   static async getBomExport(topName) {
     try {
       const headers = this.getAuthHeaders();

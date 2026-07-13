@@ -333,7 +333,8 @@ async def create_component(
             raise HTTPException(status_code=400, detail="Trigger minimum amount cannot be negative")
         
         existing = await db.components.find_unique(
-            where={"componentName": component.componentName}
+            where={"componentName": component.componentName},
+            include={"productionStages": {"order_by": {"order": "asc"}}}
         )
         
         if existing:
@@ -543,7 +544,8 @@ async def delete_component(
     current_user: User = Depends(get_current_user)
 ):
     component = await db.components.find_unique(
-        where={"componentName": componentName}
+        where={"componentName": componentName},
+        include={"productionStages": {"order_by": {"order": "asc"}}}
     )
     
     if not component:
@@ -563,11 +565,11 @@ async def delete_component(
                 }
             )
 
-            deleted = await db.components.delete(
+            await db.components.delete(
                 where={"componentName": componentName}
             )
             
-            return deleted
+            return component
         
         
         except RecordNotFoundError:
@@ -793,17 +795,22 @@ async def get_low_stock_components(
     current_user: User = Depends(get_current_user)
 ):
     try:
-
-        low_stock_components = await db.query_raw(
+        low_stock_names = await db.query_raw(
             """
-            SELECT "componentName", amount, measure, "lastScanned", "scannedBy", 
-                   "triggerMinAmount", supplier, cost, 
-                   type, description, image, location
+            SELECT "componentName"
             FROM "Components" 
             WHERE amount < "triggerMinAmount"
             ORDER BY "componentName" ASC
             """,
-            model=Component
+            model=ComponentNameOnly
+        )
+        
+        names = [c.componentName for c in low_stock_names]
+        
+        low_stock_components = await db.components.find_many(
+            where={"componentName": {"in": names}},
+            include={"productionStages": {"order_by": {"order": "asc"}}},
+            order=[{"componentName": "asc"}]
         )
         
         return low_stock_components

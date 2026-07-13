@@ -34,7 +34,7 @@ import {
   MenuList,
   MenuItem,
 } from '@chakra-ui/react';
-import { MdAddCircle, MdCheckCircle, MdLocalShipping, MdDownload, MdDelete } from 'react-icons/md';
+import { MdAddCircle, MdCheckCircle, MdLocalShipping, MdDownload, MdDelete, MdDragHandle } from 'react-icons/md';
 import * as XLSX from 'xlsx';
 import { ApiService } from '../../../services/service';
 import { useSearch } from '../../../contexts/SearchContext';
@@ -82,6 +82,8 @@ export default function ControlChecklistExecution() {
   const [newTemplateId, setNewTemplateId] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportMode, setExportMode] = useState(false);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragItemId = useRef<string | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
@@ -130,9 +132,9 @@ export default function ControlChecklistExecution() {
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = allChecklists
-      .filter((checklist) => checklist.printerSerialNumber.toLowerCase().includes(query))
-      .sort((a, b) => b.printerSerialNumber.localeCompare(a.printerSerialNumber, undefined, { numeric: true, sensitivity: 'base' }));
+    const filtered = allChecklists.filter((checklist) =>
+      checklist.printerSerialNumber.toLowerCase().includes(query)
+    );
     setFilteredChecklists(filtered);
   }, [searchQuery, allChecklists]);
 
@@ -443,6 +445,39 @@ export default function ControlChecklistExecution() {
     setExportMode(false);
   };
 
+  const handleDragStart = useCallback((id: string) => {
+    dragItemId.current = id;
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (dragItemId.current && dragItemId.current !== id) {
+      setDragOverId(id);
+    }
+  }, []);
+
+  const handleDrop = useCallback((targetId: string) => {
+    const fromId = dragItemId.current;
+    if (!fromId || fromId === targetId) { setDragOverId(null); return; }
+
+    setAllChecklists((prev) => {
+      const list = [...prev];
+      const fromIdx = list.findIndex((c) => c.id === fromId);
+      const toIdx   = list.findIndex((c) => c.id === targetId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const [item] = list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, item);
+      return list;
+    });
+    dragItemId.current = null;
+    setDragOverId(null);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    dragItemId.current = null;
+    setDragOverId(null);
+  }, []);
+
   const handleExportSelected = (mode: 'tests' | 'facts' | 'both') => {
     const toExport = allChecklists.filter((c) => selectedIds.has(c.id));
     if (toExport.length === 0) return;
@@ -661,24 +696,37 @@ export default function ControlChecklistExecution() {
                           }
                           borderWidth="2px"
                           borderColor={
-                            exportMode && isSelected
+                            dragOverId === checklist.id
+                              ? 'orange.400'
+                              : exportMode && isSelected
                               ? 'green.400'
                               : isActive
                               ? 'brand.500'
                               : borderColor
                           }
-                          cursor={exportMode ? 'pointer' : 'pointer'}
-                          transition="all 0.15s"
+                          borderTopWidth={dragOverId === checklist.id ? '4px' : '2px'}
+                          cursor={exportMode ? 'pointer' : 'grab'}
+                          transition="border 0.1s"
                           _hover={{
-                            borderColor: exportMode ? 'green.400' : isActive ? 'brand.500' : 'blue.300',
-                            transform: 'translateX(2px)',
+                            borderColor: exportMode
+                              ? 'green.400'
+                              : dragOverId === checklist.id
+                              ? 'orange.400'
+                              : isActive
+                              ? 'brand.500'
+                              : 'blue.300',
                           }}
+                          draggable={!exportMode}
+                          onDragStart={() => handleDragStart(checklist.id)}
+                          onDragOver={(e) => handleDragOver(e, checklist.id)}
+                          onDrop={() => handleDrop(checklist.id)}
+                          onDragEnd={handleDragEnd}
                           onMouseDown={() => handleRowMouseDown(checklist.id)}
                           onMouseEnter={() => handleRowMouseEnter(checklist.id)}
                           onClick={() => !exportMode && handleSelectChecklist(checklist)}
                         >
                           <HStack spacing={3} align="center">
-                            {exportMode && (
+                            {exportMode ? (
                               <Checkbox
                                 isChecked={isSelected}
                                 onChange={() => {}}
@@ -686,6 +734,15 @@ export default function ControlChecklistExecution() {
                                 colorScheme="green"
                                 flexShrink={0}
                                 pointerEvents="none"
+                              />
+                            ) : (
+                              <Icon
+                                as={MdDragHandle as any}
+                                color={isActive ? 'whiteAlpha.600' : textColorSecondary}
+                                w={4}
+                                h={4}
+                                flexShrink={0}
+                                cursor="grab"
                               />
                             )}
                             <VStack align="start" spacing={1} flex={1} minW={0}>

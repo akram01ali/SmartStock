@@ -40,7 +40,9 @@ jobs:
       - name: Pull latest code
         run: |
           cd ~/SmartStock
-          git pull origin main
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd
 
       - name: Check for schema changes
         id: check-schema

@@ -66,4 +66,12 @@ smartstock_migration_backup.sql
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Mobile app build artifacts
+*.apk
+*.aab
+*.ipa
+
+# Server uploaded files (served at runtime, not stored in git)
+server/uploads/

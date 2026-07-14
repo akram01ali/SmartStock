@@ -15,6 +15,7 @@ import {
   MdChecklist,
   MdPeople,
   MdDownload,
+  MdPhoneAndroid,
 } from 'react-icons/md';
 
 // Admin Imports
@@ -32,6 +33,7 @@ import TemplateManager from 'views/admin/checklists/TemplateManager';
 import ControlChecklistExecution from 'views/admin/checklists/ControlChecklistExecution';
 import LaborProfilesPage from 'views/admin/laborprofiles/LaborProfilesPage';
 import ExportPage from 'views/admin/export/ExportPage';
+import MobileDownloadPage from 'views/admin/mobile-download/MobileDownloadPage';
 
 // Auth Imports
 import SignInCentered from 'views/auth/signIn';
@@ -115,6 +117,20 @@ const routes = [
       />
     ),
     component: <ExportPage />,
+  },
+  {
+    name: 'Mobile App',
+    layout: '/admin',
+    path: '/mobile-download',
+    icon: (
+      <Icon
+        as={MdPhoneAndroid as any}
+        width="20px"
+        height="20px"
+        color="inherit"
+      />
+    ),
+    component: <MobileDownloadPage />,
   },
 ];
 

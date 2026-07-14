@@ -13,7 +13,7 @@ from config import (
     CORS_METHODS, CORS_HEADERS, HOST, PORT
 )
 from controllers.database import connect_db, disconnect_db
-from controllers import components, relationships, tree, graph, analytics, forecasting, manuals, checklists, laborprofiles
+from controllers import components, relationships, tree, graph, analytics, forecasting, manuals, checklists, laborprofiles, mobile_app
 from controllers.auth import auth_routes
 
 app = FastAPI(title=APP_TITLE, version=APP_VERSION)
@@ -71,6 +71,7 @@ app.include_router(forecasting.router)
 app.include_router(manuals.router)
 app.include_router(checklists.router)
 app.include_router(laborprofiles.router)
+app.include_router(mobile_app.router)
 
 # Add direct compatibility routes for frontend
 from models import UserLogin, Token, Component, RelationshipCreate, Relationship, ComponentUpdate, UserCreate, CreateAppUser, ReturnUser, RelationshipRequest, ComponentName, ComponentNameOnly, User as UserModel
